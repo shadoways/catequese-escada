@@ -6,6 +6,7 @@ data class DocumentoDTO(
     val tipoDocumento: String?,
     val caminhoArquivo: String?,
     val dataEnvio: LocalDate?,
-    val catequisandoId: Long?
+    val catequisandoId: Long?,
+    val tipoStatus: String? = "PENDENTE" // Status inicial, pode ser sobrescrito
 )
 

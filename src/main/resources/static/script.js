@@ -636,81 +636,123 @@ submitBtn.addEventListener("click", async () => {
     });
 
         const today = new Date().toISOString().slice(0, 10);
+        const uploadedDocIds = []; // Rastrear IDs para rollback
 
-        // Enviar os 3 tipos de arquivo
-        const fileTypes = ['DOCUMENTO', 'CERTIDAO', 'FOTO'];
+        try {
+          // UPLOADS SEQUENCIAIS para garantir atomicidade
+          const fileTypes = ['DOCUMENTO', 'CERTIDAO', 'FOTO'];
 
-        for (const fileType of fileTypes) {
-          if (selectedFiles[fileType]) {
-            const file = selectedFiles[fileType];
-            const upload = await uploadFile(file, fileType);
+          for (const fileType of fileTypes) {
+            if (selectedFiles[fileType]) {
+              const file = selectedFiles[fileType];
+              console.log(`📤 Iniciando upload: ${fileType}`);
 
-            // Criar documento no banco
-            const docResponse = await createDocumento({
-              tipoDocumento: fileType,
-              caminhoArquivo: upload.path || upload.filename,
-              dataEnvio: today,
-              catequisandoId: catequisando.idCatequisando
-            });
+              // 1. Upload para GCS primeiro
+              const upload = await uploadFile(file, fileType);
 
-            // Marcar como ENVIADO após upload bem-sucedido
-            if (docResponse && docResponse.idDocumento) {
-              try {
-                await fetch(`/api/documentos/${docResponse.idDocumento}/status`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    idDocumento: docResponse.idDocumento,
-                    novoStatus: 'ENVIADO',
-                    observacao: null
-                  })
-                });
-              } catch (err) {
-                console.error(`Erro ao marcar documento como ENVIADO: ${err.message}`);
+              // 2. Validar que arquivo foi salvo
+              if (!upload || !upload.filename) {
+                throw new Error(`${fileType}: Arquivo não foi salvo no GCS`);
               }
+              console.log(`✅ ${fileType} salvo no GCS: ${upload.filename}`);
+
+              // 3. SÓ DEPOIS criar documento no banco
+              const docResponse = await createDocumento({
+                tipoDocumento: fileType,
+                caminhoArquivo: upload.path || upload.filename,
+                dataEnvio: today,
+                catequisandoId: catequisando.idCatequisando,
+                tipoStatus: 'ENVIADO'
+              });
+
+              uploadedDocIds.push(docResponse.idDocumento);
+              console.log(`✅ ${fileType} criado no banco: ID ${docResponse.idDocumento}`);
             }
           }
+
+          // ASSINATURA (sequencial também)
+          if (hasSignature) {
+            console.log(`📤 Iniciando upload: ASSINATURA`);
+
+            const dataUrl = canvas.toDataURL("image/png");
+            const byteString = atob(dataUrl.split(",")[1]);
+            const buffer = new Uint8Array(byteString.length);
+            for (let i = 0; i < byteString.length; i += 1) {
+              buffer[i] = byteString.charCodeAt(i);
+            }
+            const signatureFile = new File([buffer], `assinatura-${Date.now()}.png`, { type: "image/png" });
+
+            // 1. Upload para GCS
+            const upload = await uploadFile(signatureFile, "ASSINATURA");
+
+            // 2. Validar
+            if (!upload || !upload.filename) {
+              throw new Error("ASSINATURA: Arquivo não foi salvo no GCS");
+            }
+            console.log(`✅ ASSINATURA salvo no GCS: ${upload.filename}`);
+
+            // 3. Criar no banco
+            const docResponse = await createDocumento({
+              tipoDocumento: "ASSINATURA",
+              caminhoArquivo: upload.path || upload.filename,
+              dataEnvio: today,
+              catequisandoId: catequisando.idCatequisando,
+              tipoStatus: 'ENVIADO'
+            });
+
+            uploadedDocIds.push(docResponse.idDocumento);
+            console.log(`✅ ASSINATURA criada no banco: ID ${docResponse.idDocumento}`);
+          }
+
+        } catch (uploadError) {
+          // ❌ ROLLBACK ROBUSTO
+          console.error("❌ ERRO NO UPLOAD! Iniciando rollback...", uploadError);
+
+          // Deletar documentos em ordem INVERSA (mais seguro, evita órfãos)
+          console.log(`🗑️ Deletando ${uploadedDocIds.length} documento(s) criado(s)...`);
+          for (const docId of uploadedDocIds.reverse()) {
+            try {
+              await fetch(`/api/documentos/${docId}`, { method: 'DELETE' });
+              console.log(`✅ Documento ${docId} deletado`);
+            } catch (delErr) {
+              console.error(`⚠️ Erro ao deletar documento ${docId}:`, delErr.message);
+              // Continua mesmo se um delete falhar
+            }
+          }
+
+          // Deletar ficha
+          try {
+            console.log(`🗑️ Deletando ficha do catequisando ${catequisando.idCatequisando}...`);
+            await fetch(`/api/fichas/catequisando/${catequisando.idCatequisando}`, { method: 'DELETE' });
+            console.log(`✅ Ficha deletada`);
+          } catch (fichaErr) {
+            console.error(`⚠️ Erro ao deletar ficha:`, fichaErr.message);
+          }
+
+          // Deletar catequisando (último)
+          try {
+            console.log(`🗑️ Deletando catequisando ${catequisando.idCatequisando}...`);
+            await fetch(`/api/catequisandos/${catequisando.idCatequisando}`, { method: 'DELETE' });
+            console.log(`✅ Catequisando deletado`);
+          } catch (cateqErr) {
+            console.error(`⚠️ Erro ao deletar catequisando:`, cateqErr.message);
+          }
+
+          console.log(`🔄 Rollback concluído. Relançando erro...`);
+          throw new Error(`Falha no upload: ${uploadError.message}. Todos os dados foram revertidos automaticamente.`);
         }
 
-    if (hasSignature) {
-      const dataUrl = canvas.toDataURL("image/png");
-      const byteString = atob(dataUrl.split(",")[1]);
-      const buffer = new Uint8Array(byteString.length);
-      for (let i = 0; i < byteString.length; i += 1) {
-        buffer[i] = byteString.charCodeAt(i);
-      }
-      const signatureFile = new File([buffer], `assinatura-${Date.now()}.png`, { type: "image/png" });
-      const upload = await uploadFile(signatureFile, "ASSINATURA");
+    const successMessages = ["Cadastro realizado com sucesso"];
 
-      // Criar documento da assinatura
-      const docResponse = await createDocumento({
-        tipoDocumento: "ASSINATURA",
-        caminhoArquivo: upload.path || upload.filename,
-        dataEnvio: today,
-        catequisandoId: catequisando.idCatequisando
+    // Adicionar aviso se alguns arquivos falharam
+    if (uploadErrors.length > 0 && successCount > 0) {
+      successMessages.push(`⚠️ Atenção: ${uploadErrors.length} arquivo(s) não puderam ser enviados`);
+      uploadErrors.forEach(e => {
+        successMessages.push(`  • ${e.type}: ${e.error}`);
       });
-
-      // Marcar assinatura como ENVIADO (automático!)
-      if (docResponse && docResponse.idDocumento) {
-        try {
-          await fetch(`/api/documentos/${docResponse.idDocumento}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              idDocumento: docResponse.idDocumento,
-              novoStatus: 'ENVIADO',
-              observacao: null
-            })
-          });
-        } catch (err) {
-          console.error(`Erro ao marcar assinatura como ENVIADO: ${err.message}`);
-        }
-      }
     }
 
-    setResult([
-      "Cadastro realizado com sucesso"
-    ], "ok");
+    setResult(successMessages, uploadErrors.length > 0 ? "warning" : "ok");
 
     // Limpar contador e completar barra
     clearInterval(countdownInterval);

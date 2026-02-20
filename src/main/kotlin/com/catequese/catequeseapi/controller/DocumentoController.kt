@@ -57,7 +57,8 @@ class DocumentoController(
             tipoDocumento = dto.tipoDocumento,
             caminhoArquivo = dto.caminhoArquivo,
             dataEnvio = dto.dataEnvio,
-            catequisando = catequisando
+            catequisando = catequisando,
+            tipoStatus = dto.tipoStatus ?: "PENDENTE"
         )
 
         val saved = repo.save(doc)

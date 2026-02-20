@@ -94,4 +94,14 @@ class FichaInscricaoController(
         logger.info("✅ Ficha deletada com sucesso")
         return ResponseEntity.noContent().build()
     }
+
+    @DeleteMapping("/catequisando/{catequisandoId}")
+    fun deleteByCatequisando(@PathVariable catequisandoId: Long): ResponseEntity<Void> {
+        logger.info("🗑️  DELETE /api/fichas/catequisando/$catequisandoId - Deletando ficha por catequisando")
+        val catequisando = cateqRepo.findById(catequisandoId)
+            .orElseThrow { ResourceNotFoundException("Catequisando não encontrado") }
+        repo.deleteByCatequisando(catequisando)
+        logger.info("✅ Ficha(s) do catequisando deletada(s) com sucesso")
+        return ResponseEntity.noContent().build()
+    }
 }

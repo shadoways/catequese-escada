@@ -168,6 +168,7 @@ label input[type="radio"] {
 }
 
 .status.ok { background: rgba(47, 111, 126, 0.14); color: var(--accent-2); }
+.status.warning { background: rgba(241, 201, 122, 0.3); color: #8b6914; }
 .status.error { background: rgba(192, 95, 60, 0.2); color: #9f2c0b; }
 
 /* Visual highlight para campo inválido */

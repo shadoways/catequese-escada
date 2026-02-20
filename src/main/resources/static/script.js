@@ -457,20 +457,37 @@ submitBtn.addEventListener("click", async () => {
 
   let firstInvalidEl = null;
 
-  const nome = document.getElementById("nome").value.trim();
-  // Validações adicionais para campos obrigatórios
-  const telefone = document.getElementById("telefone").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const dataNascimento = document.getElementById("data-nascimento").value;
-  const nomeResponsavel = document.getElementById("nome-responsavel").value.trim();
-  const telefoneResponsavel = document.getElementById("telefone-responsavel").value.trim();
-  const endereco = document.getElementById("endereco").value.trim();
-  const turmaId = document.getElementById("turma-select").value;
-  const comunidadeId = document.getElementById("comunidade-select").value;
-  const numeroDocumento = document.getElementById("numero-documento").value.trim();
+  const nomeEl = document.getElementById("nome");
+  const telefoneEl = document.getElementById("telefone");
+  const emailEl = document.getElementById("email");
+  const dataNascimentoEl = document.getElementById("data-nascimento");
+  const nomeResponsavelEl = document.getElementById("nome-responsavel");
+  const telefoneResponsavelEl = document.getElementById("telefone-responsavel");
+  const enderecoEl = document.getElementById("endereco");
+  const turmaSelectEl = document.getElementById("turma-select");
+  const comunidadeSelectEl = document.getElementById("comunidade-select");
+  const numeroDocumentoEl = document.getElementById("numero-documento");
+  const dataInscricaoInput = document.getElementById("data-inscricao");
+
+  if (!nomeEl || !telefoneEl || !emailEl || !dataNascimentoEl || !nomeResponsavelEl ||
+      !telefoneResponsavelEl || !enderecoEl || !turmaSelectEl || !comunidadeSelectEl ||
+      !numeroDocumentoEl || !dataInscricaoInput) {
+    setResult(["Erro: Formulário não foi carregado corretamente. Recarregue a página."], "error");
+    return;
+  }
+
+  const nome = nomeEl.value.trim();
+  const telefone = telefoneEl.value.trim();
+  const email = emailEl.value.trim();
+  const dataNascimento = dataNascimentoEl.value;
+  const nomeResponsavel = nomeResponsavelEl.value.trim();
+  const telefoneResponsavel = telefoneResponsavelEl.value.trim();
+  const endereco = enderecoEl.value.trim();
+  const turmaId = turmaSelectEl.value;
+  const comunidadeId = comunidadeSelectEl.value;
+  const numeroDocumento = numeroDocumentoEl.value.trim();
   const tipoDocumentoSelecionado = document.querySelector('input[name="tipo-documento"]:checked');
   const estadoConjugalSelecionado = document.querySelector('input[name="estado-conjugal"]:checked');
-  const dataInscricaoInput = document.getElementById("data-inscricao");
   const dataInscricaoVal = dataInscricaoInput.dataset.isoDate;
 
   const missing = [];
@@ -540,7 +557,32 @@ submitBtn.addEventListener("click", async () => {
   // Todos os campos validados — iniciar envio
   submitted = true;
   submitBtn.disabled = true;
-  submitBtn.textContent = "Enviando...";
+
+  // Criar barra de progresso
+  const progressBar = document.createElement('div');
+  progressBar.id = 'upload-progress';
+  progressBar.style.cssText = 'width: 0%; height: 4px; background: var(--accent-2); transition: width 0.5s; margin-top: 8px; border-radius: 2px;';
+  submitBtn.parentElement.insertBefore(progressBar, submitBtn.nextSibling);
+
+  // Iniciar contador regressivo
+  let countdown = 60;
+  let progressPercent = 0;
+  submitBtn.textContent = `Enviando... (${countdown}s)`;
+  progressBar.style.width = '0%';
+
+  const countdownInterval = setInterval(() => {
+    countdown--;
+    progressPercent += (100 / 60); // Incrementa ~1.67% por segundo
+
+    if (countdown > 0) {
+      submitBtn.textContent = `Enviando... (${countdown}s)`;
+      progressBar.style.width = `${Math.min(progressPercent, 95)}%`; // Máximo 95% até completar
+    } else {
+      clearInterval(countdownInterval);
+      submitBtn.textContent = "Enviando...";
+      progressBar.style.width = '95%';
+    }
+  }, 1000);
 
   // limpar mensagens anteriores
   setResult([]);
@@ -669,9 +711,23 @@ submitBtn.addEventListener("click", async () => {
     setResult([
       "Cadastro realizado com sucesso"
     ], "ok");
+
+    // Limpar contador e completar barra
+    clearInterval(countdownInterval);
+    progressBar.style.width = '100%';
+    setTimeout(() => {
+      progressBar.remove();
+    }, 500);
+
     // mostrar botão para novo cadastro
     showNewRegistrationButton();
   } catch (err) {
+    // Limpar contador em caso de erro
+    clearInterval(countdownInterval);
+    if (progressBar && progressBar.parentElement) {
+      progressBar.remove();
+    }
+
     // Em caso de erro no envio (rede/servidor), reabilitar para permitir nova tentativa
     setResult([`Erro ao cadastrar: ${err.message}`], "error");
     submitted = false;

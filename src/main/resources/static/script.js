@@ -744,15 +744,8 @@ submitBtn.addEventListener("click", async () => {
 
     const successMessages = ["Cadastro realizado com sucesso"];
 
-    // Adicionar aviso se alguns arquivos falharam
-    if (uploadErrors.length > 0 && successCount > 0) {
-      successMessages.push(`⚠️ Atenção: ${uploadErrors.length} arquivo(s) não puderam ser enviados`);
-      uploadErrors.forEach(e => {
-        successMessages.push(`  • ${e.type}: ${e.error}`);
-      });
-    }
+    setResult(successMessages, "ok");
 
-    setResult(successMessages, uploadErrors.length > 0 ? "warning" : "ok");
 
     // Limpar contador e completar barra
     clearInterval(countdownInterval);

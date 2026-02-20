@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Importar configuração padrão do Spring Boot -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+
+    <!-- Variáveis de ambiente -->
+    <springProperty scope="context" name="LOG_FILE" source="logging.file.name" defaultValue="logs/app.log"/>
+
+    <!-- Configuração de console (stdout) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Configuração de arquivo de log -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/app-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Níveis de log para pacotes específicos -->
+    <!-- Para debugar as requisições HTTP, descomente a linha abaixo -->
+    <!-- <logger name="org.springframework.web" level="DEBUG" /> -->
+
+    <!-- Para ver logs do Spring Security -->
+    <!-- <logger name="org.springframework.security" level="DEBUG" /> -->
+
+    <!-- Logs da aplicação -->
+    <logger name="com.catequese.catequeseapi" level="DEBUG" />
+
+    <!-- Logger raiz -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>
+

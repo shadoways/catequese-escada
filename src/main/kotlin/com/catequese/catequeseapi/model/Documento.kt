@@ -21,5 +21,8 @@ data class Documento(
 
     @ManyToOne
     @JoinColumn(name = "id_catequisando")
-    val catequisando: Catequisando? = null
+    val catequisando: Catequisando? = null,
+
+    // Status de entrega (sem data separada para evitar duplicidade com dataEnvio)
+    val tipoStatus: String = "PENDENTE"
 )

@@ -27,16 +27,17 @@ UploadController(private val storage: FileStorageService) {
         logger.info("   - Size: ${file.size} bytes")
 
         val saved = storage.store(file)
-        val relativePath = "uploads/${saved.fileName}"
+        val relativePath = saved.gcsPath
         val body = mapOf(
-            "filename" to saved.fileName.toString(),
+            "filename" to saved.fileName,
             "size" to file.size,
-            "path" to relativePath
+            "path" to relativePath,
+            "url" to saved.publicUrl
         )
 
         logger.info("✅ Arquivo salvo com sucesso")
-        logger.info("   - Caminho absoluto: ${saved.toAbsolutePath()}")
-        logger.info("   - Caminho retornado (relativo): $relativePath")
+        logger.info("   - GCS path: ${saved.gcsPath}")
+        logger.info("   - URL pública: ${saved.publicUrl}")
         return ResponseEntity.ok(body)
     }
 }

@@ -27,6 +27,7 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	implementation("com.google.cloud:google-cloud-storage:2.30.1")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	runtimeOnly("com.mysql:mysql-connector-j")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

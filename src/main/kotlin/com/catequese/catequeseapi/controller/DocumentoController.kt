@@ -94,4 +94,21 @@ class DocumentoController(
         logger.info("✅ Documento deletado com sucesso")
         return ResponseEntity.noContent().build()
     }
+
+    @PutMapping("/{id}/status")
+    fun atualizarStatus(
+        @PathVariable id: Long,
+        @RequestBody request: Map<String, String?>
+    ): ResponseEntity<Documento> {
+        logger.info("🔄 PUT /api/documentos/$id/status - Atualizando status")
+        val existing = repo.findById(id).orElseThrow { ResourceNotFoundException("Documento não encontrado") }
+        val novoStatus = request["novoStatus"] ?: "PENDENTE"
+
+        val updated = existing.copy(
+            tipoStatus = novoStatus
+        )
+
+        logger.info("✅ Status atualizado para: $novoStatus")
+        return ResponseEntity.ok(repo.save(updated))
+    }
 }

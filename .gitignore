@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+
+# IntelliJ / JetBrains
+.idea/
+*.iml
+out/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads / local assets
+uploads/
+
+# Local environment
+.env
+*.local
+
+# Kotlin/Java
+*.class
+
+# Test reports
+**/test-results/
+**/reports/
+

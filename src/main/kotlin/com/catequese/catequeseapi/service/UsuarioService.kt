@@ -11,7 +11,7 @@ import com.catequese.catequeseapi.repository.ComunidadeRepository
 import com.catequese.catequeseapi.repository.UsuarioRepository
 import com.catequese.catequeseapi.repository.UsuarioRoleRepository
 import org.slf4j.LoggerFactory
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -20,11 +20,11 @@ class UsuarioService(
     private val usuarioRepository: UsuarioRepository,
     private val usuarioRoleRepository: UsuarioRoleRepository,
     private val comunidadeRepository: ComunidadeRepository,
-    private val catequistaRepository: CatequistaRepository
+    private val catequistaRepository: CatequistaRepository,
+    private val passwordEncoder: PasswordEncoder
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(UsuarioService::class.java)
-        private val passwordEncoder = BCryptPasswordEncoder()
     }
 
     /**
@@ -49,8 +49,9 @@ class UsuarioService(
      * Busca usuário por email
      */
     fun findByEmail(email: String): UsuarioDTO {
-        logger.info("🔍 Buscando usuário por email: $email")
-        val usuario = usuarioRepository.findByEmail(email)
+        val normalizedEmail = email.trim().lowercase()
+        logger.info("🔍 Buscando usuário por email")
+        val usuario = usuarioRepository.findByEmail(normalizedEmail)
             .orElseThrow { ResourceNotFoundException("Usuário não encontrado") }
         return toDTO(usuario)
     }
@@ -60,10 +61,11 @@ class UsuarioService(
      */
     @Transactional
     fun create(dto: CreateUsuarioDTO): UsuarioDTO {
-        logger.info("📝 Criando novo usuário: ${dto.email}")
+        val normalizedEmail = dto.email.trim().lowercase()
+        logger.info("📝 Criando novo usuário")
 
         // Verificar se email já existe
-        if (usuarioRepository.existsByEmail(dto.email)) {
+        if (usuarioRepository.existsByEmail(normalizedEmail)) {
             throw IllegalArgumentException("Email já cadastrado")
         }
 
@@ -86,7 +88,7 @@ class UsuarioService(
         // Criar usuário
         val usuario = Usuario(
             nome = dto.nome,
-            email = dto.email,
+            email = normalizedEmail,
             passwordHash = passwordEncoder.encode(dto.password),
             ativo = true,
             comunidade = comunidade,
@@ -111,7 +113,7 @@ class UsuarioService(
 
         usuarioRoleRepository.saveAll(roles)
 
-        logger.info("✅ Usuário criado: ${dto.email}")
+        logger.info("✅ Usuário criado")
 
         // Recarregar para pegar as roles
         val usuarioCompleto = usuarioRepository.findById(usuarioSalvo.idUsuario).get()
@@ -124,12 +126,13 @@ class UsuarioService(
     @Transactional
     fun update(id: Long, dto: UsuarioDTO): UsuarioDTO {
         logger.info("📝 Atualizando usuário: $id")
+        val normalizedEmail = dto.email.trim().lowercase()
 
         val usuario = usuarioRepository.findById(id)
             .orElseThrow { ResourceNotFoundException("Usuário não encontrado") }
 
         // Verificar se email já existe em outro usuário
-        if (dto.email != usuario.email && usuarioRepository.existsByEmail(dto.email)) {
+        if (normalizedEmail != usuario.email && usuarioRepository.existsByEmail(normalizedEmail)) {
             throw IllegalArgumentException("Email já cadastrado")
         }
 
@@ -147,7 +150,7 @@ class UsuarioService(
         // Atualizar dados
         val usuarioAtualizado = usuario.copy(
             nome = dto.nome,
-            email = dto.email,
+            email = normalizedEmail,
             ativo = dto.ativo,
             comunidade = comunidade,
             catequista = catequista

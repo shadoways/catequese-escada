@@ -16,8 +16,9 @@ class EmailService {
     fun sendPasswordResetEmail(email: String, nome: String, token: String) {
         logger.info("📧 Enviando email de reset de senha para: $email")
 
-        // Por enquanto, apenas logando. Em produção, integrar com serviço de email
-        val resetLink = "http://seu-dominio.com/reset-password?token=$token"
+        // Mantém referência ao token até integrar envio real de email externo.
+        @Suppress("UNUSED_VARIABLE")
+        val resetToken = token
 
         logger.info("""
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -31,7 +32,7 @@ class EmailService {
             Você solicitou a recuperação de senha.
             Clique no link abaixo para criar uma nova senha:
             
-            $resetLink
+            [LINK DE RESET GERADO - NÃO LOGAR TOKEN EM PRODUÇÃO]
             
             Este link é válido por 24 horas.
             
@@ -39,6 +40,7 @@ class EmailService {
             
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         """.trimIndent())
+
 
         // TODO: Implementar envio real de email
         // Exemplo com SendGrid:
@@ -56,6 +58,9 @@ class EmailService {
     fun sendWelcomeEmail(email: String, nome: String, temporaryPassword: String) {
         logger.info("📧 Enviando email de boas-vindas para: $email")
 
+        @Suppress("UNUSED_VARIABLE")
+        val hiddenTemporaryPassword = temporaryPassword
+
         logger.info("""
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             📧 EMAIL DE BOAS-VINDAS
@@ -69,7 +74,7 @@ class EmailService {
             
             Seus dados de acesso:
             Email: $email
-            Senha temporária: $temporaryPassword
+            Senha temporária: [NÃO EXIBIDA]
             
             Por favor, altere sua senha no primeiro acesso.
             

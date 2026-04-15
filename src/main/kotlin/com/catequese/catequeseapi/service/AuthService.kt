@@ -1,53 +1,65 @@
 package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.auth.*
-import com.catequese.catequeseapi.exception.ResourceNotFoundException
+import com.catequese.catequeseapi.exception.UnauthorizedException
 import com.catequese.catequeseapi.model.PasswordResetToken
 import com.catequese.catequeseapi.model.Usuario
 import com.catequese.catequeseapi.repository.PasswordResetTokenRepository
 import com.catequese.catequeseapi.repository.UsuarioRepository
+import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
+import io.jsonwebtoken.security.Keys
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.*
+import javax.crypto.SecretKey
 
 @Service
 class AuthService(
     private val usuarioRepository: UsuarioRepository,
     private val passwordResetTokenRepository: PasswordResetTokenRepository,
     private val emailService: EmailService,
+    private val passwordEncoder: PasswordEncoder,
     @Value("\${jwt.secret}") private val jwtSecret: String,
     @Value("\${jwt.expirationMs}") private val jwtExpirationMs: Long
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(AuthService::class.java)
-        private val passwordEncoder = BCryptPasswordEncoder()
+    }
+
+    private val signingKey: SecretKey by lazy {
+        val bytes = jwtSecret.toByteArray(Charsets.UTF_8)
+        require(bytes.size >= 64) {
+            "JWT secret inválido: use pelo menos 64 caracteres para HS512"
+        }
+        Keys.hmacShaKeyFor(bytes)
     }
 
     /**
      * Autentica usuário e retorna JWT token
      */
     fun login(request: LoginRequestDTO): LoginResponseDTO {
-        logger.info("🔐 Tentativa de login: ${request.email}")
+        val normalizedEmail = request.email.trim().lowercase()
+        logger.info("🔐 Tentativa de login")
 
-        val usuario = usuarioRepository.findByEmail(request.email)
+        val usuario = usuarioRepository.findByEmail(normalizedEmail)
             .orElseThrow {
-                logger.warn("❌ Usuário não encontrado: ${request.email}")
-                throw ResourceNotFoundException("Credenciais inválidas")
+                logger.warn("❌ Falha de login")
+                throw UnauthorizedException("Credenciais inválidas")
             }
 
         if (!usuario.ativo) {
-            logger.warn("❌ Usuário inativo: ${request.email}")
-            throw IllegalStateException("Usuário inativo")
+            logger.warn("❌ Falha de login")
+            throw UnauthorizedException("Credenciais inválidas")
         }
 
         if (!passwordEncoder.matches(request.password, usuario.passwordHash)) {
-            logger.warn("❌ Senha inválida: ${request.email}")
-            throw IllegalArgumentException("Credenciais inválidas")
+            logger.warn("❌ Falha de login")
+            throw UnauthorizedException("Credenciais inválidas")
         }
 
         // Gerar JWT token
@@ -58,7 +70,7 @@ class AuthService(
         val usuarioAtualizado = usuario.copy(ultimoLogin = LocalDateTime.now())
         usuarioRepository.save(usuarioAtualizado)
 
-        logger.info("✅ Login bem-sucedido: ${request.email}")
+        logger.info("✅ Login bem-sucedido")
 
         return LoginResponseDTO(
             token = token,
@@ -73,20 +85,25 @@ class AuthService(
      * Solicita reset de senha (envia email com token)
      */
     fun requestPasswordReset(request: PasswordResetRequestDTO) {
-        logger.info("🔑 Solicitação de reset de senha: ${request.email}")
+        val normalizedEmail = request.email.trim().lowercase()
+        logger.info("🔑 Solicitação de reset de senha")
 
-        val usuario = usuarioRepository.findByEmail(request.email).orElse(null)
+        val usuario = usuarioRepository.findByEmail(normalizedEmail).orElse(null)
 
         if (usuario == null) {
-            logger.warn("❌ Usuário não encontrado para reset: ${request.email}")
+            logger.warn("❌ Solicitação de reset ignorada")
             // Por segurança, não informar que o email não existe
             return
         }
 
         if (!usuario.ativo) {
-            logger.warn("❌ Tentativa de reset para usuário inativo: ${request.email}")
+            logger.warn("❌ Solicitação de reset ignorada")
             return
         }
+
+        passwordResetTokenRepository.findByUsuario(usuario)
+            .filter { !it.usado }
+            .forEach { antigo -> passwordResetTokenRepository.save(antigo.copy(usado = true)) }
 
         // Gerar token único
         val token = UUID.randomUUID().toString()
@@ -103,7 +120,7 @@ class AuthService(
         // Enviar email com token
         emailService.sendPasswordResetEmail(usuario.email, usuario.nome, token)
 
-        logger.info("✅ Token de reset enviado para: ${request.email}")
+        logger.info("✅ Token de reset gerado")
     }
 
     /**
@@ -144,7 +161,11 @@ class AuthService(
         val tokenUsado = resetToken.copy(usado = true)
         passwordResetTokenRepository.save(tokenUsado)
 
-        logger.info("✅ Senha resetada com sucesso para: ${usuario.email}")
+        passwordResetTokenRepository.findByUsuario(usuario)
+            .filter { !it.usado && it.idToken != tokenUsado.idToken }
+            .forEach { antigo -> passwordResetTokenRepository.save(antigo.copy(usado = true)) }
+
+        logger.info("✅ Senha resetada com sucesso")
     }
 
     /**
@@ -157,13 +178,13 @@ class AuthService(
         val roles = usuario.roles.map { it.role.name }
 
         return Jwts.builder()
-            .setSubject(usuario.idUsuario.toString())
+            .setSubject(usuario.email)
             .claim("email", usuario.email)
             .claim("nome", usuario.nome)
             .claim("roles", roles)
             .setIssuedAt(now)
             .setExpiration(expiryDate)
-            .signWith(SignatureAlgorithm.HS512, jwtSecret)
+            .signWith(signingKey, SignatureAlgorithm.HS512)
             .compact()
     }
 
@@ -172,10 +193,10 @@ class AuthService(
      */
     fun validateToken(token: String): Boolean {
         return try {
-            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token)
+            parseClaims(token)
             true
         } catch (e: Exception) {
-            logger.warn("❌ Token inválido: ${e.message}")
+            logger.warn("❌ Token inválido")
             false
         }
     }
@@ -183,13 +204,16 @@ class AuthService(
     /**
      * Extrai ID do usuário do token
      */
-    fun getUserIdFromToken(token: String): Long {
-        val claims = Jwts.parser()
-            .setSigningKey(jwtSecret)
+    fun getEmailFromToken(token: String): String {
+        return parseClaims(token).subject
+    }
+
+    private fun parseClaims(token: String): Claims {
+        return Jwts.parserBuilder()
+            .setSigningKey(signingKey)
+            .build()
             .parseClaimsJws(token)
             .body
-
-        return claims.subject.toLong()
     }
 }
 

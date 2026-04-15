@@ -5,6 +5,7 @@ import com.catequese.catequeseapi.dto.auth.LoginResponseDTO
 import com.catequese.catequeseapi.dto.auth.PasswordResetConfirmDTO
 import com.catequese.catequeseapi.dto.auth.PasswordResetRequestDTO
 import com.catequese.catequeseapi.service.AuthService
+import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -22,17 +23,11 @@ class AuthController(private val authService: AuthService) {
      * Autentica usuário e retorna JWT token
      */
     @PostMapping("/login")
-    fun login(@RequestBody request: LoginRequestDTO): ResponseEntity<LoginResponseDTO> {
-        logger.info("📥 POST /api/auth/login - ${request.email}")
-
-        return try {
-            val response = authService.login(request)
-            logger.info("✅ Login bem-sucedido: ${request.email}")
-            ResponseEntity.ok(response)
-        } catch (e: Exception) {
-            logger.error("❌ Erro no login: ${e.message}")
-            throw e
-        }
+    fun login(@Valid @RequestBody request: LoginRequestDTO): ResponseEntity<LoginResponseDTO> {
+        logger.info("📥 POST /api/auth/login")
+        val response = authService.login(request)
+        logger.info("✅ Login bem-sucedido")
+        return ResponseEntity.ok(response)
     }
 
     /**
@@ -40,8 +35,8 @@ class AuthController(private val authService: AuthService) {
      * Solicita reset de senha (envia email com token)
      */
     @PostMapping("/password-reset/request")
-    fun requestPasswordReset(@RequestBody request: PasswordResetRequestDTO): ResponseEntity<Map<String, String>> {
-        logger.info("📥 POST /api/auth/password-reset/request - ${request.email}")
+    fun requestPasswordReset(@Valid @RequestBody request: PasswordResetRequestDTO): ResponseEntity<Map<String, String>> {
+        logger.info("📥 POST /api/auth/password-reset/request")
 
         authService.requestPasswordReset(request)
 
@@ -57,17 +52,11 @@ class AuthController(private val authService: AuthService) {
      * Confirma reset de senha com token
      */
     @PostMapping("/password-reset/confirm")
-    fun confirmPasswordReset(@RequestBody request: PasswordResetConfirmDTO): ResponseEntity<Map<String, String>> {
+    fun confirmPasswordReset(@Valid @RequestBody request: PasswordResetConfirmDTO): ResponseEntity<Map<String, String>> {
         logger.info("📥 POST /api/auth/password-reset/confirm")
-
-        return try {
-            authService.resetPassword(request)
-            logger.info("✅ Senha resetada com sucesso")
-            ResponseEntity.ok(mapOf("message" to "Senha alterada com sucesso"))
-        } catch (e: Exception) {
-            logger.error("❌ Erro ao resetar senha: ${e.message}")
-            throw e
-        }
+        authService.resetPassword(request)
+        logger.info("✅ Senha resetada com sucesso")
+        return ResponseEntity.ok(mapOf("message" to "Senha alterada com sucesso"))
     }
 
     /**
@@ -77,6 +66,10 @@ class AuthController(private val authService: AuthService) {
     @GetMapping("/validate")
     fun validateToken(@RequestHeader("Authorization") authHeader: String): ResponseEntity<Map<String, Boolean>> {
         logger.info("📥 GET /api/auth/validate")
+
+        if (!authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.badRequest().body(mapOf("valid" to false))
+        }
 
         val token = authHeader.replace("Bearer ", "")
         val isValid = authService.validateToken(token)

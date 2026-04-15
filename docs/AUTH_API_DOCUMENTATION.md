@@ -472,3 +472,4 @@ Para dúvidas ou problemas, consulte:
 **Última atualização:** 2026-03-03  
 **Versão:** 1.0.0
 
+

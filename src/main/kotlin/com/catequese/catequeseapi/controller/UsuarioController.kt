@@ -3,6 +3,7 @@ package com.catequese.catequeseapi.controller
 import com.catequese.catequeseapi.dto.auth.CreateUsuarioDTO
 import com.catequese.catequeseapi.dto.auth.UsuarioDTO
 import com.catequese.catequeseapi.service.UsuarioService
+import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -57,7 +58,7 @@ class UsuarioController(private val usuarioService: UsuarioService) {
      * Cria novo usuário
      */
     @PostMapping
-    fun create(@RequestBody dto: CreateUsuarioDTO): ResponseEntity<UsuarioDTO> {
+    fun create(@Valid @RequestBody dto: CreateUsuarioDTO): ResponseEntity<UsuarioDTO> {
         logger.info("📥 POST /api/usuarios - Criando usuário: ${dto.email}")
         val usuario = usuarioService.create(dto)
         logger.info("✅ Usuário criado: ID=${usuario.idUsuario}")
@@ -69,7 +70,7 @@ class UsuarioController(private val usuarioService: UsuarioService) {
      * Atualiza usuário existente
      */
     @PutMapping("/{id}")
-    fun update(@PathVariable id: Long, @RequestBody dto: UsuarioDTO): ResponseEntity<UsuarioDTO> {
+    fun update(@PathVariable id: Long, @Valid @RequestBody dto: UsuarioDTO): ResponseEntity<UsuarioDTO> {
         logger.info("📥 PUT /api/usuarios/$id")
         val usuario = usuarioService.update(id, dto)
         logger.info("✅ Usuário atualizado: ${usuario.email}")

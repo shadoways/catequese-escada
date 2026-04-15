@@ -213,3 +213,4 @@ mysql -u root -p$abacabb123 -h localhost catequese < CREATE_AUTH_TABLES.sql
 
 🚀 **Bora fazer o teste!**
 
+

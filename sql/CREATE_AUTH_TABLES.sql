@@ -135,3 +135,4 @@ ALTER TABLE tb_password_reset_token
 -- FIM DO SCRIPT
 -- ================================================================
 
+

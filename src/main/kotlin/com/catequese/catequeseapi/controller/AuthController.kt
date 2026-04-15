@@ -1,0 +1,101 @@
+package com.catequese.catequeseapi.controller
+
+import com.catequese.catequeseapi.dto.auth.LoginRequestDTO
+import com.catequese.catequeseapi.dto.auth.LoginResponseDTO
+import com.catequese.catequeseapi.dto.auth.PasswordResetConfirmDTO
+import com.catequese.catequeseapi.dto.auth.PasswordResetRequestDTO
+import com.catequese.catequeseapi.service.AuthService
+import org.slf4j.LoggerFactory
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+
+@RestController
+@RequestMapping("/api/auth")
+class AuthController(private val authService: AuthService) {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(AuthController::class.java)
+    }
+
+    /**
+     * POST /api/auth/login
+     * Autentica usuário e retorna JWT token
+     */
+    @PostMapping("/login")
+    fun login(@RequestBody request: LoginRequestDTO): ResponseEntity<LoginResponseDTO> {
+        logger.info("📥 POST /api/auth/login - ${request.email}")
+
+        return try {
+            val response = authService.login(request)
+            logger.info("✅ Login bem-sucedido: ${request.email}")
+            ResponseEntity.ok(response)
+        } catch (e: Exception) {
+            logger.error("❌ Erro no login: ${e.message}")
+            throw e
+        }
+    }
+
+    /**
+     * POST /api/auth/password-reset/request
+     * Solicita reset de senha (envia email com token)
+     */
+    @PostMapping("/password-reset/request")
+    fun requestPasswordReset(@RequestBody request: PasswordResetRequestDTO): ResponseEntity<Map<String, String>> {
+        logger.info("📥 POST /api/auth/password-reset/request - ${request.email}")
+
+        authService.requestPasswordReset(request)
+
+        logger.info("✅ Email de reset enviado (se usuário existe)")
+
+        return ResponseEntity.ok(
+            mapOf("message" to "Se o email estiver cadastrado, você receberá instruções para redefinir sua senha.")
+        )
+    }
+
+    /**
+     * POST /api/auth/password-reset/confirm
+     * Confirma reset de senha com token
+     */
+    @PostMapping("/password-reset/confirm")
+    fun confirmPasswordReset(@RequestBody request: PasswordResetConfirmDTO): ResponseEntity<Map<String, String>> {
+        logger.info("📥 POST /api/auth/password-reset/confirm")
+
+        return try {
+            authService.resetPassword(request)
+            logger.info("✅ Senha resetada com sucesso")
+            ResponseEntity.ok(mapOf("message" to "Senha alterada com sucesso"))
+        } catch (e: Exception) {
+            logger.error("❌ Erro ao resetar senha: ${e.message}")
+            throw e
+        }
+    }
+
+    /**
+     * GET /api/auth/validate
+     * Valida se token JWT é válido
+     */
+    @GetMapping("/validate")
+    fun validateToken(@RequestHeader("Authorization") authHeader: String): ResponseEntity<Map<String, Boolean>> {
+        logger.info("📥 GET /api/auth/validate")
+
+        val token = authHeader.replace("Bearer ", "")
+        val isValid = authService.validateToken(token)
+
+        return ResponseEntity.ok(mapOf("valid" to isValid))
+    }
+
+    /**
+     * GET /api/auth/health
+     * Health check do módulo de autenticação
+     */
+    @GetMapping("/health")
+    fun health(): ResponseEntity<Map<String, String>> {
+        return ResponseEntity.ok(
+            mapOf(
+                "status" to "UP",
+                "module" to "authentication"
+            )
+        )
+    }
+}
+

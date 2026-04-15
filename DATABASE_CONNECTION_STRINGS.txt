@@ -1,0 +1,198 @@
+📚 STRINGS DE CONEXÃO - REFERÊNCIA COMPLETA
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ DESENVOLVIMENTO LOCAL (MariaDB)
+═══════════════════════════════════════════════════════════════════════════════
+
+Formato Correto:
+───────────────
+spring.datasource.url=jdbc:mariadb://localhost:3306/catequese?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=sua_senha
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+
+Parâmetros Explicados:
+──────────────────────
+jdbc:mariadb://              ← Protocolo MariaDB
+localhost:3306              ← Host:Porta local
+catequese                   ← Nome do banco de dados
+?useSSL=false               ← Desabilita SSL (desenvolvimento)
+&serverTimezone=UTC         ← Define timezone
+&allowPublicKeyRetrieval=true ← Permite autenticação
+
+Dialeto Hibernate:
+──────────────────
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDBDialect
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ PRODUÇÃO (Aiven - MySQL)
+═══════════════════════════════════════════════════════════════════════════════
+
+Formato Correto:
+───────────────
+spring.datasource.url=jdbc:mysql://mysql-escada-catequese-escada.j.aivencloud.com:26254/catequese?useSSL=true&requireSSL=true&serverTimezone=UTC
+spring.datasource.username=cq-escada
+spring.datasource.password=SUA_SENHA_AIVEN
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+Parâmetros Explicados:
+──────────────────────
+jdbc:mysql://                   ← Protocolo MySQL
+mysql-escada-...aivencloud.com ← Host do Aiven
+:26254                          ← Porta customizada
+catequese                       ← Nome do banco
+?useSSL=true                    ← OBRIGATÓRIO em produção
+&requireSSL=true                ← OBRIGATÓRIO em produção
+&serverTimezone=UTC             ← Define timezone
+
+Dialeto Hibernate:
+──────────────────
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+❌ ERROS COMUNS
+═══════════════════════════════════════════════════════════════════════════════
+
+ERRO 1: Aspas duplas na URL
+─────────────────────────────
+❌ ERRADO:
+spring.datasource.url="jdbc:mariadb://localhost:3306/catequese"
+
+✅ CORRETO:
+spring.datasource.url=jdbc:mariadb://localhost:3306/catequese
+
+Motivo: Properties não usa aspas para strings, elas são interpretadas literalmente
+
+
+ERRO 2: Driver não definido
+────────────────────────────
+❌ ERRADO:
+spring.datasource.url=jdbc:mariadb://localhost:3306/catequese
+(sem driver-class-name)
+
+✅ CORRETO:
+spring.datasource.url=jdbc:mariadb://localhost:3306/catequese
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+
+Motivo: Spring precisa saber qual driver usar
+
+
+ERRO 3: Dialeto errado
+──────────────────────
+❌ ERRADO (para MariaDB):
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+
+✅ CORRETO (para MariaDB):
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDBDialect
+
+Motivo: MariaDB tem seu próprio dialeto otimizado
+
+
+ERRO 4: Variáveis de ambiente em development
+──────────────────────────────────────────────
+❌ ERRADO:
+spring.datasource.url=${SPRING_DATASOURCE_URL}
+(sem variável definida)
+
+✅ CORRETO (se usar variáveis):
+1. Definir variável de ambiente
+2. Ou usar valor literal para desenvolvimento
+
+Motivo: ${...} procura por variáveis de ambiente
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔄 MIGRAÇÕES ENTRE AMBIENTES
+═══════════════════════════════════════════════════════════════════════════════
+
+Application.properties Atual (DESENVOLVIMENTO):
+────────────────────────────────────────────────
+spring.datasource.url=jdbc:mariadb://localhost:3306/catequese?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=SUA_SENHA_LOCAL
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDBDialect
+
+
+Para Produção (usando variáveis de ambiente):
+──────────────────────────────────────────────
+spring.datasource.url=${SPRING_DATASOURCE_URL}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD}
+spring.datasource.driver-class-name=${SPRING_DATASOURCE_DRIVER_CLASS_NAME}
+spring.jpa.properties.hibernate.dialect=${SPRING_JPA_DIALECT}
+
+Variáveis a definir em produção:
+SPRING_DATASOURCE_URL=jdbc:mysql://mysql-escada-...
+SPRING_DATASOURCE_USERNAME=cq-escada
+SPRING_DATASOURCE_PASSWORD=...
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+SPRING_JPA_DIALECT=org.hibernate.dialect.MySQL8Dialect
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ VALIDAÇÃO - COMO TESTAR
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Verificar Conexão no Startup
+─────────────────────────────────
+Rodar: ./gradlew bootRun
+
+Procurar por:
+✅ "HikariPool-1 - Starting..."
+✅ "HikariPool-1 - Connected to database"
+
+Se falhar:
+❌ "Connection refused"        → MariaDB/MySQL não está rodando
+❌ "Access denied"             → Credenciais erradas
+❌ "Unknown database"          → Nome do banco errado
+❌ "No suitable driver found"  → Driver não instalado
+
+
+2. Verificar com SQL
+────────────────────
+mysql -u root -pSUA_SENHA_LOCAL -h localhost
+
+Se conectar:
+> use catequese;
+> show tables;
+
+Se falhar:
+❌ "Can't connect to MySQL server" → Serviço não rodando
+
+
+3. Verificar no Application
+────────────────────────────
+GET http://localhost:8080/api/auth/health
+
+Resposta esperada:
+{
+  "status": "UP",
+  "module": "authentication"
+}
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📊 RESUMO DE CONFIGURAÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+Ambiente:       Desenvolvimento Local
+Database:       MariaDB
+Host:          localhost:3306
+Database Name:  catequese
+User:          root
+Driver:        org.mariadb.jdbc.Driver
+Dialect:       org.hibernate.dialect.MariaDBDialect
+Status:        ✅ CONFIGURADO CORRETAMENTE
+
+
+═══════════════════════════════════════════════════════════════════════════════
+

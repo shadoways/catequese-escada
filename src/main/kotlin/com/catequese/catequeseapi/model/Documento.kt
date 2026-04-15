@@ -10,7 +10,7 @@ import jakarta.persistence.Table
 import java.time.LocalDate
 
 @Entity
-@Table(name = "tb_documento")
+@Table(name = "tb_documentos")
 data class Documento(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val idDocumento: Long = 0,

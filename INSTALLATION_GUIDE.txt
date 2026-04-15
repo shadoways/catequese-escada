@@ -1,0 +1,139 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║          GUIA DE INSTALAÇÃO - SISTEMA DE AUTENTICAÇÃO                     ║
+║                          PASSO A PASSO                                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+📋 RESUMO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ 27 arquivos criados (código Kotlin + SQL + docs)
+✅ 11 endpoints REST implementados
+✅ 3 tabelas no banco de dados
+✅ 3 níveis de acesso (roles)
+✅ JWT + Recuperação de senha
+✅ Documentação completa
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 INSTALAÇÃO - PASSO A PASSO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASSO 1: CRIAR TABELAS NO BANCO DE DADOS (2 minutos)
+─────────────────────────────────────────────────────────
+  mysql -u usuario -p catequese < CREATE_AUTH_TABLES.sql
+  O que faz:
+  ✓ Cria tabela tb_usuario
+  ✓ Cria tabela tb_usuario_role
+  ✓ Cria tabela tb_password_reset_token
+  ✓ Insere usuário admin (admin@catequese.com / admin123)
+  Verificar se funcionou:
+  mysql -u usuario -p catequese < VERIFY_AUTH_TABLES.sql
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASSO 2: (OPCIONAL) POPULAR DADOS DE TESTE (1 minuto)
+───────────────────────────────────────────────────────
+  mysql -u usuario -p catequese < POPULATE_AUTH_TEST_DATA.sql
+  O que faz:
+  ✓ Cria 5 usuários de exemplo
+  ✓ Diferentes roles
+  ✓ Vinculações com comunidades/catequistas
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASSO 3: BUILDAR O PROJETO (2 minutos)
+───────────────────────────────────────
+  cd /home/usuario/workspace/catequese-escada
+  ./gradlew clean build
+  O que faz:
+  ✓ Baixa dependências (JWT, BCrypt, etc)
+  ✓ Compila código Kotlin
+  ✓ Roda testes
+  ✓ Gera JAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASSO 4: RODAR A APLICAÇÃO (1 minuto)
+──────────────────────────────────────
+  ./gradlew bootRun
+  Aguarde:
+  ✓ "Tomcat started on port(s): 8080"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASSO 5: TESTAR (30 segundos)
+──────────────────────────────
+  Opção A: Script Automatizado
+  ─────────────────────────────
+  ./test-auth-api.sh
+  Opção B: Teste Manual
+  ─────────────────────
+  curl -X POST http://localhost:8080/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"admin@catequese.com","password":"admin123"}'
+  Resposta esperada:
+  {
+    "token": "eyJhbGciOiJIUzUxMiJ9...",
+    "email": "admin@catequese.com",
+    "nome": "Administrador",
+    "roles": ["COORDENADOR_PAROQUIAL"],
+    "expiresIn": 172800000
+  }
+  ✅ SE RECEBEU O TOKEN = FUNCIONOU!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 CREDENCIAIS DE TESTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Após rodar CREATE_AUTH_TABLES.sql:
+  Email: admin@catequese.com
+  Senha: admin123
+  Role:  COORDENADOR_PAROQUIAL
+Após rodar POPULATE_AUTH_TEST_DATA.sql (opcional):
+  joao.silva@catequese.com      / admin123  (COORDENADOR_PAROQUIAL)
+  maria.santos@catequese.com    / admin123  (COORDENADOR_COMUNIDADE)
+  pedro.oliveira@catequese.com  / admin123  (CATEQUISTA)
+  ana.costa@catequese.com       / admin123  (MÚLTIPLAS ROLES)
+⚠️  IMPORTANTE: Altere essas senhas em produção!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔌 ENDPOINTS DISPONÍVEIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AUTENTICAÇÃO
+────────────
+  POST   /api/auth/login                      Login (retorna JWT)
+  POST   /api/auth/password-reset/request     Solicitar reset
+  POST   /api/auth/password-reset/confirm     Confirmar reset
+  GET    /api/auth/validate                   Validar token
+  GET    /api/auth/health                     Health check
+GESTÃO DE USUÁRIOS
+──────────────────
+  GET    /api/usuarios                        Listar todos
+  GET    /api/usuarios/{id}                   Buscar por ID
+  GET    /api/usuarios/email/{email}          Buscar por email
+  POST   /api/usuarios                        Criar usuário
+  PUT    /api/usuarios/{id}                   Atualizar
+  PATCH  /api/usuarios/{id}/toggle-ativo      Ativar/Desativar
+  DELETE /api/usuarios/{id}                   Deletar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 DOCUMENTAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  AUTH_README.md                    Guia rápido
+  AUTH_API_DOCUMENTATION.md         Documentação completa da API
+  RESUMO_AUTH_IMPLEMENTATION.md     Resumo técnico
+  test-auth-api.sh                  Testes automatizados
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🐛 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROBLEMA: Build falhou
+SOLUÇÃO:  ./gradlew clean build --refresh-dependencies
+PROBLEMA: Usuário não encontrado
+SOLUÇÃO:  Verificar se rodou CREATE_AUTH_TABLES.sql
+PROBLEMA: Token inválido
+SOLUÇÃO:  Verificar header Authorization: Bearer {token}
+PROBLEMA: Porta 8080 já em uso
+SOLUÇÃO:  Matar processo: lsof -ti:8080 | xargs kill -9
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ CHECKLIST DE VALIDAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [ ] Rodei CREATE_AUTH_TABLES.sql
+  [ ] Rodei VERIFY_AUTH_TABLES.sql (opcional)
+  [ ] Rodei ./gradlew clean build
+  [ ] Rodei ./gradlew bootRun
+  [ ] Testei login com curl ou test-auth-api.sh
+  [ ] Recebi token JWT
+  [ ] Li AUTH_README.md
+  [ ] Alterei senha do admin (produção)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 PARABÉNS!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Sistema de autenticação instalado e funcionando!
+  Próximos passos:
+  1. Integrar com frontend
+  2. Implementar telas de login
+  3. Adicionar gestão de usuários (UI)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1,0 +1,155 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                 STRING DE CONEXÃO - ANÁLISE E CORREÇÃO                    ║
+║                            2026-03-04                                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+📋 RESUMO EXECUTIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Sua string de conexão tinha 4 problemas principais:
+1. ❌ Aspas duplas desnecessárias
+2. ❌ Faltavam parâmetros importantes
+3. ❌ Driver não declarado
+4. ❌ Dialeto Hibernate errado
+Todos foram CORRIGIDOS ✅
+═════════════════════════════════════════════════════════════════════════════════
+❌ STRING ORIGINAL (COM PROBLEMAS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+spring.datasource.url="jdbc:mariadb://localhost:3306/catequese"
+PROBLEMAS:
+  1. Aspas duplas: "jdbc:..." ← Não deve ter aspas!
+  2. Faltam parâmetros: ?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  3. Sem driver class
+═════════════════════════════════════════════════════════════════════════════════
+✅ STRING CORRIGIDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+spring.datasource.url=jdbc:mariadb://localhost:3306/catequese?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=$abacabb123
+spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MariaDBDialect
+spring.jpa.hibernate.ddl-auto=validate
+═════════════════════════════════════════════════════════════════════════════════
+📝 PARÂMETROS EXPLICADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+jdbc:mariadb://
+  → Protocolo de conexão (especifica que é MariaDB)
+localhost:3306
+  → Host e porta do servidor MariaDB
+  → localhost = sua máquina local
+  → 3306 = porta padrão do MariaDB
+catequese
+  → Nome do banco de dados
+?useSSL=false
+  → Desabilita SSL para desenvolvimento
+  → Use "true" em produção
+&serverTimezone=UTC
+  → Define o timezone para UTC
+  → Evita problemas com datas
+&allowPublicKeyRetrieval=true
+  → Permite autenticação segura
+═════════════════════════════════════════════════════════════════════════════════
+🔧 CORREÇÕES FEITAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. application.properties
+   ✅ Removido aspas duplas
+   ✅ Adicionado parâmetros SSL e timezone
+   ✅ Corrigido dialect para MariaDBDialect
+2. build.gradle.kts
+   ✅ Trocado driver: mysql-connector-j → mariadb-java-client
+   ✅ Adicionado na seção de dependencies
+═════════════════════════════════════════════════════════════════════════════════
+✅ COMO VALIDAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. No Startup da Aplicação
+──────────────────────────
+  Executar: ./gradlew bootRun
+  Procurar por:
+  ✅ "HikariPool-1 - Starting..."
+  ✅ "HikariPool-1 - Connected to database"
+  Se ver erro:
+  ❌ "Connection refused" → MariaDB não está rodando
+  ❌ "Access denied" → Credenciais erradas
+  ❌ "Unknown database" → Nome do banco errado
+2. Via SQL
+──────────
+  mysql -u root -p$abacabb123 -h localhost
+  > use catequese;
+  > show tables;
+3. Via API
+──────────
+  curl http://localhost:8080/api/auth/health
+  Resposta esperada:
+  {
+    "status": "UP",
+    "module": "authentication"
+  }
+═════════════════════════════════════════════════════════════════════════════════
+📊 COMPARAÇÃO DE DIALETOS HIBERNATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MariaDB:
+  org.hibernate.dialect.MariaDBDialect
+  ✓ Otimizado para MariaDB
+  ✓ Driver: org.mariadb.jdbc.Driver
+MySQL 8:
+  org.hibernate.dialect.MySQL8Dialect
+  ✓ Otimizado para MySQL 8+
+  ✓ Driver: com.mysql.cj.jdbc.Driver
+PostgreSQL:
+  org.hibernate.dialect.PostgreSQLDialect
+  ✓ Otimizado para PostgreSQL
+  ✓ Driver: org.postgresql.Driver
+═════════════════════════════════════════════════════════════════════════════════
+⚠️ ERROS COMUNS E SOLUÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ERRO 1: "Connection refused"
+──────────────────────────
+  Causa: MariaDB não está rodando
+  Solução: sudo systemctl start mariadb
+           ou
+           sudo service mariadb start
+ERRO 2: "Access denied for user 'root'@'localhost'"
+──────────────────────────────────────────────────
+  Causa: Senha incorreta
+  Solução: Verificar a senha em application.properties
+           Resetar senha do root se necessário
+ERRO 3: "Unknown database 'catequese'"
+──────────────────────────────────────
+  Causa: Banco não existe
+  Solução: CREATE DATABASE catequese;
+ERRO 4: "No suitable driver found"
+──────────────────────────────────
+  Causa: Driver não instalado
+  Solução: ./gradlew clean build --refresh-dependencies
+═════════════════════════════════════════════════════════════════════════════════
+🚀 PRÓXIMOS PASSOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Garantir que MariaDB está rodando
+   systemctl status mariadb
+2. Build do projeto
+   ./gradlew clean build
+3. Rodar aplicação
+   ./gradlew bootRun
+4. Verificar logs
+   Procurar por: "HikariPool-1 - Connected to database"
+5. Testar conexão
+   curl http://localhost:8080/api/auth/health
+═════════════════════════════════════════════════════════════════════════════════
+✅ STATUS FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Database:           MariaDB
+Host:              localhost:3306
+Database Name:     catequese
+Driver:            org.mariadb.jdbc.Driver
+Dialect:           org.hibernate.dialect.MariaDBDialect
+SSL:               false (desenvolvimento)
+Timezone:          UTC
+Arquivo: application.properties
+Arquivo: build.gradle.kts
+Status: ✅ CONFIGURADO CORRETAMENTE
+═════════════════════════════════════════════════════════════════════════════════
+📖 DOCUMENTAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ver arquivo: DATABASE_CONNECTION_STRINGS.txt
+             (contém strings para desenvolvimento e produção)
+Ver arquivo: ANALISE_STRING_CONEXAO.md
+             (análise visual formatada)
+═════════════════════════════════════════════════════════════════════════════════

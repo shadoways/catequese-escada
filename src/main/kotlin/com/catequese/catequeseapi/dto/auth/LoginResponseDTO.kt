@@ -7,6 +7,8 @@ data class LoginResponseDTO(
     val email: String,
     val nome: String,
     val roles: List<RoleType>,
-    val expiresIn: Long // milliseconds
+    val expiresIn: Long, // milliseconds (access token)
+    val refreshToken: String? = null,
+    val refreshExpiresIn: Long? = null // milliseconds
 )
 

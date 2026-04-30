@@ -45,7 +45,9 @@ class AuthControllerContractTest {
             email = "admin@catequese.com",
             nome = "Administrador",
             roles = listOf(RoleType.COORDENADOR_PAROQUIAL),
-            expiresIn = 172800000
+            expiresIn = 172800000,
+            refreshToken = "refresh.token.value",
+            refreshExpiresIn = 604800000
         )
         `when`(authService.login(com.catequese.catequeseapi.dto.auth.LoginRequestDTO("admin@catequese.com", "admin123")))
             .thenReturn(response)
@@ -63,6 +65,43 @@ class AuthControllerContractTest {
             .andExpect(jsonPath("$.nome").value("Administrador"))
             .andExpect(jsonPath("$.roles[0]").value("COORDENADOR_PAROQUIAL"))
             .andExpect(jsonPath("$.expiresIn").value(172800000))
+            .andExpect(jsonPath("$.refreshToken").value("refresh.token.value"))
+            .andExpect(jsonPath("$.refreshExpiresIn").value(604800000))
+    }
+
+    @Test
+    fun `POST refresh deve manter contrato de sucesso`() {
+        val response = LoginResponseDTO(
+            token = "novo.access.token",
+            email = "admin@catequese.com",
+            nome = "Administrador",
+            roles = listOf(RoleType.COORDENADOR_PAROQUIAL),
+            expiresIn = 172800000,
+            refreshToken = "novo.refresh.token",
+            refreshExpiresIn = 604800000
+        )
+        `when`(authService.refresh(com.catequese.catequeseapi.dto.auth.RefreshTokenRequestDTO("refresh-token")))
+            .thenReturn(response)
+
+        mockMvc.perform(
+            post("/api/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("refreshToken" to "refresh-token")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.token").value("novo.access.token"))
+            .andExpect(jsonPath("$.refreshToken").value("novo.refresh.token"))
+    }
+
+    @Test
+    fun `POST logout deve manter contrato de sucesso`() {
+        mockMvc.perform(
+            post("/api/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("refreshToken" to "refresh-token")))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.message").value("Logout realizado com sucesso"))
     }
 
     @Test

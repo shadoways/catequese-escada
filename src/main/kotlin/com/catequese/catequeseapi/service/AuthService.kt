@@ -3,8 +3,10 @@ package com.catequese.catequeseapi.service
 import com.catequese.catequeseapi.dto.auth.*
 import com.catequese.catequeseapi.exception.UnauthorizedException
 import com.catequese.catequeseapi.model.PasswordResetToken
+import com.catequese.catequeseapi.model.RefreshToken
 import com.catequese.catequeseapi.model.Usuario
 import com.catequese.catequeseapi.repository.PasswordResetTokenRepository
+import com.catequese.catequeseapi.repository.RefreshTokenRepository
 import com.catequese.catequeseapi.repository.UsuarioRepository
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
@@ -14,6 +16,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.*
 import javax.crypto.SecretKey
@@ -22,10 +25,12 @@ import javax.crypto.SecretKey
 class AuthService(
     private val usuarioRepository: UsuarioRepository,
     private val passwordResetTokenRepository: PasswordResetTokenRepository,
+    private val refreshTokenRepository: RefreshTokenRepository,
     private val emailService: EmailService,
     private val passwordEncoder: PasswordEncoder,
     @Value("\${jwt.secret}") private val jwtSecret: String,
-    @Value("\${jwt.expirationMs}") private val jwtExpirationMs: Long
+    @Value("\${jwt.expirationMs}") private val jwtExpirationMs: Long,
+    @Value("\${jwt.refreshExpirationMs:604800000}") private val refreshExpirationMs: Long
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(AuthService::class.java)
@@ -63,8 +68,10 @@ class AuthService(
             throw UnauthorizedException("Credenciais inválidas")
         }
 
-        // Gerar JWT token
+        // Gerar access token e refresh token persistido
         val token = generateToken(usuario)
+        val refreshToken = generateRefreshTokenRaw()
+        saveRefreshToken(usuario, refreshToken)
         val roles = usuario.roles.map { it.role }
 
         // Atualizar último login
@@ -78,8 +85,67 @@ class AuthService(
             email = usuario.email,
             nome = usuario.nome,
             roles = roles,
-            expiresIn = jwtExpirationMs
+            expiresIn = jwtExpirationMs,
+            refreshToken = refreshToken,
+            refreshExpiresIn = refreshExpirationMs
         )
+    }
+
+    /**
+     * Renova sessão com rotação de refresh token (token antigo é revogado).
+     */
+    fun refresh(request: RefreshTokenRequestDTO): LoginResponseDTO {
+        val now = LocalDateTime.now()
+        val tokenHash = hashToken(request.refreshToken)
+        val stored = refreshTokenRepository.findByTokenHash(tokenHash)
+            .orElseThrow {
+                logger.warn("❌ Refresh token inválido")
+                throw UnauthorizedException("Refresh token inválido ou expirado")
+            }
+
+        if (stored.revogado || stored.dataExpiracao.isBefore(now)) {
+            logger.warn("❌ Refresh token expirado/revogado")
+            if (!stored.revogado) {
+                refreshTokenRepository.save(stored.copy(revogado = true, dataRevogacao = now))
+            }
+            throw UnauthorizedException("Refresh token inválido ou expirado")
+        }
+
+        val usuario = stored.usuario
+        if (!usuario.ativo) {
+            refreshTokenRepository.save(stored.copy(revogado = true, dataRevogacao = now))
+            throw UnauthorizedException("Credenciais inválidas")
+        }
+
+        // Rotaciona refresh token para bloquear reutilização.
+        refreshTokenRepository.save(stored.copy(revogado = true, dataRevogacao = now))
+
+        val newAccessToken = generateToken(usuario)
+        val newRefreshToken = generateRefreshTokenRaw()
+        saveRefreshToken(usuario, newRefreshToken)
+
+        return LoginResponseDTO(
+            token = newAccessToken,
+            email = usuario.email,
+            nome = usuario.nome,
+            roles = usuario.roles.map { it.role },
+            expiresIn = jwtExpirationMs,
+            refreshToken = newRefreshToken,
+            refreshExpiresIn = refreshExpirationMs
+        )
+    }
+
+    /**
+     * Revoga refresh token da sessão atual (logout da sessão).
+     */
+    fun logout(request: RefreshTokenRequestDTO) {
+        val now = LocalDateTime.now()
+        val tokenHash = hashToken(request.refreshToken)
+        val existing = refreshTokenRepository.findByTokenHash(tokenHash).orElse(null)
+
+        if (existing != null && !existing.revogado) {
+            refreshTokenRepository.save(existing.copy(revogado = true, dataRevogacao = now))
+        }
     }
 
     /**
@@ -215,6 +281,26 @@ class AuthService(
             .build()
             .parseClaimsJws(token)
             .body
+    }
+
+    private fun saveRefreshToken(usuario: Usuario, refreshTokenRaw: String) {
+        val now = LocalDateTime.now()
+        val refreshToken = RefreshToken(
+            usuario = usuario,
+            tokenHash = hashToken(refreshTokenRaw),
+            dataExpiracao = now.plusSeconds(refreshExpirationMs / 1000)
+        )
+        refreshTokenRepository.save(refreshToken)
+    }
+
+    private fun generateRefreshTokenRaw(): String {
+        return UUID.randomUUID().toString() + UUID.randomUUID().toString()
+    }
+
+    private fun hashToken(value: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }
     }
 }
 

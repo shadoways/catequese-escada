@@ -29,7 +29,7 @@ class SecurityConfig(
             .formLogin { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/password-reset/**").permitAll()
+                it.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/auth/password-reset/**").permitAll()
                 it.requestMatchers(HttpMethod.GET, "/api/auth/health").permitAll()
                 it.requestMatchers(
                     "/",

@@ -4,6 +4,7 @@ import com.catequese.catequeseapi.dto.auth.LoginRequestDTO
 import com.catequese.catequeseapi.dto.auth.LoginResponseDTO
 import com.catequese.catequeseapi.dto.auth.PasswordResetConfirmDTO
 import com.catequese.catequeseapi.dto.auth.PasswordResetRequestDTO
+import com.catequese.catequeseapi.dto.auth.RefreshTokenRequestDTO
 import com.catequese.catequeseapi.service.AuthService
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
@@ -28,6 +29,27 @@ class AuthController(private val authService: AuthService) {
         val response = authService.login(request)
         logger.info("✅ Login bem-sucedido")
         return ResponseEntity.ok(response)
+    }
+
+    /**
+     * POST /api/auth/refresh
+     * Renova access token via refresh token com rotação.
+     */
+    @PostMapping("/refresh")
+    fun refresh(@Valid @RequestBody request: RefreshTokenRequestDTO): ResponseEntity<LoginResponseDTO> {
+        logger.info("📥 POST /api/auth/refresh")
+        return ResponseEntity.ok(authService.refresh(request))
+    }
+
+    /**
+     * POST /api/auth/logout
+     * Revoga refresh token da sessão atual.
+     */
+    @PostMapping("/logout")
+    fun logout(@Valid @RequestBody request: RefreshTokenRequestDTO): ResponseEntity<Map<String, String>> {
+        logger.info("📥 POST /api/auth/logout")
+        authService.logout(request)
+        return ResponseEntity.ok(mapOf("message" to "Logout realizado com sucesso"))
     }
 
     /**

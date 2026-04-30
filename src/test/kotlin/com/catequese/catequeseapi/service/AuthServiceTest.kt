@@ -6,9 +6,11 @@ import com.catequese.catequeseapi.dto.auth.PasswordResetRequestDTO
 import com.catequese.catequeseapi.enums.RoleType
 import com.catequese.catequeseapi.exception.UnauthorizedException
 import com.catequese.catequeseapi.model.PasswordResetToken
+import com.catequese.catequeseapi.model.RefreshToken
 import com.catequese.catequeseapi.model.Usuario
 import com.catequese.catequeseapi.model.UsuarioRole
 import com.catequese.catequeseapi.repository.PasswordResetTokenRepository
+import com.catequese.catequeseapi.repository.RefreshTokenRepository
 import com.catequese.catequeseapi.repository.UsuarioRepository
 import io.mockk.*
 import org.junit.jupiter.api.Assertions.*
@@ -23,6 +25,7 @@ class AuthServiceTest {
 
     private lateinit var usuarioRepository: UsuarioRepository
     private lateinit var passwordResetTokenRepository: PasswordResetTokenRepository
+    private lateinit var refreshTokenRepository: RefreshTokenRepository
     private lateinit var emailService: EmailService
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var authService: AuthService
@@ -33,16 +36,21 @@ class AuthServiceTest {
     fun setUp() {
         usuarioRepository = mockk()
         passwordResetTokenRepository = mockk()
+        refreshTokenRepository = mockk()
         emailService = mockk(relaxed = true)
         passwordEncoder = mockk()
+
+        every { refreshTokenRepository.save(any()) } answers { firstArg() }
 
         authService = AuthService(
             usuarioRepository,
             passwordResetTokenRepository,
+            refreshTokenRepository,
             emailService,
             passwordEncoder,
             jwtSecret,
-            120_000L
+            120_000L,
+            600_000L
         )
     }
 
@@ -59,6 +67,8 @@ class AuthServiceTest {
         assertEquals("admin@catequese.com", response.email)
         assertEquals("Administrador", response.nome)
         assertEquals(listOf(RoleType.COORDENADOR_PAROQUIAL), response.roles)
+        assertNotNull(response.refreshToken)
+        assertEquals(600_000L, response.refreshExpiresIn)
         verify(exactly = 1) {
             usuarioRepository.save(withArg {
                 assertNotNull(it.ultimoLogin)
@@ -200,6 +210,44 @@ class AuthServiceTest {
 
         assertTrue(authService.validateToken(token))
         assertEquals("admin@catequese.com", authService.getEmailFromToken(token))
+    }
+
+    @Test
+    fun `refresh deve rotacionar refresh token quando valido`() {
+        val usuario = usuarioComRole()
+        every { refreshTokenRepository.findByTokenHash(any()) } returns Optional.of(
+            RefreshToken(
+                idRefreshToken = 1,
+                usuario = usuario,
+                tokenHash = "hash",
+                dataExpiracao = LocalDateTime.now().plusMinutes(10),
+                revogado = false
+            )
+        )
+
+        val response = authService.refresh(com.catequese.catequeseapi.dto.auth.RefreshTokenRequestDTO("refresh-token-valido"))
+
+        assertTrue(response.token.isNotBlank())
+        assertNotNull(response.refreshToken)
+        verify(atLeast = 2) { refreshTokenRepository.save(any()) }
+    }
+
+    @Test
+    fun `logout deve revogar refresh token quando encontrado`() {
+        val usuario = usuarioComRole()
+        every { refreshTokenRepository.findByTokenHash(any()) } returns Optional.of(
+            RefreshToken(
+                idRefreshToken = 2,
+                usuario = usuario,
+                tokenHash = "hash",
+                dataExpiracao = LocalDateTime.now().plusMinutes(10),
+                revogado = false
+            )
+        )
+
+        authService.logout(com.catequese.catequeseapi.dto.auth.RefreshTokenRequestDTO("refresh-token-valido"))
+
+        verify(atLeast = 1) { refreshTokenRepository.save(withArg { assertTrue(it.revogado) }) }
     }
 
     private fun usuarioComRole(

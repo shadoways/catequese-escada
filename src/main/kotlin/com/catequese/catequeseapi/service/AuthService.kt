@@ -57,7 +57,8 @@ class AuthService(
             throw UnauthorizedException("Credenciais inválidas")
         }
 
-        if (!passwordEncoder.matches(request.password, usuario.passwordHash)) {
+        val storedHash = usuario.passwordHash.trim()
+        if (!passwordEncoder.matches(request.password, storedHash)) {
             logger.warn("❌ Falha de login")
             throw UnauthorizedException("Credenciais inválidas")
         }

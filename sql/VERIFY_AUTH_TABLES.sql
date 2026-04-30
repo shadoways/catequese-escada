@@ -2,7 +2,7 @@
 -- SCRIPT DE VERIFICAÇÃO - SISTEMA DE AUTENTICAÇÃO
 -- ================================================================
 -- Use este script para verificar se as tabelas já existem
--- antes de executar CREATE_AUTH_TABLES.sql
+-- antes de executar sql/CREATE_AUTH_TABLES.sql
 -- Data: 2026-03-03
 -- ================================================================
 
@@ -199,12 +199,12 @@ WHERE usado = TRUE;
 
 /*
 Se as tabelas NÃO EXISTEM:
-    1. Execute: CREATE_AUTH_TABLES.sql
-    2. Execute: POPULATE_AUTH_TEST_DATA.sql (opcional)
+    1. Execute: sql/CREATE_AUTH_TABLES.sql
+    2. Execute: sql/POPULATE_AUTH_TEST_DATA.sql (opcional)
 
 Se as tabelas JÁ EXISTEM:
     1. Verifique os dados existentes
-    2. Execute: POPULATE_AUTH_TEST_DATA.sql (se quiser dados de teste)
+    2. Execute: sql/POPULATE_AUTH_TEST_DATA.sql (se quiser dados de teste)
 
 Para limpar tokens expirados:
     DELETE FROM tb_password_reset_token

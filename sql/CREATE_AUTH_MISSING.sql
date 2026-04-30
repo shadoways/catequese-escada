@@ -1,13 +1,11 @@
 -- ================================================================
--- SISTEMA DE AUTENTICAÇÃO E CONTROLE DE ACESSO
+-- CREATE_AUTH_MISSING.sql
 -- ================================================================
--- Criação das tabelas para gestão de usuários, roles e reset de senha
--- Data: 2026-03-03
+-- Objetivo: criar somente o que faltar para o login funcionar.
+-- Seguro para reexecucao (usa IF NOT EXISTS + inserts idempotentes).
 -- ================================================================
 
--- ================================================================
--- 1. TABELA DE USUÁRIOS
--- ================================================================
+-- Tabela de usuarios
 CREATE TABLE IF NOT EXISTS tb_usuario (
     id_usuario BIGINT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -34,9 +32,7 @@ CREATE TABLE IF NOT EXISTS tb_usuario (
     INDEX idx_usuario_ativo (ativo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ================================================================
--- 2. TABELA DE ROLES (PERMISSÕES)
--- ================================================================
+-- Tabela de roles
 CREATE TABLE IF NOT EXISTS tb_usuario_role (
     id_usuario_role BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_usuario BIGINT NOT NULL,
@@ -56,9 +52,7 @@ CREATE TABLE IF NOT EXISTS tb_usuario_role (
     UNIQUE KEY uk_usuario_role (id_usuario, role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ================================================================
--- 3. TABELA DE TOKENS DE RESET DE SENHA
--- ================================================================
+-- Tabela de reset de senha
 CREATE TABLE IF NOT EXISTS tb_password_reset_token (
     id_token BIGINT AUTO_INCREMENT PRIMARY KEY,
     token VARCHAR(255) NOT NULL UNIQUE,
@@ -77,29 +71,19 @@ CREATE TABLE IF NOT EXISTS tb_password_reset_token (
     INDEX idx_reset_token_expiracao (data_expiracao)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ================================================================
--- 4. DADOS INICIAIS
--- ================================================================
-
--- Inserir usuário administrador padrão
--- Senha: admin123 (deve ser alterada no primeiro acesso!)
+-- Seed admin (idempotente)
 INSERT INTO tb_usuario (nome, email, password_hash, ativo)
 SELECT
     'Administrador',
     'admin@catequese.com',
-    '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq', -- senha: admin123
+    '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq',
     TRUE
 WHERE NOT EXISTS (
-    SELECT 1
-    FROM tb_usuario
-    WHERE email = 'admin@catequese.com'
+    SELECT 1 FROM tb_usuario WHERE email = 'admin@catequese.com'
 );
 
--- Adicionar role de coordenador paroquial ao admin
 INSERT INTO tb_usuario_role (id_usuario, role)
-SELECT
-    u.id_usuario,
-    'COORDENADOR_PAROQUIAL'
+SELECT u.id_usuario, 'COORDENADOR_PAROQUIAL'
 FROM tb_usuario u
 WHERE u.email = 'admin@catequese.com'
   AND NOT EXISTS (
@@ -109,41 +93,6 @@ WHERE u.email = 'admin@catequese.com'
         AND ur.role = 'COORDENADOR_PAROQUIAL'
   );
 
--- ================================================================
--- 5. COMENTÁRIOS DAS TABELAS
--- ================================================================
-
-ALTER TABLE tb_usuario
-    COMMENT = 'Tabela de usuários do sistema com credenciais e informações de acesso';
-
-ALTER TABLE tb_usuario_role
-    COMMENT = 'Tabela de roles (permissões) dos usuários - relacionamento N:N';
-
-ALTER TABLE tb_password_reset_token
-    COMMENT = 'Tabela de tokens para recuperação de senha - válidos por 24h';
-
--- ================================================================
--- 6. DESCRIÇÃO DAS ROLES
--- ================================================================
-
--- COORDENADOR_PAROQUIAL:
---   - Acesso total ao sistema
---   - Gerencia todas as comunidades
---   - Gerencia todos os catequistas
---   - Gerencia usuários e permissões
-
--- COORDENADOR_COMUNIDADE:
---   - Acesso à sua comunidade específica
---   - Visualiza catequistas da comunidade
---   - Gerencia catequisandos da comunidade
-
--- CATEQUISTA:
---   - Acesso às suas turmas
---   - Gerencia presença dos alunos
---   - Visualiza dados dos catequisandos
-
--- ================================================================
--- FIM DO SCRIPT
--- ================================================================
-
+-- Verificacao rapida
+SELECT 'OK - Estrutura minima de login criada/verificada' AS status;
 

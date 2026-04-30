@@ -19,81 +19,112 @@
 
 -- Coordenador Paroquial
 INSERT INTO tb_usuario (nome, email, password_hash, ativo)
-VALUES (
+SELECT
     'João Silva',
     'joao.silva@catequese.com',
     '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq', -- senha: admin123
     TRUE
+WHERE NOT EXISTS (
+    SELECT 1 FROM tb_usuario WHERE email = 'joao.silva@catequese.com'
 );
 
 INSERT INTO tb_usuario_role (id_usuario, role)
-VALUES (
-    (SELECT id_usuario FROM tb_usuario WHERE email = 'joao.silva@catequese.com'),
-    'COORDENADOR_PAROQUIAL'
-);
+SELECT u.id_usuario, 'COORDENADOR_PAROQUIAL'
+FROM tb_usuario u
+WHERE u.email = 'joao.silva@catequese.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_usuario_role ur
+      WHERE ur.id_usuario = u.id_usuario AND ur.role = 'COORDENADOR_PAROQUIAL'
+  );
 
 -- Coordenador de Comunidade (vinculado à primeira comunidade)
 INSERT INTO tb_usuario (nome, email, password_hash, ativo, id_comunidade)
-VALUES (
+SELECT
     'Maria Santos',
     'maria.santos@catequese.com',
     '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq', -- senha: admin123
     TRUE,
     (SELECT id_comunidade FROM tb_comunidade LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM tb_usuario WHERE email = 'maria.santos@catequese.com'
 );
 
 INSERT INTO tb_usuario_role (id_usuario, role)
-VALUES (
-    (SELECT id_usuario FROM tb_usuario WHERE email = 'maria.santos@catequese.com'),
-    'COORDENADOR_COMUNIDADE'
-);
+SELECT u.id_usuario, 'COORDENADOR_COMUNIDADE'
+FROM tb_usuario u
+WHERE u.email = 'maria.santos@catequese.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_usuario_role ur
+      WHERE ur.id_usuario = u.id_usuario AND ur.role = 'COORDENADOR_COMUNIDADE'
+  );
 
 -- Catequista (vinculado ao primeiro catequista cadastrado)
 INSERT INTO tb_usuario (nome, email, password_hash, ativo, id_catequista)
-VALUES (
+SELECT
     'Pedro Oliveira',
     'pedro.oliveira@catequese.com',
     '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq', -- senha: admin123
     TRUE,
     (SELECT id_catequista FROM tb_catequista LIMIT 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM tb_usuario WHERE email = 'pedro.oliveira@catequese.com'
 );
 
 INSERT INTO tb_usuario_role (id_usuario, role)
-VALUES (
-    (SELECT id_usuario FROM tb_usuario WHERE email = 'pedro.oliveira@catequese.com'),
-    'CATEQUISTA'
-);
+SELECT u.id_usuario, 'CATEQUISTA'
+FROM tb_usuario u
+WHERE u.email = 'pedro.oliveira@catequese.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_usuario_role ur
+      WHERE ur.id_usuario = u.id_usuario AND ur.role = 'CATEQUISTA'
+  );
 
 -- Usuário com múltiplas roles (Coordenador de Comunidade + Catequista)
 INSERT INTO tb_usuario (nome, email, password_hash, ativo, id_comunidade, id_catequista)
-VALUES (
+SELECT
     'Ana Costa',
     'ana.costa@catequese.com',
     '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq', -- senha: admin123
     TRUE,
     (SELECT id_comunidade FROM tb_comunidade LIMIT 1),
     (SELECT id_catequista FROM tb_catequista LIMIT 1 OFFSET 1)
+WHERE NOT EXISTS (
+    SELECT 1 FROM tb_usuario WHERE email = 'ana.costa@catequese.com'
 );
 
 INSERT INTO tb_usuario_role (id_usuario, role)
-VALUES
-    ((SELECT id_usuario FROM tb_usuario WHERE email = 'ana.costa@catequese.com'), 'COORDENADOR_COMUNIDADE'),
-    ((SELECT id_usuario FROM tb_usuario WHERE email = 'ana.costa@catequese.com'), 'CATEQUISTA');
+SELECT u.id_usuario, r.role
+FROM tb_usuario u
+JOIN (
+    SELECT 'COORDENADOR_COMUNIDADE' AS role
+    UNION ALL
+    SELECT 'CATEQUISTA' AS role
+) r
+WHERE u.email = 'ana.costa@catequese.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_usuario_role ur
+      WHERE ur.id_usuario = u.id_usuario AND ur.role = r.role
+  );
 
 -- Usuário inativo (para testes de login)
 INSERT INTO tb_usuario (nome, email, password_hash, ativo)
-VALUES (
+SELECT
     'Carlos Inativo',
     'carlos.inativo@catequese.com',
     '$2a$10$SlVZrKwUmK8qIL2yDySe.aVbgvMdQx/k4U6S4vqKoXlQE7lJZGjPq', -- senha: admin123
     FALSE
+WHERE NOT EXISTS (
+    SELECT 1 FROM tb_usuario WHERE email = 'carlos.inativo@catequese.com'
 );
 
 INSERT INTO tb_usuario_role (id_usuario, role)
-VALUES (
-    (SELECT id_usuario FROM tb_usuario WHERE email = 'carlos.inativo@catequese.com'),
-    'CATEQUISTA'
-);
+SELECT u.id_usuario, 'CATEQUISTA'
+FROM tb_usuario u
+WHERE u.email = 'carlos.inativo@catequese.com'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_usuario_role ur
+      WHERE ur.id_usuario = u.id_usuario AND ur.role = 'CATEQUISTA'
+  );
 
 -- ================================================================
 -- VERIFICAR DADOS INSERIDOS

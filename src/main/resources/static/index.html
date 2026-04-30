@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cadastro de Fichas - Catequese</title>
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app" class="shell">
+    <header id="header">
+      <h1>CADASTRO DE FICHAS</h1>
+      <img src="/logo.png" alt="Logo Catequese" />
+    </header>
+
+    <div class="layout">
+      <section class="panel" id="section-catequisando">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Dados do catequisando</h2>
+        </div>
+        <div class="grid">
+          <label>
+            Nome Completo
+            <input id="nome" type="text" required />
+          </label>
+          <label>
+            Telefone
+            <input id="telefone" type="tel" required />
+          </label>
+          <label>
+            Email
+            <input id="email" type="email" required />
+          </label>
+          <label>
+            Data de nascimento
+            <input id="data-nascimento" type="date" required />
+          </label>
+          <label>
+            Nome do responsável
+            <input id="nome-responsavel" type="text" required />
+          </label>
+          <label>
+            Telefone do responsável
+            <input id="telefone-responsavel" type="tel" required />
+          </label>
+          <label>
+            Endereço
+            <input id="endereco" type="text" required />
+          </label>
+          <label>
+            Turma
+            <select id="turma-select" required>
+              <option value="">Selecione uma turma</option>
+            </select>
+          </label>
+          <label>
+            Comunidade
+            <select id="comunidade-select" required>
+              <option value="">Selecione uma comunidade</option>
+            </select>
+          </label>
+        </div>
+        <div style="border-top: 1px solid var(--stroke); padding-top: 16px; margin-top: 12px;"></div>
+        <div class="grid" id="section-documento">
+          <span class="muted" id="doc-hint"><strong>Selecione primeiro o tipo do documento.</strong></span>
+          <label style="grid-column: 1;">
+            Número do documento
+            <input id="numero-documento" type="text" required disabled />
+          </label>
+          <div style="grid-column: 2;">
+            <label style="margin-bottom: 12px;">Tipo de documento</label>
+            <div style="display: flex; gap: 20px;">
+              <label class="row" style="margin: 0;">
+                <input type="radio" name="tipo-documento" value="RG" required />
+                RG
+              </label>
+              <label class="row" style="margin: 0;">
+                <input type="radio" name="tipo-documento" value="CPF" />
+                CPF
+              </label>
+            </div>
+          </div>
+        </div>
+        <div style="border-top: 1px solid var(--stroke); padding-top: 16px; margin-top: 12px;"></div>
+        <label style="margin-bottom: 12px; display: block;">Intolerante a glúten?</label>
+        <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+          <input id="intolerante" type="checkbox" />
+          <span>Sim</span>
+        </label>
+        <div style="border-top: 1px solid var(--stroke); padding-top: 16px; margin-top: 12px;"></div>
+        <label style="margin-bottom: 12px; display: block;">Quais sacramentos já possui?</label>
+        <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+          <input id="batizado" type="checkbox" />
+          <span>Batismo</span>
+        </label>
+        <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+          <input id="primeira-eucaristia" type="checkbox" />
+          <span>Primeira Eucaristia</span>
+        </label>
+
+        <div style="border-top: 1px solid var(--stroke); padding-top: 16px; margin-top: 12px;">
+          <label style="margin-bottom: 12px; display: block;">Estado civil/convivência conjugal (Catequisando)</label>
+          <div style="display: grid; gap: 10px;">
+            <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+              <input type="radio" name="estado-conjugal" value="SOLTEIRO" />
+              <span>Solteiro(a)</span>
+            </label>
+            <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+              <input type="radio" name="estado-conjugal" value="CASADO_IGREJA" required />
+              <span>Casado(a) na Igreja</span>
+            </label>
+            <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+              <input type="radio" name="estado-conjugal" value="CASADO_CIVIL" />
+              <span>Casado(a) apenas no civil</span>
+            </label>
+            <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+              <input type="radio" name="estado-conjugal" value="UNIAO_ESTAVEL" />
+              <span>União estável</span>
+            </label>
+            <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+              <input type="radio" name="estado-conjugal" value="VIVE_COMPANHEIRO" />
+              <span>Vive com companheiro(a)</span>
+            </label>
+            <label style="display: flex; align-items: center; margin: 0; gap: 8px; cursor: pointer;">
+              <input type="radio" name="estado-conjugal" value="SEGUNDA_UNIAO" />
+              <span>Segunda união</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="section-anexos-assinatura">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Anexos e assinatura</h2>
+        </div>
+        <label>
+          <strong>Documento (RG, CPF, etc.)</strong>
+          <input id="arquivo-documento" type="file" data-file-type="DOCUMENTO" />
+        </label>
+        <label>
+          <strong>Certidão de Batismo</strong>
+          <input id="arquivo-certidao" type="file" data-file-type="CERTIDAO" />
+        </label>
+        <label>
+          <strong>Foto do Catequisando</strong>
+          <input id="arquivo-foto" type="file" data-file-type="FOTO" />
+        </label>
+        <div id="anexos-list" style="margin-top: 12px; display: none;">
+          <label style="margin-bottom: 8px; display: block; color: var(--muted); font-size: 0.9rem;">Arquivos selecionados:</label>
+          <div id="anexos-container" style="display: grid; gap: 8px;"></div>
+        </div>
+        <div class="signature">
+          <strong>Assinatura digital</strong>
+          <canvas id="signature-pad" width="800" height="240" tabindex="0"></canvas>
+          <div class="row">
+            <button id="btn-clear" class="secondary">Limpar assinatura</button>
+            <span class="muted">Use mouse ou toque para assinar.</span>
+          </div>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--stroke); margin: 24px 0;" />
+        <label>
+          <strong>Observações</strong>
+          <textarea id="observacoes" placeholder="Alguma observação importante..."></textarea>
+        </label>
+        <input id="data-inscricao" type="text" required style="background: transparent; border: none; text-align: right; cursor: default; font-style: italic; color: var(--muted); margin-top: 12px;" readonly aria-label="Data de inscrição" />
+      </section>
+
+      <section class="panel" id="section-envio">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Enviar cadastro</h2>
+        </div>
+        <button id="btn-submit">Cadastrar ficha</button>
+        <div id="result" class="summary"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/script.js"></script>
+</body>
+</html>
+

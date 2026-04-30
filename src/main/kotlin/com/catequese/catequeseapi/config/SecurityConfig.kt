@@ -37,8 +37,7 @@ class SecurityConfig(
                     "/favicon.ico",
                     "/logo.png",
                     "/style.css",
-                    "/script.js",
-                    "/public/**"
+                    "/script.js"
                 ).permitAll()
                 it.requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
                 it.requestMatchers("/api/auth/validate").authenticated()

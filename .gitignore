@@ -29,3 +29,8 @@ uploads/
 **/test-results/
 **/reports/
 
+# Frontend tooling artifacts (if generated again)
+src/main/resources/static/node_modules/
+src/main/resources/static/dist/
+src/main/resources/static/.vite/
+

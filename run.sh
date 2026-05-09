@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Script unico para validar ambiente e iniciar a aplicacao.
+# Script unico para validar ambiente e iniciar a Go API.
 # Uso:
-#   ./run.sh                 # usa profile dev por padrao
+#   ./run.sh                 # usa APP_ENV=dev por padrao
 #   ./run.sh --check         # valida e sai
-#   ./run.sh --dev           # forca profile dev
-#   ./run.sh --prod          # forca profile prod
+#   ./run.sh --dev           # forca APP_ENV=dev
+#   ./run.sh --prod          # forca APP_ENV=prod
 #   ./run.sh --prod --check  # valida prod e sai
 
-PROFILE="${SPRING_PROFILES_ACTIVE:-dev}"
+PROFILE="${APP_ENV:-dev}"
 CHECK_ONLY="false"
 
 for arg in "$@"; do
@@ -23,8 +23,8 @@ Uso:
   ./run.sh [--dev|--prod] [--check]
 
 Opcoes:
-  --dev    Forca profile dev
-  --prod   Forca profile prod
+  --dev    Forca APP_ENV=dev
+  --prod   Forca APP_ENV=prod
   --check  Apenas valida ambiente, sem iniciar app
 EOF
       exit 0
@@ -49,7 +49,6 @@ require_non_empty() {
 
 validate_jwt_secret() {
   local secret="${JWT_SECRET:-}"
-  # AuthService exige >= 64 bytes para HS512.
   if [ -n "$secret" ] && [ "${#secret}" -lt 64 ]; then
     echo "❌ JWT_SECRET deve ter pelo menos 64 caracteres."
     return 1
@@ -58,54 +57,46 @@ validate_jwt_secret() {
 }
 
 validate_dev() {
-  export SPRING_PROFILES_ACTIVE="dev"
+  export APP_ENV="dev"
 
   export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:mariadb://localhost:3306/catequese?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}"
   export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-root}"
   export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-}"
+  export GCS_BUCKET="${GCS_BUCKET:-catequese-escada-storage}"
 
-  if [[ "$SPRING_DATASOURCE_URL" != jdbc:mariadb://* ]]; then
-    echo "⚠️ SPRING_DATASOURCE_URL normalmente deve comecar com jdbc:mariadb://"
-    echo "   URL atual: $SPRING_DATASOURCE_URL"
-  fi
-
-  if [ -z "$SPRING_DATASOURCE_PASSWORD" ]; then
-    echo "❌ Senha do banco nao definida para dev."
-    echo "   Defina SPRING_DATASOURCE_PASSWORD."
+  if [ -z "$GCS_BUCKET" ]; then
+    echo "❌ GCS_BUCKET nao definido para dev."
     return 1
   fi
 
   validate_jwt_secret
 
   echo "✅ Ambiente DEV validado"
-  echo "   Profile: $SPRING_PROFILES_ACTIVE"
+  echo "   APP_ENV: $APP_ENV"
   echo "   URL: $SPRING_DATASOURCE_URL"
   echo "   Usuario: $SPRING_DATASOURCE_USERNAME"
   echo "   Senha: ******"
+  echo "   Bucket: $GCS_BUCKET"
 }
 
 validate_prod() {
-  export SPRING_PROFILES_ACTIVE="prod"
+  export APP_ENV="prod"
 
   require_non_empty SPRING_DATASOURCE_URL
   require_non_empty SPRING_DATASOURCE_USERNAME
   require_non_empty SPRING_DATASOURCE_PASSWORD
   require_non_empty JWT_SECRET
-
-  if [[ "$SPRING_DATASOURCE_URL" != jdbc:mysql://* ]]; then
-    echo "❌ Em prod a URL deve comecar com jdbc:mysql://"
-    echo "   URL atual: $SPRING_DATASOURCE_URL"
-    return 1
-  fi
+  require_non_empty GCS_BUCKET
 
   validate_jwt_secret
 
   echo "✅ Ambiente PROD validado"
-  echo "   Profile: $SPRING_PROFILES_ACTIVE"
+  echo "   APP_ENV: $APP_ENV"
   echo "   URL: $SPRING_DATASOURCE_URL"
   echo "   Usuario: $SPRING_DATASOURCE_USERNAME"
   echo "   Senha: ******"
   echo "   JWT_SECRET: ******"
+  echo "   Bucket: $GCS_BUCKET"
 }
 
 if [ "$PROFILE" = "dev" ]; then
@@ -123,5 +114,6 @@ if [ "$CHECK_ONLY" = "true" ]; then
 fi
 
 echo "🚀 Iniciando aplicacao..."
-./gradlew bootRun --args="--spring.profiles.active=$SPRING_PROFILES_ACTIVE"
+cd go-api
+go run ./cmd/api
 

@@ -1,29 +1,21 @@
-# ===== Build stage =====
-FROM gradle:8.7-jdk21 AS builder
+# ===== Build stage (Go API) =====
+FROM golang:1.25 AS builder
 WORKDIR /app
 
-# Copia só arquivos de build primeiro (melhor cache)
-COPY build.gradle.kts settings.gradle.kts gradle.properties* ./
-COPY gradle ./gradle
+# Copia apenas módulo Go para melhor cache de dependências.
+COPY go-api/go.mod go-api/go.sum ./
+RUN go mod download
 
-# Baixa dependências (cache)
-RUN gradle dependencies --no-daemon
-
-# Agora copia o resto do projeto
-COPY . .
-
-# Gera o JAR executável
-RUN gradle clean bootJar -x test --no-daemon
+# Copia código e gera binário estático.
+COPY go-api/ ./
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/go-api ./cmd/api
 
 # ===== Runtime stage =====
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-COPY --from=builder /app/build/libs/*.jar app.jar
+FROM gcr.io/distroless/base-debian12
+WORKDIR /
+COPY --from=builder /bin/go-api /go-api
 
-# Render define PORT em runtime; expomos por padrão
-EXPOSE 10000
+# PORT é injetada em runtime; padrão da app é 8080.
+EXPOSE 8080
 
-# Dica: define memória (opcional, pode remover)
-# ENV JAVA_OPTS="-XX:MaxRAMPercentage=75"
-
-CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["/go-api"]

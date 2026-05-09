@@ -1,0 +1,525 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-04-30T12:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v10",
+  "resources": [
+    {
+      "_id": "wrk_catequese_auth",
+      "_type": "workspace",
+      "name": "Catequese API - Go Migracao",
+      "description": "Colecao para validar endpoints migrados da API Go.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_catequese_base",
+      "_type": "environment",
+      "parentId": "wrk_catequese_auth",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "login_email": "admin@catequese.com",
+        "login_password": "admin123",
+        "access_token": "",
+        "refresh_token": "",
+        "id_catequisando": 1,
+        "id_evento": 1,
+        "id_documento": 1,
+        "id_catequista": 1,
+        "id_coordenador": 1,
+        "id_conhecimento": 1,
+        "id_permissao": 1
+      }
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Autenticacao",
+      "description": "Endpoints de login, refresh e logout"
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.login_email }}\",\n  \"password\": \"{{ _.login_password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Executar primeiro. Copie token e refreshToken da resposta para as variaveis access_token e refresh_token do Environment."
+    },
+    {
+      "_id": "req_refresh",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST Refresh",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/refresh",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refreshToken\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_logout",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST Logout",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/logout",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refreshToken\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "fld_usuario",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Usuarios",
+      "description": "Cadastro e consulta de usuarios (ROLE_COORDENADOR_PAROQUIAL)"
+    },
+    {
+      "_id": "req_create_usuario",
+      "_type": "request",
+      "parentId": "fld_usuario",
+      "name": "POST Criar Usuario",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/usuarios",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Usuario Teste\",\n  \"email\": \"usuario.teste@catequese.com\",\n  \"password\": \"Senha@123\",\n  \"roles\": [\"CATEQUISTA\"],\n  \"idComunidade\": null,\n  \"idCatequista\": null\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "description": "Requer access token valido de usuario com role COORDENADOR_PAROQUIAL."
+    },
+    {
+      "_id": "req_list_usuarios",
+      "_type": "request",
+      "parentId": "fld_usuario",
+      "name": "GET Listar Usuarios",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/usuarios",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_eventos",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Eventos",
+      "description": "CRUD basico de eventos"
+    },
+    {
+      "_id": "req_create_evento",
+      "_type": "request",
+      "parentId": "fld_eventos",
+      "name": "POST Criar Evento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/eventos",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Retiro de Catequese\",\n  \"descricao\": \"Encontro formativo\",\n  \"dataEvento\": \"2026-07-10\",\n  \"local\": \"Sala 3\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_list_eventos",
+      "_type": "request",
+      "parentId": "fld_eventos",
+      "name": "GET Listar Eventos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/eventos",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_presencas",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Presencas",
+      "description": "Cadastro e listagem de presencas por evento"
+    },
+    {
+      "_id": "req_create_presenca",
+      "_type": "request",
+      "parentId": "fld_presencas",
+      "name": "POST Criar Presenca",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/presencas",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"idEvento\": {{ _.id_evento }},\n  \"idCatequisando\": {{ _.id_catequisando }},\n  \"presente\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_list_presencas",
+      "_type": "request",
+      "parentId": "fld_presencas",
+      "name": "GET Listar Presencas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/presencas",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_documentos",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Documentos",
+      "description": "CRUD de documentos e mudanca de status"
+    },
+    {
+      "_id": "req_create_documento",
+      "_type": "request",
+      "parentId": "fld_documentos",
+      "name": "POST Criar Documento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/documentos",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"idCatequisando\": {{ _.id_catequisando }},\n  \"tipoDocumento\": \"CERTIDAO\",\n  \"status\": \"PENDENTE\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_update_documento_status",
+      "_type": "request",
+      "parentId": "fld_documentos",
+      "name": "PATCH Atualizar Status Documento",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/documentos/{{ _.id_documento }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"APROVADO\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_catequistas",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Catequistas",
+      "description": "CRUD basico de catequistas"
+    },
+    {
+      "_id": "req_create_catequista",
+      "_type": "request",
+      "parentId": "fld_catequistas",
+      "name": "POST Criar Catequista",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/catequistas",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Catequista Teste\",\n  \"telefone\": \"11999999999\",\n  \"email\": \"catequista@catequese.com\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_list_catequistas",
+      "_type": "request",
+      "parentId": "fld_catequistas",
+      "name": "GET Listar Catequistas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequistas",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_coordenadores",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Coordenadores",
+      "description": "CRUD basico de coordenadores"
+    },
+    {
+      "_id": "req_create_coordenador",
+      "_type": "request",
+      "parentId": "fld_coordenadores",
+      "name": "POST Criar Coordenador",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/coordenadores",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Coordenador Teste\",\n  \"telefone\": \"11888888888\",\n  \"email\": \"coordenador@catequese.com\",\n  \"nivelOrganizacional\": \"PAROQUIAL\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_list_coordenadores",
+      "_type": "request",
+      "parentId": "fld_coordenadores",
+      "name": "GET Listar Coordenadores",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/coordenadores",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_conhecimentos",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Conhecimentos",
+      "description": "CRUD de conhecimentos de catequista"
+    },
+    {
+      "_id": "req_create_conhecimento",
+      "_type": "request",
+      "parentId": "fld_conhecimentos",
+      "name": "POST Criar Conhecimento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/conhecimentos",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"idCatequista\": {{ _.id_catequista }},\n  \"tipoConhecimento\": \"LITURGIA\",\n  \"nivel\": \"AVANCADO\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_list_conhecimentos",
+      "_type": "request",
+      "parentId": "fld_conhecimentos",
+      "name": "GET Listar Conhecimentos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/conhecimentos",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_permissoes",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Permissoes",
+      "description": "CRUD basico de permissoes"
+    },
+    {
+      "_id": "req_create_permissao",
+      "_type": "request",
+      "parentId": "fld_permissoes",
+      "name": "POST Criar Permissao",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/permissoes",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nomePermissao\": \"VISUALIZAR_RELATORIOS\",\n  \"descricao\": \"Permite visualizar relatorios administrativos\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_list_permissoes",
+      "_type": "request",
+      "parentId": "fld_permissoes",
+      "name": "GET Listar Permissoes",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/permissoes",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_upload",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_auth",
+      "name": "Upload",
+      "description": "Upload multipart de arquivos"
+    },
+    {
+      "_id": "req_upload_file",
+      "_type": "request",
+      "parentId": "fld_upload",
+      "name": "POST Upload Arquivo",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/files",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "file",
+            "type": "file",
+            "fileName": ""
+          },
+          {
+            "name": "fileType",
+            "value": "documentos"
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "description": "Anexe um arquivo no campo file e opcionalmente envie fileType para separar por pasta logica."
+    },
+    {
+      "_id": "req_upload_batch",
+      "_type": "request",
+      "parentId": "fld_upload",
+      "name": "POST Upload Lote Atomico",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/files/batch",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "files",
+            "type": "file",
+            "fileName": ""
+          },
+          {
+            "name": "files",
+            "type": "file",
+            "fileName": ""
+          },
+          {
+            "name": "fileTypes",
+            "value": "documentos"
+          },
+          {
+            "name": "fileTypes",
+            "value": "certidoes"
+          }
+        ]
+      },
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ],
+      "description": "Envie multiplos arquivos no mesmo request. Se qualquer upload falhar, o backend desfaz os objetos ja enviados e retorna erro."
+    }
+  ]
+}
+

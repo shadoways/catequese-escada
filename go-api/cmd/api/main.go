@@ -56,7 +56,16 @@ func main() {
 	coordenadorService := coordenador.NewService(coordenador.NewRepository(db))
 	conhecimentoService := conhecimento.NewService(conhecimento.NewRepository(db))
 	permissaoService := permissao.NewService(permissao.NewRepository(db))
-	uploadService, err := upload.NewService(cfg.GCSBucket, cfg.UploadPublicBaseURL)
+	var uploadService *upload.Service
+	switch cfg.UploadStorage {
+	case "local":
+		uploadService, err = upload.NewLocalService(cfg.UploadLocalDir, cfg.UploadPublicBaseURL)
+	case "gcs":
+		uploadService, err = upload.NewService(cfg.GCSBucket, cfg.UploadPublicBaseURL)
+	default:
+		err = nil
+		log.Fatalf("upload config error: storage mode unsupported: %s", cfg.UploadStorage)
+	}
 	if err != nil {
 		log.Fatalf("upload config error: %v", err)
 	}
@@ -72,7 +81,7 @@ func main() {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	log.Printf("go-api running on :%s env=%s", cfg.Port, cfg.AppEnv)
+	log.Printf("go-api running on :%s env=%s storage=%s", cfg.Port, cfg.AppEnv, cfg.UploadStorage)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}

@@ -43,6 +43,7 @@ func New(
 	usuarioService *usuario.Service,
 ) http.Handler {
 	r := chi.NewRouter()
+	r.Use(middleware.RequestLogger())
 	authHandler := handlers.NewAuthHandler(jwtService, authService)
 	cateqHandler := handlers.NewCatequisandoHandler(cateqRepo)
 	fichaHandler := handlers.NewFichaHandler(fichaService)

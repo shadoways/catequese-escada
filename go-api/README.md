@@ -41,10 +41,13 @@ go run ./cmd/api
 ## Environment Variables
 
 - PORT (default: 8080)
+- APP_ENV (default: dev)
+- UPLOAD_STORAGE (`local` for dev by default, `gcs` required in prod)
+- UPLOAD_LOCAL_DIR (default: uploads; used when `UPLOAD_STORAGE=local`)
 - JWT_SECRET (must be >= 64 chars)
 - JWT_EXPIRATION_MS (default: 900000)
 - JWT_REFRESH_EXPIRATION_MS (default: 604800000)
-- GCS_BUCKET (default: catequese-escada-storage)
+- GCS_BUCKET (required when `UPLOAD_STORAGE=gcs`)
 - GOOGLE_APPLICATION_CREDENTIALS_JSON (optional; JSON completo da Service Account)
 - UPLOAD_PUBLIC_BASE_URL (default: empty; when set, upload response `url` is generated with this base)
 - UPLOAD_MAX_MB (default: 10)
@@ -59,6 +62,7 @@ Database options:
 ## Notes
 
 - No schema changes are performed by this service.
-- Upload storage is GCS-only (no local fallback).
+- Upload storage can be local only in dev (`UPLOAD_STORAGE=local`) to avoid polluting production buckets.
+- In production (`APP_ENV=prod`), storage is enforced as GCS.
 - `POST /api/files/batch` is atomic: if any file upload fails, uploaded objects from the same request are rolled back.
 - Unknown protected routes now return 404.

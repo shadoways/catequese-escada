@@ -58,15 +58,19 @@ validate_jwt_secret() {
 
 validate_dev() {
   export APP_ENV="dev"
+  export UPLOAD_STORAGE="${UPLOAD_STORAGE:-local}"
+  export UPLOAD_LOCAL_DIR="${UPLOAD_LOCAL_DIR:-uploads}"
 
-  export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:mariadb://localhost:3306/catequese?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}"
+  export SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:mariadb://localhost:3306/catequese?serverTimezone=UTC}"
   export SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-root}"
   export SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-}"
-  export GCS_BUCKET="${GCS_BUCKET:-catequese-escada-storage}"
 
-  if [ -z "$GCS_BUCKET" ]; then
-    echo "❌ GCS_BUCKET nao definido para dev."
-    return 1
+  if [ "$UPLOAD_STORAGE" = "gcs" ]; then
+    export GCS_BUCKET="${GCS_BUCKET:-catequese-escada-storage}"
+    if [ -z "$GCS_BUCKET" ]; then
+      echo "❌ GCS_BUCKET nao definido para dev com UPLOAD_STORAGE=gcs."
+      return 1
+    fi
   fi
 
   validate_jwt_secret
@@ -76,11 +80,17 @@ validate_dev() {
   echo "   URL: $SPRING_DATASOURCE_URL"
   echo "   Usuario: $SPRING_DATASOURCE_USERNAME"
   echo "   Senha: ******"
-  echo "   Bucket: $GCS_BUCKET"
+  echo "   Storage: $UPLOAD_STORAGE"
+  if [ "$UPLOAD_STORAGE" = "local" ]; then
+    echo "   Upload dir: $UPLOAD_LOCAL_DIR"
+  else
+    echo "   Bucket: $GCS_BUCKET"
+  fi
 }
 
 validate_prod() {
   export APP_ENV="prod"
+  export UPLOAD_STORAGE="gcs"
 
   require_non_empty SPRING_DATASOURCE_URL
   require_non_empty SPRING_DATASOURCE_USERNAME

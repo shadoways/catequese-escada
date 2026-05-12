@@ -16,6 +16,8 @@ type Config struct {
 	JWTSecret            string
 	JWTExpiration        time.Duration
 	JWTRefreshExpiration time.Duration
+	UploadStorage        string
+	UploadLocalDir       string
 	GCSBucket            string
 	UploadPublicBaseURL  string
 	UploadMaxMB          int64
@@ -26,9 +28,11 @@ func Load() (Config, error) {
 		AppEnv:              getEnv("APP_ENV", "dev"),
 		Port:                getEnv("PORT", "8080"),
 		JWTSecret:           getEnv("JWT_SECRET", "dev-only-change-this-secret-key-before-production-minimum-64-characters-1234567890"),
-		GCSBucket:           getEnv("GCS_BUCKET", "catequese-escada-storage"),
+		GCSBucket:           getEnv("GCS_BUCKET", ""),
 		UploadPublicBaseURL: getEnv("UPLOAD_PUBLIC_BASE_URL", ""),
+		UploadLocalDir:      getEnv("UPLOAD_LOCAL_DIR", "uploads"),
 	}
+	cfg.UploadStorage = strings.ToLower(getEnv("UPLOAD_STORAGE", defaultUploadStorage(cfg.AppEnv)))
 
 	jwtExpMs, err := getEnvAsInt64("JWT_EXPIRATION_MS", 900000)
 	if err != nil {
@@ -55,7 +59,27 @@ func Load() (Config, error) {
 	}
 	cfg.DBDSN = dsn
 
+	if cfg.UploadStorage != "gcs" && cfg.UploadStorage != "local" {
+		return Config{}, fmt.Errorf("invalid UPLOAD_STORAGE: %s (use gcs or local)", cfg.UploadStorage)
+	}
+	if cfg.AppEnv == "prod" && cfg.UploadStorage != "gcs" {
+		return Config{}, fmt.Errorf("APP_ENV=prod requires UPLOAD_STORAGE=gcs")
+	}
+	if cfg.UploadStorage == "local" && cfg.AppEnv != "dev" {
+		return Config{}, fmt.Errorf("UPLOAD_STORAGE=local is only allowed when APP_ENV=dev")
+	}
+	if cfg.UploadStorage == "gcs" && strings.TrimSpace(cfg.GCSBucket) == "" {
+		return Config{}, fmt.Errorf("GCS_BUCKET is required when UPLOAD_STORAGE=gcs")
+	}
+
 	return cfg, nil
+}
+
+func defaultUploadStorage(appEnv string) string {
+	if strings.EqualFold(strings.TrimSpace(appEnv), "prod") {
+		return "gcs"
+	}
+	return "local"
 }
 
 func buildDSNFromSpringVars() (string, error) {
@@ -95,6 +119,8 @@ func parseJDBCURL(jdbcURL string) (hostPort string, dbName string, params string
 
 	q := u.Query()
 	q.Del("serverTimezone")
+	q.Del("allowPublicKeyRetrieval")
+	q.Del("useSSL")
 	q.Set("loc", "UTC")
 
 	return u.Host, name, q.Encode(), nil

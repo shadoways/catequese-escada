@@ -45,6 +45,18 @@ func (r *Repository) FindByID(ctx context.Context, id int64) (Documento, error) 
 	return scanDocumento(row)
 }
 
+func (r *Repository) FindByCatequisandoIDAndTipoDocumento(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error) {
+	const query = `
+SELECT id_documento, COALESCE(tipo_documento, ''), COALESCE(caminho_arquivo, ''), data_envio, id_catequisando, COALESCE(tipo_status, 'PENDENTE')
+FROM tb_documentos
+WHERE id_catequisando = ?
+  AND UPPER(TRIM(COALESCE(tipo_documento, ''))) = UPPER(TRIM(?))
+ORDER BY id_documento DESC
+LIMIT 1`
+	row := r.db.QueryRowContext(ctx, query, catequisandoID, tipoDocumento)
+	return scanDocumento(row)
+}
+
 func (r *Repository) ExistsByID(ctx context.Context, id int64) (bool, error) {
 	var exists bool
 	if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM tb_documentos WHERE id_documento = ?)`, id).Scan(&exists); err != nil {

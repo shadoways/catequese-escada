@@ -40,13 +40,39 @@ ORDER BY id_ficha ASC`
 	return result, nil
 }
 
-func (r *Repository) FindByID(ctx context.Context, id int64) (fichaDB, error) {
+func (r *Repository) FindByCatequisandoID(ctx context.Context, catequisandoID int64) ([]fichaDB, error) {
 	const query = `
 SELECT id_ficha, data_inscricao, observacoes, id_catequisando
 FROM tb_ficha_inscricao
-WHERE id_ficha = ?
+WHERE id_catequisando = ?
+ORDER BY id_ficha ASC`
+	rows, err := r.db.QueryContext(ctx, query, catequisandoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]fichaDB, 0)
+	for rows.Next() {
+		item, err := scanFicha(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (r *Repository) FindByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64) (fichaDB, error) {
+	const query = `
+SELECT id_ficha, data_inscricao, observacoes, id_catequisando
+FROM tb_ficha_inscricao
+WHERE id_ficha = ? AND id_catequisando = ?
 LIMIT 1`
-	row := r.db.QueryRowContext(ctx, query, id)
+	row := r.db.QueryRowContext(ctx, query, id, catequisandoID)
 	return scanFicha(row)
 }
 
@@ -61,22 +87,17 @@ VALUES (NULLIF(?, ''), NULLIF(?, ''), ?)`
 	return res.LastInsertId()
 }
 
-func (r *Repository) Update(ctx context.Context, id int64, f fichaDB) error {
+func (r *Repository) UpdateByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64, f fichaDB) error {
 	const query = `
 UPDATE tb_ficha_inscricao
 SET data_inscricao = NULLIF(?, ''), observacoes = NULLIF(?, ''), id_catequisando = ?
-WHERE id_ficha = ?`
-	_, err := r.db.ExecContext(ctx, query, f.DataInscricao, f.Observacoes, f.CatequisandoID, id)
+WHERE id_ficha = ? AND id_catequisando = ?`
+	_, err := r.db.ExecContext(ctx, query, f.DataInscricao, f.Observacoes, f.CatequisandoID, id, catequisandoID)
 	return err
 }
 
-func (r *Repository) DeleteByID(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM tb_ficha_inscricao WHERE id_ficha = ?`, id)
-	return err
-}
-
-func (r *Repository) DeleteByCatequisandoID(ctx context.Context, catequisandoID int64) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM tb_ficha_inscricao WHERE id_catequisando = ?`, catequisandoID)
+func (r *Repository) DeleteByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM tb_ficha_inscricao WHERE id_ficha = ? AND id_catequisando = ?`, id, catequisandoID)
 	return err
 }
 

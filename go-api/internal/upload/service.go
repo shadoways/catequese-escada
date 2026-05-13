@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -258,6 +259,88 @@ func (s *Service) DeleteObject(ctx context.Context, objectName string) error {
 		return fmt.Errorf("objectName não pode ser vazio")
 	}
 	return s.store.Delete(ctx, objectName)
+}
+
+func (s *Service) DeletePath(ctx context.Context, storedPath string) error {
+	objectName, err := s.objectNameFromStoredPath(storedPath)
+	if err != nil {
+		return err
+	}
+	return s.DeleteObject(ctx, objectName)
+}
+
+func (s *Service) objectNameFromStoredPath(storedPath string) (string, error) {
+	path := strings.TrimSpace(storedPath)
+	if path == "" {
+		return "", fmt.Errorf("storedPath não pode ser vazio")
+	}
+
+	if strings.HasPrefix(path, "gs://") {
+		rest := strings.TrimPrefix(path, "gs://")
+		parts := strings.SplitN(rest, "/", 2)
+		if len(parts) != 2 || strings.TrimSpace(parts[1]) == "" {
+			return "", fmt.Errorf("storedPath inválido: %s", storedPath)
+		}
+		return parts[1], nil
+	}
+
+	if strings.HasPrefix(path, "https://storage.googleapis.com/") {
+		rest := strings.TrimPrefix(path, "https://storage.googleapis.com/")
+		parts := strings.SplitN(rest, "/", 2)
+		if len(parts) != 2 || strings.TrimSpace(parts[1]) == "" {
+			return "", fmt.Errorf("storedPath inválido: %s", storedPath)
+		}
+		return parts[1], nil
+	}
+
+	if strings.TrimSpace(s.publicBaseURL) != "" {
+		base := strings.TrimRight(strings.TrimSpace(s.publicBaseURL), "/") + "/"
+		if strings.HasPrefix(path, base) {
+			candidate := strings.TrimPrefix(path, base)
+			if candidate == "" {
+				return "", fmt.Errorf("storedPath inválido: %s", storedPath)
+			}
+			return candidate, nil
+		}
+	}
+
+	if strings.HasPrefix(path, "/uploads/") {
+		candidate := strings.TrimPrefix(path, "/uploads/")
+		if candidate == "" {
+			return "", fmt.Errorf("storedPath inválido: %s", storedPath)
+		}
+		return candidate, nil
+	}
+
+	if parsed, err := url.Parse(path); err == nil && parsed.Scheme != "" && parsed.Path != "" {
+		candidate := strings.TrimPrefix(parsed.Path, "/")
+		parts := strings.SplitN(candidate, "/", 2)
+		if len(parts) == 2 && strings.TrimSpace(parts[1]) != "" {
+			return parts[1], nil
+		}
+	}
+
+	if s.storageType == "local" && strings.TrimSpace(s.localDir) != "" {
+		normalizedPath := filepath.ToSlash(filepath.Clean(path))
+		normalizedRoot := filepath.ToSlash(filepath.Clean(s.localDir))
+		prefix := normalizedRoot + "/"
+		if strings.HasPrefix(normalizedPath, prefix) {
+			candidate := strings.TrimPrefix(normalizedPath, prefix)
+			if candidate == "" {
+				return "", fmt.Errorf("storedPath inválido: %s", storedPath)
+			}
+			return candidate, nil
+		}
+	}
+
+	if strings.HasPrefix(path, "/") {
+		path = strings.TrimPrefix(path, "/")
+	}
+	if path == "" {
+		return "", fmt.Errorf("storedPath inválido: %s", storedPath)
+	}
+
+	return path, nil
 }
 
 func sanitizeSegment(v string) string {

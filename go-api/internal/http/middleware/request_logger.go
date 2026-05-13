@@ -34,14 +34,17 @@ func RequestLogger() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := atomic.AddUint64(&requestCounter, 1)
+			correlationID := EnsureCorrelationID(CorrelationIDFromHeaders(r.Header))
+			w.Header().Set(CorrelationIDHeader, correlationID)
+			r = r.WithContext(WithCorrelationID(r.Context(), correlationID))
 			start := time.Now()
-			log.Printf("[req:%d] started method=%s path=%s remote=%s", requestID, r.Method, r.URL.Path, r.RemoteAddr)
+			log.Printf("[req:%d corr:%s] started method=%s path=%s remote=%s", requestID, correlationID, r.Method, r.URL.Path, r.RemoteAddr)
 
 			wrapped := newLoggingResponseWriter(w)
 			next.ServeHTTP(wrapped, r)
 
 			duration := time.Since(start)
-			log.Printf("[req:%d] completed status=%d bytes=%d duration=%s method=%s path=%s", requestID, wrapped.statusCode, wrapped.bytes, duration, r.Method, r.URL.Path)
+			log.Printf("[req:%d corr:%s] completed status=%d bytes=%d duration=%s method=%s path=%s", requestID, correlationID, wrapped.statusCode, wrapped.bytes, duration, r.Method, r.URL.Path)
 		})
 	}
 }

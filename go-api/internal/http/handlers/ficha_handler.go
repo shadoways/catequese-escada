@@ -18,34 +18,43 @@ type FichaHandler struct {
 }
 
 type fichaService interface {
-	FindAll(ctx context.Context) ([]ficha.FichaInscricao, error)
-	FindByID(ctx context.Context, id int64) (ficha.FichaInscricao, error)
-	Create(ctx context.Context, req ficha.FichaInscricaoRequest) (ficha.FichaInscricao, error)
-	Update(ctx context.Context, id int64, req ficha.FichaInscricaoRequest) (ficha.FichaInscricao, error)
-	DeleteByID(ctx context.Context, id int64) error
-	DeleteByCatequisandoID(ctx context.Context, catequisandoID int64) error
+	FindByCatequisandoID(ctx context.Context, catequisandoID int64) ([]ficha.FichaInscricao, error)
+	FindByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64) (ficha.FichaInscricao, error)
+	CreateForCatequisando(ctx context.Context, catequisandoID int64, req ficha.FichaInscricaoRequest) (ficha.FichaInscricao, error)
+	UpdateForCatequisando(ctx context.Context, id int64, catequisandoID int64, req ficha.FichaInscricaoRequest) (ficha.FichaInscricao, error)
+	DeleteByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64) error
 }
 
 func NewFichaHandler(service fichaService) *FichaHandler {
 	return &FichaHandler{service: service}
 }
 
-func (h *FichaHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	items, err := h.service.FindAll(r.Context())
+func (h *FichaHandler) GetByCatequisandoID(w http.ResponseWriter, r *http.Request) {
+	catequisandoID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "Erro interno")
+		response.Error(w, http.StatusBadRequest, "Requisição inválida")
+		return
+	}
+	items, err := h.service.FindByCatequisandoID(r.Context(), catequisandoID)
+	if err != nil {
+		h.mapDomainError(w, err)
 		return
 	}
 	response.JSON(w, http.StatusOK, items)
 }
 
 func (h *FichaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	catequisandoID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "Requisição inválida")
 		return
 	}
-	item, err := h.service.FindByID(r.Context(), id)
+	fichaID, err := strconv.ParseInt(chi.URLParam(r, "idFicha"), 10, 64)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Requisição inválida")
+		return
+	}
+	item, err := h.service.FindByIDAndCatequisandoID(r.Context(), fichaID, catequisandoID)
 	if err != nil {
 		h.mapDomainError(w, err)
 		return
@@ -54,22 +63,32 @@ func (h *FichaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FichaHandler) Create(w http.ResponseWriter, r *http.Request) {
+	catequisandoID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Requisição inválida")
+		return
+	}
 	var req ficha.FichaInscricaoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Requisição inválida")
 		return
 	}
-	item, err := h.service.Create(r.Context(), req)
+	item, err := h.service.CreateForCatequisando(r.Context(), catequisandoID, req)
 	if err != nil {
 		h.mapDomainError(w, err)
 		return
 	}
-	w.Header().Set("Location", "/api/fichas/"+strconv.FormatInt(item.IDFicha, 10))
+	w.Header().Set("Location", "/api/catequisandos/"+strconv.FormatInt(catequisandoID, 10)+"/fichas/"+strconv.FormatInt(item.IDFicha, 10))
 	response.JSON(w, http.StatusCreated, item)
 }
 
 func (h *FichaHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	catequisandoID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Requisição inválida")
+		return
+	}
+	fichaID, err := strconv.ParseInt(chi.URLParam(r, "idFicha"), 10, 64)
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "Requisição inválida")
 		return
@@ -79,7 +98,7 @@ func (h *FichaHandler) Update(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "Requisição inválida")
 		return
 	}
-	item, err := h.service.Update(r.Context(), id, req)
+	item, err := h.service.UpdateForCatequisando(r.Context(), fichaID, catequisandoID, req)
 	if err != nil {
 		h.mapDomainError(w, err)
 		return
@@ -88,25 +107,17 @@ func (h *FichaHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FichaHandler) DeleteByID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	catequisandoID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "Requisição inválida")
 		return
 	}
-	if err := h.service.DeleteByID(r.Context(), id); err != nil {
-		h.mapDomainError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *FichaHandler) DeleteByCatequisandoID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(chi.URLParam(r, "catequisandoId"), 10, 64)
+	fichaID, err := strconv.ParseInt(chi.URLParam(r, "idFicha"), 10, 64)
 	if err != nil {
 		response.Error(w, http.StatusBadRequest, "Requisição inválida")
 		return
 	}
-	if err := h.service.DeleteByCatequisandoID(r.Context(), id); err != nil {
+	if err := h.service.DeleteByIDAndCatequisandoID(r.Context(), fichaID, catequisandoID); err != nil {
 		h.mapDomainError(w, err)
 		return
 	}

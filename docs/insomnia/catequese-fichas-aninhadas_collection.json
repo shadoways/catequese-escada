@@ -1,0 +1,205 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-05-12T20:30:00.000Z",
+  "__export_source": "insomnia.desktop.app:v10",
+  "resources": [
+    {
+      "_id": "wrk_catequese_fichas_nested",
+      "_type": "workspace",
+      "name": "Catequese API - Fichas Aninhadas",
+      "description": "Colecao para validar o novo contrato de fichas como subrecurso de catequisandos.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_catequese_fichas_nested_base",
+      "_type": "environment",
+      "parentId": "wrk_catequese_fichas_nested",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "login_email": "admin@catequese.com",
+        "login_password": "admin123",
+        "access_token": "",
+        "refresh_token": "",
+        "id_catequisando": 1,
+        "id_ficha": 1
+      }
+    },
+    {
+      "_id": "fld_auth_nested",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_fichas_nested",
+      "name": "Auth",
+      "description": "Execute login primeiro e copie access_token/refresh_token para o environment."
+    },
+    {
+      "_id": "req_auth_health_nested",
+      "_type": "request",
+      "parentId": "fld_auth_nested",
+      "name": "GET Health (public)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/health"
+    },
+    {
+      "_id": "req_auth_login_nested",
+      "_type": "request",
+      "parentId": "fld_auth_nested",
+      "name": "POST Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.login_email }}\",\n  \"password\": \"{{ _.login_password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_auth_validate_nested",
+      "_type": "request",
+      "parentId": "fld_auth_nested",
+      "name": "GET Validate",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/validate",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_catequisando_nested",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_fichas_nested",
+      "name": "Catequisandos",
+      "description": "Operacoes do recurso principal catequisando."
+    },
+    {
+      "_id": "req_catequisando_list_nested",
+      "_type": "request",
+      "parentId": "fld_catequisando_nested",
+      "name": "GET Listar Catequisandos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequisandos/",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequisando_get_nested",
+      "_type": "request",
+      "parentId": "fld_catequisando_nested",
+      "name": "GET Catequisando por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_fichas_nested",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_fichas_nested",
+      "name": "Fichas (Subrecurso)",
+      "description": "Novo contrato: fichas vinculadas ao catequisando via rota aninhada."
+    },
+    {
+      "_id": "req_fichas_list_by_cateq_nested",
+      "_type": "request",
+      "parentId": "fld_fichas_nested",
+      "name": "GET Fichas por Catequisando",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_fichas_create_nested",
+      "_type": "request",
+      "parentId": "fld_fichas_nested",
+      "name": "POST Criar Ficha para Catequisando",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"dataInscricao\": \"2026-05-12\",\n  \"observacoes\": \"Ficha anual 2026\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_fichas_get_by_id_nested",
+      "_type": "request",
+      "parentId": "fld_fichas_nested",
+      "name": "GET Ficha por ID (escopo catequisando)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/{{ _.id_ficha }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_fichas_update_nested",
+      "_type": "request",
+      "parentId": "fld_fichas_nested",
+      "name": "PUT Atualizar Ficha",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/{{ _.id_ficha }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"dataInscricao\": \"2026-05-13\",\n  \"observacoes\": \"Ficha atualizada\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_fichas_delete_nested",
+      "_type": "request",
+      "parentId": "fld_fichas_nested",
+      "name": "DELETE Ficha",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/{{ _.id_ficha }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    }
+  ]
+}

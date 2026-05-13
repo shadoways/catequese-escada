@@ -89,15 +89,13 @@ func New(
 			c.Post("/", cateqHandler.Create)
 			c.Put("/{id}", cateqHandler.Update)
 			c.Delete("/{id}", cateqHandler.Delete)
-		})
-
-		api.Route("/api/fichas", func(f chi.Router) {
-			f.Get("/", fichaHandler.GetAll)
-			f.Get("/{id}", fichaHandler.GetByID)
-			f.Post("/", fichaHandler.Create)
-			f.Put("/{id}", fichaHandler.Update)
-			f.Delete("/{id}", fichaHandler.DeleteByID)
-			f.Delete("/catequisando/{catequisandoId}", fichaHandler.DeleteByCatequisandoID)
+			c.Route("/{id}/fichas", func(f chi.Router) {
+				f.Get("/", fichaHandler.GetByCatequisandoID)
+				f.Post("/", fichaHandler.Create)
+				f.Get("/{idFicha}", fichaHandler.GetByID)
+				f.Put("/{idFicha}", fichaHandler.Update)
+				f.Delete("/{idFicha}", fichaHandler.DeleteByID)
+			})
 		})
 
 		api.Route("/api/comunidades", func(c chi.Router) {

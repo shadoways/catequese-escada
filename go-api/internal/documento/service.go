@@ -13,6 +13,7 @@ type repository interface {
 	FindAll(ctx context.Context) ([]Documento, error)
 	FindByID(ctx context.Context, id int64) (Documento, error)
 	FindByCatequisandoIDs(ctx context.Context, ids []int64) (map[int64][]Documento, error)
+	FindByCatequisandoIDAndTipoDocumento(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error)
 	ExistsByID(ctx context.Context, id int64) (bool, error)
 	ExistsCatequisandoID(ctx context.Context, id int64) (bool, error)
 	FindCatequisandoIDByDocumentoID(ctx context.Context, id int64) (int64, error)
@@ -40,7 +41,19 @@ func (s *Service) FindByCatequisandoIDs(ctx context.Context, ids []int64) (map[i
 	return s.repo.FindByCatequisandoIDs(ctx, ids)
 }
 
+func (s *Service) FindByCatequisandoAndTipoDocumento(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error) {
+	return s.repo.FindByCatequisandoIDAndTipoDocumento(ctx, catequisandoID, strings.TrimSpace(tipoDocumento))
+}
+
 func (s *Service) Create(ctx context.Context, req Documento) (Documento, error) {
+	return s.save(ctx, req, false)
+}
+
+func (s *Service) Save(ctx context.Context, req Documento) (Documento, error) {
+	return s.save(ctx, req, true)
+}
+
+func (s *Service) save(ctx context.Context, req Documento, upsertByTipo bool) (Documento, error) {
 	if req.Catequisando == nil {
 		return Documento{}, sql.ErrNoRows
 	}
@@ -54,6 +67,18 @@ func (s *Service) Create(ctx context.Context, req Documento) (Documento, error) 
 	if strings.TrimSpace(req.TipoStatus) == "" {
 		req.TipoStatus = "PENDENTE"
 	}
+
+	tipoDocumento := strings.TrimSpace(req.TipoDocumento)
+	if upsertByTipo && tipoDocumento != "" {
+		existing, err := s.repo.FindByCatequisandoIDAndTipoDocumento(ctx, req.Catequisando.IDCatequisando, tipoDocumento)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return Documento{}, err
+		}
+		if err == nil {
+			return s.Update(ctx, existing.IDDocumento, req)
+		}
+	}
+
 	id, err := s.repo.Create(ctx, req)
 	if err != nil {
 		return Documento{}, err

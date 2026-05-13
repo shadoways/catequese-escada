@@ -11,6 +11,7 @@ type fakeRepo struct {
 	findAllFn                       func(ctx context.Context) ([]Documento, error)
 	findByIDFn                      func(ctx context.Context, id int64) (Documento, error)
 	findByCatequisandoIDsFn         func(ctx context.Context, ids []int64) (map[int64][]Documento, error)
+	findByCateqTipoFn               func(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error)
 	existsByIDFn                    func(ctx context.Context, id int64) (bool, error)
 	existsCatequisandoIDFn          func(ctx context.Context, id int64) (bool, error)
 	findCatequisandoByDocumentoIDFn func(ctx context.Context, id int64) (int64, error)
@@ -39,6 +40,13 @@ func (f *fakeRepo) FindByCatequisandoIDs(ctx context.Context, ids []int64) (map[
 		return map[int64][]Documento{}, nil
 	}
 	return f.findByCatequisandoIDsFn(ctx, ids)
+}
+
+func (f *fakeRepo) FindByCatequisandoIDAndTipoDocumento(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error) {
+	if f.findByCateqTipoFn == nil {
+		return Documento{}, sql.ErrNoRows
+	}
+	return f.findByCateqTipoFn(ctx, catequisandoID, tipoDocumento)
 }
 
 func (f *fakeRepo) ExistsByID(ctx context.Context, id int64) (bool, error) {
@@ -137,5 +145,82 @@ func TestServiceUpdateAllowsSameOwner(t *testing.T) {
 	}
 	if out.Catequisando == nil || out.Catequisando.IDCatequisando != 10 {
 		t.Fatalf("unexpected output: %+v", out)
+	}
+}
+
+func TestServiceSaveUpdatesWhenTipoDocumentoAlreadyExists(t *testing.T) {
+	created := false
+	updated := false
+	repo := &fakeRepo{
+		existsByIDFn:           func(ctx context.Context, id int64) (bool, error) { return true, nil },
+		existsCatequisandoIDFn: func(ctx context.Context, id int64) (bool, error) { return true, nil },
+		findByCateqTipoFn: func(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error) {
+			if catequisandoID != 1 || tipoDocumento != "RG" {
+				t.Fatalf("unexpected lookup cateq=%d tipo=%s", catequisandoID, tipoDocumento)
+			}
+			return Documento{IDDocumento: 55, Catequisando: &CatequisandoRef{IDCatequisando: 1}, TipoDocumento: "RG"}, nil
+		},
+		findCatequisandoByDocumentoIDFn: func(ctx context.Context, id int64) (int64, error) {
+			if id != 55 {
+				t.Fatalf("unexpected id on owner lookup: %d", id)
+			}
+			return 1, nil
+		},
+		updateFn: func(ctx context.Context, id int64, d Documento) error {
+			updated = true
+			if id != 55 {
+				t.Fatalf("unexpected update id: %d", id)
+			}
+			return nil
+		},
+		createFn: func(ctx context.Context, d Documento) (int64, error) {
+			created = true
+			return 999, nil
+		},
+		findByIDFn: func(ctx context.Context, id int64) (Documento, error) {
+			return Documento{IDDocumento: id, Catequisando: &CatequisandoRef{IDCatequisando: 1}, TipoDocumento: "RG"}, nil
+		},
+	}
+
+	svc := NewService(repo)
+	out, err := svc.Save(context.Background(), Documento{TipoDocumento: "RG", CaminhoArquivo: "novo", Catequisando: &CatequisandoRef{IDCatequisando: 1}})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if !updated {
+		t.Fatalf("expected existing document to be updated")
+	}
+	if created {
+		t.Fatalf("expected no create when tipoDocumento already exists")
+	}
+	if out.IDDocumento != 55 {
+		t.Fatalf("expected idDocumento=55, got %d", out.IDDocumento)
+	}
+}
+
+func TestServiceSaveCreatesWhenTipoDocumentoDoesNotExist(t *testing.T) {
+	repo := &fakeRepo{
+		existsCatequisandoIDFn: func(ctx context.Context, id int64) (bool, error) { return true, nil },
+		findByCateqTipoFn: func(ctx context.Context, catequisandoID int64, tipoDocumento string) (Documento, error) {
+			return Documento{}, sql.ErrNoRows
+		},
+		createFn: func(ctx context.Context, d Documento) (int64, error) {
+			if d.Catequisando == nil || d.Catequisando.IDCatequisando != 1 {
+				t.Fatalf("unexpected catequisando payload: %+v", d.Catequisando)
+			}
+			return 77, nil
+		},
+		findByIDFn: func(ctx context.Context, id int64) (Documento, error) {
+			return Documento{IDDocumento: id, Catequisando: &CatequisandoRef{IDCatequisando: 1}, TipoDocumento: "RG"}, nil
+		},
+	}
+
+	svc := NewService(repo)
+	out, err := svc.Save(context.Background(), Documento{TipoDocumento: "RG", Catequisando: &CatequisandoRef{IDCatequisando: 1}})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if out.IDDocumento != 77 {
+		t.Fatalf("expected idDocumento=77, got %d", out.IDDocumento)
 	}
 }

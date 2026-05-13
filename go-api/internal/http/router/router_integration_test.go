@@ -658,7 +658,7 @@ func TestFichasCRUDViaRouter(t *testing.T) {
 	}
 
 	createBody := []byte(`{"dataInscricao":"2026-05-06","observacoes":"Primeira ficha","catequisandoId":1}`)
-	createReq := httptest.NewRequest(http.MethodPost, "/api/fichas/", bytes.NewReader(createBody))
+	createReq := httptest.NewRequest(http.MethodPost, "/api/catequisandos/1/fichas/", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
 	createReq.Header.Set("Authorization", "Bearer "+token)
 	createW := httptest.NewRecorder()
@@ -677,7 +677,15 @@ func TestFichasCRUDViaRouter(t *testing.T) {
 		t.Fatalf("expected idFicha in create payload, got %v", created)
 	}
 
-	getReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/fichas/%d", int64(id)), nil)
+	listReq := httptest.NewRequest(http.MethodGet, "/api/catequisandos/1/fichas/", nil)
+	listReq.Header.Set("Authorization", "Bearer "+token)
+	listW := httptest.NewRecorder()
+	h.ServeHTTP(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("expected 200 on ficha list by catequisando, got %d body=%s", listW.Code, listW.Body.String())
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/catequisandos/1/fichas/%d", int64(id)), nil)
 	getReq.Header.Set("Authorization", "Bearer "+token)
 	getW := httptest.NewRecorder()
 	h.ServeHTTP(getW, getReq)
@@ -686,7 +694,7 @@ func TestFichasCRUDViaRouter(t *testing.T) {
 	}
 
 	updateBody := []byte(`{"dataInscricao":"2026-05-07","observacoes":"Ficha atualizada","catequisandoId":1}`)
-	updateReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/fichas/%d", int64(id)), bytes.NewReader(updateBody))
+	updateReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/catequisandos/1/fichas/%d", int64(id)), bytes.NewReader(updateBody))
 	updateReq.Header.Set("Content-Type", "application/json")
 	updateReq.Header.Set("Authorization", "Bearer "+token)
 	updateW := httptest.NewRecorder()
@@ -698,15 +706,15 @@ func TestFichasCRUDViaRouter(t *testing.T) {
 		t.Fatalf("expected updated observacoes in response, got %s", updateW.Body.String())
 	}
 
-	deleteByCateqReq := httptest.NewRequest(http.MethodDelete, "/api/fichas/catequisando/1", nil)
-	deleteByCateqReq.Header.Set("Authorization", "Bearer "+token)
-	deleteByCateqW := httptest.NewRecorder()
-	h.ServeHTTP(deleteByCateqW, deleteByCateqReq)
-	if deleteByCateqW.Code != http.StatusNoContent {
-		t.Fatalf("expected 204 on delete by catequisando, got %d body=%s", deleteByCateqW.Code, deleteByCateqW.Body.String())
+	deleteReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/catequisandos/1/fichas/%d", int64(id)), nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteW := httptest.NewRecorder()
+	h.ServeHTTP(deleteW, deleteReq)
+	if deleteW.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 on ficha delete, got %d body=%s", deleteW.Code, deleteW.Body.String())
 	}
 
-	getAfterDeleteReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/fichas/%d", int64(id)), nil)
+	getAfterDeleteReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/catequisandos/1/fichas/%d", int64(id)), nil)
 	getAfterDeleteReq.Header.Set("Authorization", "Bearer "+token)
 	getAfterDeleteW := httptest.NewRecorder()
 	h.ServeHTTP(getAfterDeleteW, getAfterDeleteReq)
@@ -1132,5 +1140,60 @@ func TestCatequistaCoordenadorConhecimentoPermissaoAndUploadViaRouter(t *testing
 	}
 	if !strings.Contains(uploadW.Body.String(), "documento") || !strings.Contains(uploadW.Body.String(), "upload") {
 		t.Fatalf("expected unified upload payload with documento and upload, got %s", uploadW.Body.String())
+	}
+
+	body2 := &bytes.Buffer{}
+	writer2 := multipart.NewWriter(body2)
+	part2, err := writer2.CreateFormFile("file", "teste-novo.txt")
+	if err != nil {
+		t.Fatalf("create second form file: %v", err)
+	}
+	if _, err := part2.Write([]byte("conteudo-novo")); err != nil {
+		t.Fatalf("write second form file: %v", err)
+	}
+	if err := writer2.WriteField("idCatequisando", "1"); err != nil {
+		t.Fatalf("write second idCatequisando field: %v", err)
+	}
+	if err := writer2.WriteField("tipoDocumento", "RG"); err != nil {
+		t.Fatalf("write second tipoDocumento field: %v", err)
+	}
+	if err := writer2.WriteField("tipoStatus", "APROVADO"); err != nil {
+		t.Fatalf("write second tipoStatus field: %v", err)
+	}
+	if err := writer2.Close(); err != nil {
+		t.Fatalf("close second writer: %v", err)
+	}
+
+	uploadReq2 := httptest.NewRequest(http.MethodPost, "/api/documentos/upload", body2)
+	uploadReq2.Header.Set("Content-Type", writer2.FormDataContentType())
+	uploadReq2.Header.Set("Authorization", "Bearer "+token)
+	uploadW2 := httptest.NewRecorder()
+	h.ServeHTTP(uploadW2, uploadReq2)
+	if uploadW2.Code != http.StatusCreated {
+		t.Fatalf("expected 201 on second unified upload, got %d body=%s", uploadW2.Code, uploadW2.Body.String())
+	}
+
+	listDocsReq := httptest.NewRequest(http.MethodGet, "/api/documentos/", nil)
+	listDocsReq.Header.Set("Authorization", "Bearer "+token)
+	listDocsW := httptest.NewRecorder()
+	h.ServeHTTP(listDocsW, listDocsReq)
+	if listDocsW.Code != http.StatusOK {
+		t.Fatalf("expected 200 on documentos list, got %d body=%s", listDocsW.Code, listDocsW.Body.String())
+	}
+
+	var docs []map[string]any
+	if err := json.Unmarshal(listDocsW.Body.Bytes(), &docs); err != nil {
+		t.Fatalf("invalid documentos list json: %v", err)
+	}
+
+	rgCount := 0
+	for _, doc := range docs {
+		tipo, _ := doc["tipoDocumento"].(string)
+		if tipo == "RG" {
+			rgCount++
+		}
+	}
+	if rgCount != 1 {
+		t.Fatalf("expected exactly one RG document after overwrite flow, got %d payload=%s", rgCount, listDocsW.Body.String())
 	}
 }

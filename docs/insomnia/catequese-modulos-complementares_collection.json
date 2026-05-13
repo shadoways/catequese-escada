@@ -179,15 +179,15 @@
       "_type": "request_group",
       "parentId": "wrk_catequese_modulos",
       "name": "Fichas",
-      "description": "CRUD de fichas de inscricao"
+      "description": "CRUD de fichas de inscricao como subrecurso de catequisando"
     },
     {
       "_id": "req_fichas_list_extra",
       "_type": "request",
       "parentId": "fld_fichas_extra",
-      "name": "GET Listar Fichas",
+      "name": "GET Listar Fichas por Catequisando",
       "method": "GET",
-      "url": "{{ _.base_url }}/api/fichas/",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/",
       "headers": [
         { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
       ]
@@ -196,9 +196,9 @@
       "_id": "req_fichas_get_extra",
       "_type": "request",
       "parentId": "fld_fichas_extra",
-      "name": "GET Ficha por ID",
+      "name": "GET Ficha por ID (escopo catequisando)",
       "method": "GET",
-      "url": "{{ _.base_url }}/api/fichas/{{ _.id_ficha }}",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/{{ _.id_ficha }}",
       "headers": [
         { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
       ]
@@ -207,12 +207,12 @@
       "_id": "req_fichas_create_extra",
       "_type": "request",
       "parentId": "fld_fichas_extra",
-      "name": "POST Criar Ficha",
+      "name": "POST Criar Ficha para Catequisando",
       "method": "POST",
-      "url": "{{ _.base_url }}/api/fichas/",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"dataInscricao\": \"2026-05-11\",\n  \"observacoes\": \"Ficha criada via Insomnia\",\n  \"catequisandoId\": {{ _.id_catequisando }}\n}"
+        "text": "{\n  \"dataInscricao\": \"2026-05-11\",\n  \"observacoes\": \"Ficha criada via Insomnia\"\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" },
@@ -225,10 +225,10 @@
       "parentId": "fld_fichas_extra",
       "name": "PUT Atualizar Ficha",
       "method": "PUT",
-      "url": "{{ _.base_url }}/api/fichas/{{ _.id_ficha }}",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/{{ _.id_ficha }}",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"dataInscricao\": \"2026-05-12\",\n  \"observacoes\": \"Ficha atualizada via Insomnia\",\n  \"catequisandoId\": {{ _.id_catequisando }}\n}"
+        "text": "{\n  \"dataInscricao\": \"2026-05-12\",\n  \"observacoes\": \"Ficha atualizada via Insomnia\"\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" },
@@ -241,18 +241,7 @@
       "parentId": "fld_fichas_extra",
       "name": "DELETE Ficha por ID",
       "method": "DELETE",
-      "url": "{{ _.base_url }}/api/fichas/{{ _.id_ficha }}",
-      "headers": [
-        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
-      ]
-    },
-    {
-      "_id": "req_fichas_delete_by_cateq_extra",
-      "_type": "request",
-      "parentId": "fld_fichas_extra",
-      "name": "DELETE Ficha por Catequisando",
-      "method": "DELETE",
-      "url": "{{ _.base_url }}/api/fichas/catequisando/{{ _.id_catequisando }}",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}/fichas/{{ _.id_ficha }}",
       "headers": [
         { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
       ]

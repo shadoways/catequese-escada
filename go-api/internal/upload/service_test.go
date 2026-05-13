@@ -110,3 +110,39 @@ func TestUploadServiceStoreManyRollsBackOnFailure(t *testing.T) {
 		t.Fatalf("expected rollback to delete previously uploaded objects, found %d", len(fake.uploaded))
 	}
 }
+
+func TestUploadServiceDeletePathFromGCSPath(t *testing.T) {
+	mem := NewMemoryStore()
+	svc, err := NewServiceWithStore("test-bucket", "", mem)
+	if err != nil {
+		t.Fatalf("new service failed: %v", err)
+	}
+
+	srcPath := filepath.Join(t.TempDir(), "doc.pdf")
+	if err := os.WriteFile(srcPath, []byte("conteudo"), 0o644); err != nil {
+		t.Fatalf("write source file: %v", err)
+	}
+
+	f, err := os.Open(srcPath)
+	if err != nil {
+		t.Fatalf("open source file: %v", err)
+	}
+	defer f.Close()
+
+	saved, err := svc.Store(context.Background(), f, "doc.pdf", "RG", "application/pdf")
+	if err != nil {
+		t.Fatalf("store failed: %v", err)
+	}
+
+	if _, ok := mem.objects[saved.FileName]; !ok {
+		t.Fatalf("expected object to exist before delete")
+	}
+
+	if err := svc.DeletePath(context.Background(), saved.Path); err != nil {
+		t.Fatalf("delete path failed: %v", err)
+	}
+
+	if _, ok := mem.objects[saved.FileName]; ok {
+		t.Fatalf("expected object to be deleted")
+	}
+}

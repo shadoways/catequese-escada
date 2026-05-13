@@ -15,8 +15,16 @@ func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
 }
 
-func (s *Service) FindAll(ctx context.Context) ([]FichaInscricao, error) {
-	items, err := s.repo.FindAll(ctx)
+func (s *Service) FindByCatequisandoID(ctx context.Context, catequisandoID int64) ([]FichaInscricao, error) {
+	exists, err := s.repo.ExistsCatequisandoID(ctx, catequisandoID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrCatequisandoNotFound
+	}
+
+	items, err := s.repo.FindByCatequisandoID(ctx, catequisandoID)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +35,8 @@ func (s *Service) FindAll(ctx context.Context) ([]FichaInscricao, error) {
 	return result, nil
 }
 
-func (s *Service) FindByID(ctx context.Context, id int64) (FichaInscricao, error) {
-	item, err := s.repo.FindByID(ctx, id)
+func (s *Service) FindByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64) (FichaInscricao, error) {
+	item, err := s.repo.FindByIDAndCatequisandoID(ctx, id, catequisandoID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return FichaInscricao{}, ErrNotFound
@@ -38,16 +46,16 @@ func (s *Service) FindByID(ctx context.Context, id int64) (FichaInscricao, error
 	return toDTO(item), nil
 }
 
-func (s *Service) Create(ctx context.Context, req FichaInscricaoRequest) (FichaInscricao, error) {
-	if req.CatequisandoID != nil {
-		exists, err := s.repo.ExistsCatequisandoID(ctx, *req.CatequisandoID)
-		if err != nil {
-			return FichaInscricao{}, err
-		}
-		if !exists {
-			return FichaInscricao{}, ErrCatequisandoNotFound
-		}
+func (s *Service) CreateForCatequisando(ctx context.Context, catequisandoID int64, req FichaInscricaoRequest) (FichaInscricao, error) {
+	exists, err := s.repo.ExistsCatequisandoID(ctx, catequisandoID)
+	if err != nil {
+		return FichaInscricao{}, err
 	}
+	if !exists {
+		return FichaInscricao{}, ErrCatequisandoNotFound
+	}
+
+	req.CatequisandoID = &catequisandoID
 	id, err := s.repo.Create(ctx, fichaDB{
 		DataInscricao:  strings.TrimSpace(req.DataInscricao),
 		Observacoes:    strings.TrimSpace(req.Observacoes),
@@ -56,11 +64,11 @@ func (s *Service) Create(ctx context.Context, req FichaInscricaoRequest) (FichaI
 	if err != nil {
 		return FichaInscricao{}, err
 	}
-	return s.FindByID(ctx, id)
+	return s.FindByIDAndCatequisandoID(ctx, id, catequisandoID)
 }
 
-func (s *Service) Update(ctx context.Context, id int64, req FichaInscricaoRequest) (FichaInscricao, error) {
-	existing, err := s.repo.FindByID(ctx, id)
+func (s *Service) UpdateForCatequisando(ctx context.Context, id int64, catequisandoID int64, req FichaInscricaoRequest) (FichaInscricao, error) {
+	_, err := s.repo.FindByIDAndCatequisandoID(ctx, id, catequisandoID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return FichaInscricao{}, ErrNotFound
@@ -68,47 +76,32 @@ func (s *Service) Update(ctx context.Context, id int64, req FichaInscricaoReques
 		return FichaInscricao{}, err
 	}
 
-	cateqID := req.CatequisandoID
-	if cateqID == nil {
-		cateqID = existing.CatequisandoID
+	exists, err := s.repo.ExistsCatequisandoID(ctx, catequisandoID)
+	if err != nil {
+		return FichaInscricao{}, err
 	}
-	if cateqID != nil {
-		exists, err := s.repo.ExistsCatequisandoID(ctx, *cateqID)
-		if err != nil {
-			return FichaInscricao{}, err
-		}
-		if !exists {
-			return FichaInscricao{}, ErrCatequisandoNotFound
-		}
+	if !exists {
+		return FichaInscricao{}, ErrCatequisandoNotFound
 	}
 
-	if err := s.repo.Update(ctx, id, fichaDB{
+	cateqID := catequisandoID
+
+	if err := s.repo.UpdateByIDAndCatequisandoID(ctx, id, catequisandoID, fichaDB{
 		DataInscricao:  strings.TrimSpace(req.DataInscricao),
 		Observacoes:    strings.TrimSpace(req.Observacoes),
-		CatequisandoID: cateqID,
+		CatequisandoID: &cateqID,
 	}); err != nil {
 		return FichaInscricao{}, err
 	}
-	return s.FindByID(ctx, id)
+	return s.FindByIDAndCatequisandoID(ctx, id, catequisandoID)
 }
 
-func (s *Service) DeleteByID(ctx context.Context, id int64) error {
-	_, err := s.FindByID(ctx, id)
+func (s *Service) DeleteByIDAndCatequisandoID(ctx context.Context, id int64, catequisandoID int64) error {
+	_, err := s.FindByIDAndCatequisandoID(ctx, id, catequisandoID)
 	if err != nil {
 		return err
 	}
-	return s.repo.DeleteByID(ctx, id)
-}
-
-func (s *Service) DeleteByCatequisandoID(ctx context.Context, catequisandoID int64) error {
-	exists, err := s.repo.ExistsCatequisandoID(ctx, catequisandoID)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return ErrCatequisandoNotFound
-	}
-	return s.repo.DeleteByCatequisandoID(ctx, catequisandoID)
+	return s.repo.DeleteByIDAndCatequisandoID(ctx, id, catequisandoID)
 }
 
 func toDTO(item fichaDB) FichaInscricao {

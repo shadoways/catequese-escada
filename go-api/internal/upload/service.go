@@ -253,6 +253,13 @@ func (s *Service) StoreMany(ctx context.Context, payloads []UploadPayload) ([]Sa
 	return saved, nil
 }
 
+func (s *Service) DeleteObject(ctx context.Context, objectName string) error {
+	if strings.TrimSpace(objectName) == "" {
+		return fmt.Errorf("objectName não pode ser vazio")
+	}
+	return s.store.Delete(ctx, objectName)
+}
+
 func sanitizeSegment(v string) string {
 	v = strings.TrimSpace(v)
 	if v == "" {

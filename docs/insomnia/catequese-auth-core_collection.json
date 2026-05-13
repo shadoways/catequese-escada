@@ -1,0 +1,426 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-05-11T12:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v10",
+  "resources": [
+    {
+      "_id": "wrk_catequese_core",
+      "_type": "workspace",
+      "name": "Catequese API - Auth Core (Go)",
+      "description": "Colecao atualizada para teste de autenticacao e CRUD de catequisandos, catequistas e usuarios.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_catequese_core_base",
+      "_type": "environment",
+      "parentId": "wrk_catequese_core",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "login_email": "admin@catequese.com",
+        "login_password": "admin123",
+        "access_token": "",
+        "refresh_token": "",
+        "id_catequisando": 1,
+        "id_catequista": 1,
+        "id_usuario": 1,
+        "email_usuario": "coord@catequese.com"
+      }
+    },
+    {
+      "_id": "fld_auth_core",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_core",
+      "name": "Auth",
+      "description": "Execute login primeiro e copie token/refreshToken para o environment. Logout agora exige Authorization Bearer."
+    },
+    {
+      "_id": "req_auth_health_core",
+      "_type": "request",
+      "parentId": "fld_auth_core",
+      "name": "GET Health (public)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/health"
+    },
+    {
+      "_id": "req_auth_login_core",
+      "_type": "request",
+      "parentId": "fld_auth_core",
+      "name": "POST Login (public)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.login_email }}\",\n  \"password\": \"{{ _.login_password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_auth_refresh_core",
+      "_type": "request",
+      "parentId": "fld_auth_core",
+      "name": "POST Refresh (public)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/refresh",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refreshToken\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req_auth_validate_core",
+      "_type": "request",
+      "parentId": "fld_auth_core",
+      "name": "GET Validate (auth)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/auth/validate",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_auth_logout_core",
+      "_type": "request",
+      "parentId": "fld_auth_core",
+      "name": "POST Logout (auth)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/auth/logout",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refreshToken\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_catequisandos_core",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_core",
+      "name": "Catequisandos",
+      "description": "CRUD de catequisandos (todos exigem JWT)."
+    },
+    {
+      "_id": "req_catequisandos_list_core",
+      "_type": "request",
+      "parentId": "fld_catequisandos_core",
+      "name": "GET Listar Catequisandos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequisandos/",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequisandos_get_by_id_core",
+      "_type": "request",
+      "parentId": "fld_catequisandos_core",
+      "name": "GET Catequisando por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequisandos_create_core",
+      "_type": "request",
+      "parentId": "fld_catequisandos_core",
+      "name": "POST Criar Catequisando",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/catequisandos/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Novo Catequisando\",\n  \"telefone\": \"11999999999\",\n  \"email\": \"catequisando.teste@catequese.com\",\n  \"dataNascimento\": \"2012-05-10\",\n  \"nomeResponsavel\": \"Maria Responsavel\",\n  \"telefoneResponsavel\": \"11988888888\",\n  \"endereco\": \"Rua Exemplo, 123\",\n  \"numeroDocumento\": \"12345678900\",\n  \"tipoDocumento\": \"CPF\",\n  \"intoleranteGluten\": false,\n  \"foiBatizado\": true,\n  \"fezPrimeiraEucaristia\": false,\n  \"estadoConjugal\": \"SOLTEIRO\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequisandos_update_core",
+      "_type": "request",
+      "parentId": "fld_catequisandos_core",
+      "name": "PUT Atualizar Catequisando",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Catequisando Atualizado\",\n  \"telefone\": \"11977777777\",\n  \"email\": \"catequisando.atualizado@catequese.com\",\n  \"dataNascimento\": \"2012-05-10\",\n  \"nomeResponsavel\": \"Jose Responsavel\",\n  \"telefoneResponsavel\": \"11966666666\",\n  \"endereco\": \"Rua Atualizada, 456\",\n  \"numeroDocumento\": \"12345678900\",\n  \"tipoDocumento\": \"CPF\",\n  \"intoleranteGluten\": false,\n  \"foiBatizado\": true,\n  \"fezPrimeiraEucaristia\": true,\n  \"estadoConjugal\": \"SOLTEIRO\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequisandos_delete_core",
+      "_type": "request",
+      "parentId": "fld_catequisandos_core",
+      "name": "DELETE Catequisando",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/catequisandos/{{ _.id_catequisando }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_catequistas_core",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_core",
+      "name": "Catequistas",
+      "description": "CRUD de catequistas (todos exigem JWT)."
+    },
+    {
+      "_id": "req_catequistas_list_core",
+      "_type": "request",
+      "parentId": "fld_catequistas_core",
+      "name": "GET Listar Catequistas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequistas/",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequistas_get_by_id_core",
+      "_type": "request",
+      "parentId": "fld_catequistas_core",
+      "name": "GET Catequista por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/catequistas/{{ _.id_catequista }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequistas_create_core",
+      "_type": "request",
+      "parentId": "fld_catequistas_core",
+      "name": "POST Criar Catequista",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/catequistas/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Catequista Novo\",\n  \"telefone\": \"11995554444\",\n  \"email\": \"catequista.novo@catequese.com\",\n  \"endereco\": \"Rua do Catequista, 99\",\n  \"dataNascimento\": \"1990-01-10\",\n  \"dataInicio\": \"2024-02-01\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequistas_update_core",
+      "_type": "request",
+      "parentId": "fld_catequistas_core",
+      "name": "PUT Atualizar Catequista",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/catequistas/{{ _.id_catequista }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Catequista Atualizado\",\n  \"telefone\": \"11992223333\",\n  \"email\": \"catequista.atualizado@catequese.com\",\n  \"endereco\": \"Rua do Catequista, 100\",\n  \"dataNascimento\": \"1990-01-10\",\n  \"dataInicio\": \"2024-02-01\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_catequistas_delete_core",
+      "_type": "request",
+      "parentId": "fld_catequistas_core",
+      "name": "DELETE Catequista",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/catequistas/{{ _.id_catequista }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "fld_usuarios_core",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_core",
+      "name": "Usuarios",
+      "description": "CRUD de usuarios (requer JWT + role COORDENADOR_PAROQUIAL)."
+    },
+    {
+      "_id": "req_usuarios_list_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "GET Listar Usuarios",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/usuarios/",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_usuarios_get_by_id_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "GET Usuario por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/usuarios/{{ _.id_usuario }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_usuarios_get_by_email_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "GET Usuario por Email",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/usuarios/email/{{ _.email_usuario }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_usuarios_create_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "POST Criar Usuario",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/usuarios/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Usuario Novo\",\n  \"email\": \"usuario.novo@catequese.com\",\n  \"password\": \"Senha@123\",\n  \"roles\": [\"CATEQUISTA\"],\n  \"idComunidade\": null,\n  \"idCatequista\": null\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_usuarios_update_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "PUT Atualizar Usuario",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/usuarios/{{ _.id_usuario }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Usuario Atualizado\",\n  \"email\": \"usuario.atualizado@catequese.com\",\n  \"ativo\": true,\n  \"roles\": [\"CATEQUISTA\"],\n  \"idComunidade\": null,\n  \"idCatequista\": null\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_usuarios_toggle_ativo_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "PATCH Toggle Ativo",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/usuarios/{{ _.id_usuario }}/toggle-ativo",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    },
+    {
+      "_id": "req_usuarios_delete_core",
+      "_type": "request",
+      "parentId": "fld_usuarios_core",
+      "name": "DELETE Usuario",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/usuarios/{{ _.id_usuario }}",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.access_token }}"
+        }
+      ]
+    }
+  ]
+}

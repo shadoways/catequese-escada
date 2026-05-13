@@ -94,6 +94,10 @@ func (h *DocumentoHandler) Update(w http.ResponseWriter, r *http.Request) {
 			response.Error(w, http.StatusNotFound, "Documento não encontrado")
 			return
 		}
+		if errors.Is(err, documento.ErrOwnerChangeNotAllowed) {
+			response.Error(w, http.StatusConflict, "Não é permitido reassociar documento para outro catequisando")
+			return
+		}
 		response.Error(w, http.StatusInternalServerError, "Erro interno")
 		return
 	}

@@ -37,15 +37,25 @@ func (h *AuthHandler) Health(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *AuthHandler) Validate(w http.ResponseWriter, r *http.Request) {
-	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
-	if !strings.HasPrefix(authHeader, "Bearer ") {
+	token, ok := extractBearerToken(r.Header.Get("Authorization"))
+	if !ok {
 		response.JSON(w, http.StatusBadRequest, map[string]bool{"valid": false})
 		return
 	}
 
-	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 	valid, _ := h.jwtService.ValidateToken(token)
 	response.JSON(w, http.StatusOK, map[string]bool{"valid": valid})
+}
+
+func extractBearerToken(authHeader string) (string, bool) {
+	parts := strings.Fields(strings.TrimSpace(authHeader))
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", false
+	}
+	if parts[1] == "" {
+		return "", false
+	}
+	return parts[1], true
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {

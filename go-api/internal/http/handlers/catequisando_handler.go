@@ -66,6 +66,10 @@ func (h *CatequisandoHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	id, err := h.repo.Create(r.Context(), req)
 	if err != nil {
+		if err == catequisando.ErrDocumentoCivilDuplicado {
+			response.Error(w, http.StatusConflict, "Documento civil já vinculado a outro catequisando")
+			return
+		}
 		response.Error(w, http.StatusInternalServerError, "Erro interno")
 		return
 	}
@@ -103,6 +107,10 @@ func (h *CatequisandoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.repo.Update(r.Context(), id, req); err != nil {
+		if err == catequisando.ErrDocumentoCivilDuplicado {
+			response.Error(w, http.StatusConflict, "Documento civil já vinculado a outro catequisando")
+			return
+		}
 		response.Error(w, http.StatusInternalServerError, "Erro interno")
 		return
 	}

@@ -1,0 +1,519 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-05-11T23:59:00.000Z",
+  "__export_source": "insomnia.desktop.app:v10",
+  "resources": [
+    {
+      "_id": "wrk_catequese_modulos",
+      "_type": "workspace",
+      "name": "Catequese API - Modulos Complementares",
+      "description": "Collection complementar com Turmas, Comunidades, Fichas, Eventos, Presencas, Documentos e Arquivos.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_catequese_modulos_base",
+      "_type": "environment",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "access_token": "",
+        "id_turma": 1,
+        "id_comunidade": 1,
+        "id_ficha": 1,
+        "id_evento": 1,
+        "id_presenca": 1,
+        "id_documento": 1,
+        "id_catequisando": 1
+      }
+    },
+    {
+      "_id": "fld_turmas_extra",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Turmas",
+      "description": "CRUD de turmas"
+    },
+    {
+      "_id": "req_turmas_list_extra",
+      "_type": "request",
+      "parentId": "fld_turmas_extra",
+      "name": "GET Listar Turmas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/turmas/",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_turmas_get_extra",
+      "_type": "request",
+      "parentId": "fld_turmas_extra",
+      "name": "GET Turma por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/turmas/{{ _.id_turma }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_turmas_create_extra",
+      "_type": "request",
+      "parentId": "fld_turmas_extra",
+      "name": "POST Criar Turma",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/turmas/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Turma Perseveranca\",\n  \"descricao\": \"Turma de exemplo\",\n  \"ano\": 2026,\n  \"nivel\": \"ADULTOS\",\n  \"idCatequista\": 1\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_turmas_update_extra",
+      "_type": "request",
+      "parentId": "fld_turmas_extra",
+      "name": "PUT Atualizar Turma",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/turmas/{{ _.id_turma }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Turma Perseveranca Atualizada\",\n  \"descricao\": \"Descricao atualizada\",\n  \"ano\": 2026,\n  \"nivel\": \"ADULTOS\",\n  \"idCatequista\": 1\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_turmas_delete_extra",
+      "_type": "request",
+      "parentId": "fld_turmas_extra",
+      "name": "DELETE Turma",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/turmas/{{ _.id_turma }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+
+    {
+      "_id": "fld_comunidades_extra",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Comunidades",
+      "description": "CRUD de comunidades"
+    },
+    {
+      "_id": "req_comunidades_list_extra",
+      "_type": "request",
+      "parentId": "fld_comunidades_extra",
+      "name": "GET Listar Comunidades",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/comunidades/",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_comunidades_get_extra",
+      "_type": "request",
+      "parentId": "fld_comunidades_extra",
+      "name": "GET Comunidade por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/comunidades/{{ _.id_comunidade }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_comunidades_create_extra",
+      "_type": "request",
+      "parentId": "fld_comunidades_extra",
+      "name": "POST Criar Comunidade",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/comunidades/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Comunidade Sao Jose\",\n  \"descricao\": \"Exemplo para testes\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_comunidades_update_extra",
+      "_type": "request",
+      "parentId": "fld_comunidades_extra",
+      "name": "PUT Atualizar Comunidade",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/comunidades/{{ _.id_comunidade }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Comunidade Sao Jose Atualizada\",\n  \"descricao\": \"Descricao atualizada\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_comunidades_delete_extra",
+      "_type": "request",
+      "parentId": "fld_comunidades_extra",
+      "name": "DELETE Comunidade",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/comunidades/{{ _.id_comunidade }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+
+    {
+      "_id": "fld_fichas_extra",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Fichas",
+      "description": "CRUD de fichas de inscricao"
+    },
+    {
+      "_id": "req_fichas_list_extra",
+      "_type": "request",
+      "parentId": "fld_fichas_extra",
+      "name": "GET Listar Fichas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/fichas/",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_fichas_get_extra",
+      "_type": "request",
+      "parentId": "fld_fichas_extra",
+      "name": "GET Ficha por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/fichas/{{ _.id_ficha }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_fichas_create_extra",
+      "_type": "request",
+      "parentId": "fld_fichas_extra",
+      "name": "POST Criar Ficha",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/fichas/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"dataInscricao\": \"2026-05-11\",\n  \"observacoes\": \"Ficha criada via Insomnia\",\n  \"catequisandoId\": {{ _.id_catequisando }}\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_fichas_update_extra",
+      "_type": "request",
+      "parentId": "fld_fichas_extra",
+      "name": "PUT Atualizar Ficha",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/fichas/{{ _.id_ficha }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"dataInscricao\": \"2026-05-12\",\n  \"observacoes\": \"Ficha atualizada via Insomnia\",\n  \"catequisandoId\": {{ _.id_catequisando }}\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_fichas_delete_extra",
+      "_type": "request",
+      "parentId": "fld_fichas_extra",
+      "name": "DELETE Ficha por ID",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/fichas/{{ _.id_ficha }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_fichas_delete_by_cateq_extra",
+      "_type": "request",
+      "parentId": "fld_fichas_extra",
+      "name": "DELETE Ficha por Catequisando",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/fichas/catequisando/{{ _.id_catequisando }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+
+    {
+      "_id": "fld_eventos_extra",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Eventos",
+      "description": "CRUD de eventos"
+    },
+    {
+      "_id": "req_eventos_list_extra",
+      "_type": "request",
+      "parentId": "fld_eventos_extra",
+      "name": "GET Listar Eventos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/eventos/",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_eventos_get_extra",
+      "_type": "request",
+      "parentId": "fld_eventos_extra",
+      "name": "GET Evento por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/eventos/{{ _.id_evento }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_eventos_create_extra",
+      "_type": "request",
+      "parentId": "fld_eventos_extra",
+      "name": "POST Criar Evento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/eventos/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Retiro de Catequese\",\n  \"nivel\": \"PAROQUIAL\",\n  \"publicoAlvo\": \"CATEQUISTAS\",\n  \"descricao\": \"Evento de exemplo\",\n  \"dataInicio\": \"2026-06-01\",\n  \"dataFim\": \"2026-06-02\",\n  \"local\": \"Sala 3\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_eventos_update_extra",
+      "_type": "request",
+      "parentId": "fld_eventos_extra",
+      "name": "PUT Atualizar Evento",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/eventos/{{ _.id_evento }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"titulo\": \"Retiro de Catequese Atualizado\",\n  \"nivel\": \"PAROQUIAL\",\n  \"publicoAlvo\": \"TODOS\",\n  \"descricao\": \"Descricao atualizada\",\n  \"dataInicio\": \"2026-06-05\",\n  \"dataFim\": \"2026-06-06\",\n  \"local\": \"Sala 4\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_eventos_delete_extra",
+      "_type": "request",
+      "parentId": "fld_eventos_extra",
+      "name": "DELETE Evento",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/eventos/{{ _.id_evento }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+
+    {
+      "_id": "fld_presencas_extra",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Presencas",
+      "description": "CRUD de presencas"
+    },
+    {
+      "_id": "req_presencas_list_extra",
+      "_type": "request",
+      "parentId": "fld_presencas_extra",
+      "name": "GET Listar Presencas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/presencas/",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_presencas_get_extra",
+      "_type": "request",
+      "parentId": "fld_presencas_extra",
+      "name": "GET Presenca por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/presencas/{{ _.id_presenca }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_presencas_create_extra",
+      "_type": "request",
+      "parentId": "fld_presencas_extra",
+      "name": "POST Criar Presenca",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/presencas/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"data\": \"2026-05-11\",\n  \"presente\": true,\n  \"catequisando\": {\n    \"idCatequisando\": {{ _.id_catequisando }}\n  }\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_presencas_update_extra",
+      "_type": "request",
+      "parentId": "fld_presencas_extra",
+      "name": "PUT Atualizar Presenca",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/presencas/{{ _.id_presenca }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"data\": \"2026-05-12\",\n  \"presente\": false,\n  \"catequisando\": {\n    \"idCatequisando\": {{ _.id_catequisando }}\n  }\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_presencas_delete_extra",
+      "_type": "request",
+      "parentId": "fld_presencas_extra",
+      "name": "DELETE Presenca",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/presencas/{{ _.id_presenca }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+
+    {
+      "_id": "fld_documentos_extra",
+      "_type": "request_group",
+      "parentId": "wrk_catequese_modulos",
+      "name": "Documentos",
+      "description": "CRUD de documentos"
+    },
+    {
+      "_id": "req_documentos_list_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "GET Listar Documentos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/documentos/",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_documentos_get_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "GET Documento por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/documentos/{{ _.id_documento }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_documentos_create_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "POST Criar Documento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/documentos/",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipoDocumento\": \"RG\",\n  \"caminhoArquivo\": \"uploads/documentos/arquivo.pdf\",\n  \"dataEnvio\": \"2026-05-11\",\n  \"catequisando\": {\n    \"idCatequisando\": {{ _.id_catequisando }}\n  },\n  \"tipoStatus\": \"PENDENTE\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_documentos_update_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "PUT Atualizar Documento",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/documentos/{{ _.id_documento }}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipoDocumento\": \"CPF\",\n  \"caminhoArquivo\": \"uploads/documentos/arquivo-atualizado.pdf\",\n  \"dataEnvio\": \"2026-05-12\",\n  \"catequisando\": {\n    \"idCatequisando\": {{ _.id_catequisando }}\n  },\n  \"tipoStatus\": \"APROVADO\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_documentos_update_status_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "PUT Atualizar Status Documento",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/documentos/{{ _.id_documento }}/status",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"novoStatus\": \"REPROVADO\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_documentos_delete_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "DELETE Documento",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/documentos/{{ _.id_documento }}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ]
+    },
+    {
+      "_id": "req_documentos_upload_unificado_extra",
+      "_type": "request",
+      "parentId": "fld_documentos_extra",
+      "name": "POST Upload + Criar Documento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/documentos/upload",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          { "name": "file", "type": "file", "fileName": "" },
+          { "name": "idCatequisando", "value": "{{ _.id_catequisando }}" },
+          { "name": "tipoDocumento", "value": "RG" },
+          { "name": "tipoStatus", "value": "PENDENTE" },
+          { "name": "dataEnvio", "value": "2026-05-12" },
+          { "name": "fileType", "value": "documentos" }
+        ]
+      },
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{ _.access_token }}" }
+      ],
+      "description": "Endpoint unificado: realiza upload do arquivo e cria o registro em documentos no mesmo request."
+    }
+  ]
+}

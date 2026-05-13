@@ -104,7 +104,7 @@ func newUsuariosRouterTestFixture(t *testing.T) (http.Handler, *auth.JWTService)
 			presente BOOLEAN,
 			id_catequisando INTEGER NOT NULL
 		)`,
-		`CREATE TABLE tb_documento (
+		`CREATE TABLE tb_documentos (
 			id_documento INTEGER PRIMARY KEY AUTOINCREMENT,
 			tipo_documento TEXT,
 			caminho_arquivo TEXT,
@@ -258,7 +258,7 @@ func newAuthRouterTestFixture(t *testing.T) http.Handler {
 			presente BOOLEAN,
 			id_catequisando INTEGER NOT NULL
 		)`,
-		`CREATE TABLE tb_documento (
+		`CREATE TABLE tb_documentos (
 			id_documento INTEGER PRIMARY KEY AUTOINCREMENT,
 			tipo_documento TEXT,
 			caminho_arquivo TEXT,
@@ -465,6 +465,13 @@ func TestAuthRefreshLogoutLifecycleViaHTTP(t *testing.T) {
 	if err := json.Unmarshal(refreshW.Body.Bytes(), &refreshPayload); err != nil {
 		t.Fatalf("invalid refresh json: %v", err)
 	}
+	accessToken, _ := refreshPayload["token"].(string)
+	if accessToken == "" {
+		accessToken, _ = loginPayload["token"].(string)
+	}
+	if accessToken == "" {
+		t.Fatalf("expected access token in login/refresh payload: login=%v refresh=%v", loginPayload, refreshPayload)
+	}
 	refresh2, _ := refreshPayload["refreshToken"].(string)
 	if refresh2 == "" || refresh2 == refresh1 {
 		t.Fatalf("expected rotated refresh token, got payload: %v", refreshPayload)
@@ -473,6 +480,7 @@ func TestAuthRefreshLogoutLifecycleViaHTTP(t *testing.T) {
 	logoutBody := []byte(fmt.Sprintf(`{"refreshToken":"%s"}`, refresh2))
 	logoutReq := httptest.NewRequest(http.MethodPost, "/api/auth/logout", bytes.NewReader(logoutBody))
 	logoutReq.Header.Set("Content-Type", "application/json")
+	logoutReq.Header.Set("Authorization", "Bearer "+accessToken)
 	logoutW := httptest.NewRecorder()
 	h.ServeHTTP(logoutW, logoutReq)
 	if logoutW.Code != http.StatusOK {
@@ -492,8 +500,27 @@ func TestAuthRefreshLogoutLifecycleViaHTTP(t *testing.T) {
 func TestAuthLogoutValidationErrorViaHTTP(t *testing.T) {
 	h := newAuthRouterTestFixture(t)
 
+	loginBody := []byte(`{"email":"admin@catequese.com","password":"admin123"}`)
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(loginBody))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginW := httptest.NewRecorder()
+	h.ServeHTTP(loginW, loginReq)
+	if loginW.Code != http.StatusOK {
+		t.Fatalf("login expected 200, got %d body=%s", loginW.Code, loginW.Body.String())
+	}
+
+	var loginPayload map[string]any
+	if err := json.Unmarshal(loginW.Body.Bytes(), &loginPayload); err != nil {
+		t.Fatalf("invalid login json: %v", err)
+	}
+	token, _ := loginPayload["token"].(string)
+	if token == "" {
+		t.Fatalf("expected token in login payload: %v", loginPayload)
+	}
+
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", bytes.NewReader([]byte(`{"refreshToken":""}`)))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
@@ -1082,19 +1109,28 @@ func TestCatequistaCoordenadorConhecimentoPermissaoAndUploadViaRouter(t *testing
 	if _, err := part.Write([]byte("conteudo")); err != nil {
 		t.Fatalf("write form file: %v", err)
 	}
+	if err := writer.WriteField("idCatequisando", "1"); err != nil {
+		t.Fatalf("write idCatequisando field: %v", err)
+	}
+	if err := writer.WriteField("tipoDocumento", "RG"); err != nil {
+		t.Fatalf("write tipoDocumento field: %v", err)
+	}
+	if err := writer.WriteField("tipoStatus", "PENDENTE"); err != nil {
+		t.Fatalf("write tipoStatus field: %v", err)
+	}
 	if err := writer.Close(); err != nil {
 		t.Fatalf("close writer: %v", err)
 	}
 
-	uploadReq := httptest.NewRequest(http.MethodPost, "/api/files", body)
+	uploadReq := httptest.NewRequest(http.MethodPost, "/api/documentos/upload", body)
 	uploadReq.Header.Set("Content-Type", writer.FormDataContentType())
 	uploadReq.Header.Set("Authorization", "Bearer "+token)
 	uploadW := httptest.NewRecorder()
 	h.ServeHTTP(uploadW, uploadReq)
-	if uploadW.Code != http.StatusOK {
-		t.Fatalf("expected 200 on upload, got %d body=%s", uploadW.Code, uploadW.Body.String())
+	if uploadW.Code != http.StatusCreated {
+		t.Fatalf("expected 201 on unified upload, got %d body=%s", uploadW.Code, uploadW.Body.String())
 	}
-	if !strings.Contains(uploadW.Body.String(), "filename") {
-		t.Fatalf("expected upload payload, got %s", uploadW.Body.String())
+	if !strings.Contains(uploadW.Body.String(), "documento") || !strings.Contains(uploadW.Body.String(), "upload") {
+		t.Fatalf("expected unified upload payload with documento and upload, got %s", uploadW.Body.String())
 	}
 }

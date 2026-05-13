@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -16,7 +17,8 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) FindAll(ctx context.Context) ([]Documento, error) {
-	const query = `SELECT id_documento, COALESCE(tipo_documento, ''), COALESCE(caminho_arquivo, ''), data_envio, id_catequisando, COALESCE(tipo_status, 'PENDENTE') FROM tb_documento ORDER BY id_documento`
+	const query = `SELECT id_documento, COALESCE(tipo_documento, ''), COALESCE(caminho_arquivo, ''), data_envio, id_catequisando, COALESCE(tipo_status, 'PENDENTE') FROM tb_documentos ORDER BY id_documento`
+
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -38,14 +40,14 @@ func (r *Repository) FindAll(ctx context.Context) ([]Documento, error) {
 }
 
 func (r *Repository) FindByID(ctx context.Context, id int64) (Documento, error) {
-	const query = `SELECT id_documento, COALESCE(tipo_documento, ''), COALESCE(caminho_arquivo, ''), data_envio, id_catequisando, COALESCE(tipo_status, 'PENDENTE') FROM tb_documento WHERE id_documento = ? LIMIT 1`
+	const query = `SELECT id_documento, COALESCE(tipo_documento, ''), COALESCE(caminho_arquivo, ''), data_envio, id_catequisando, COALESCE(tipo_status, 'PENDENTE') FROM tb_documentos WHERE id_documento = ? LIMIT 1`
 	row := r.db.QueryRowContext(ctx, query, id)
 	return scanDocumento(row)
 }
 
 func (r *Repository) ExistsByID(ctx context.Context, id int64) (bool, error) {
 	var exists bool
-	if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM tb_documento WHERE id_documento = ?)`, id).Scan(&exists); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM tb_documentos WHERE id_documento = ?)`, id).Scan(&exists); err != nil {
 		return false, err
 	}
 	return exists, nil
@@ -59,8 +61,16 @@ func (r *Repository) ExistsCatequisandoID(ctx context.Context, id int64) (bool, 
 	return exists, nil
 }
 
+func (r *Repository) FindCatequisandoIDByDocumentoID(ctx context.Context, id int64) (int64, error) {
+	var cateqID int64
+	if err := r.db.QueryRowContext(ctx, `SELECT id_catequisando FROM tb_documentos WHERE id_documento = ? LIMIT 1`, id).Scan(&cateqID); err != nil {
+		return 0, err
+	}
+	return cateqID, nil
+}
+
 func (r *Repository) Create(ctx context.Context, d Documento) (int64, error) {
-	const query = `INSERT INTO tb_documento (tipo_documento, caminho_arquivo, data_envio, id_catequisando, tipo_status) VALUES (NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?, ''))`
+	const query = `INSERT INTO tb_documentos (tipo_documento, caminho_arquivo, data_envio, id_catequisando, tipo_status) VALUES (NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?, ''))`
 	cateqID := int64(0)
 	if d.Catequisando != nil {
 		cateqID = d.Catequisando.IDCatequisando
@@ -73,7 +83,7 @@ func (r *Repository) Create(ctx context.Context, d Documento) (int64, error) {
 }
 
 func (r *Repository) Update(ctx context.Context, id int64, d Documento) error {
-	const query = `UPDATE tb_documento SET tipo_documento = NULLIF(?, ''), caminho_arquivo = NULLIF(?, ''), data_envio = NULLIF(?, ''), id_catequisando = ?, tipo_status = NULLIF(?, '') WHERE id_documento = ?`
+	const query = `UPDATE tb_documentos SET tipo_documento = NULLIF(?, ''), caminho_arquivo = NULLIF(?, ''), data_envio = NULLIF(?, ''), id_catequisando = ?, tipo_status = NULLIF(?, '') WHERE id_documento = ?`
 	cateqID := int64(0)
 	if d.Catequisando != nil {
 		cateqID = d.Catequisando.IDCatequisando
@@ -83,13 +93,55 @@ func (r *Repository) Update(ctx context.Context, id int64, d Documento) error {
 }
 
 func (r *Repository) UpdateStatus(ctx context.Context, id int64, status string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE tb_documento SET tipo_status = NULLIF(?, '') WHERE id_documento = ?`, status, id)
+	_, err := r.db.ExecContext(ctx, `UPDATE tb_documentos SET tipo_status = NULLIF(?, '') WHERE id_documento = ?`, status, id)
 	return err
 }
 
 func (r *Repository) DeleteByID(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM tb_documento WHERE id_documento = ?`, id)
+	_, err := r.db.ExecContext(ctx, `DELETE FROM tb_documentos WHERE id_documento = ?`, id)
 	return err
+}
+
+func (r *Repository) FindByCatequisandoIDs(ctx context.Context, ids []int64) (map[int64][]Documento, error) {
+	result := make(map[int64][]Documento, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	placeholders := make([]string, 0, len(ids))
+	args := make([]any, 0, len(ids))
+	for _, id := range ids {
+		placeholders = append(placeholders, "?")
+		args = append(args, id)
+	}
+
+	query := fmt.Sprintf(`
+SELECT id_documento, COALESCE(tipo_documento, ''), COALESCE(caminho_arquivo, ''), data_envio, id_catequisando, COALESCE(tipo_status, 'PENDENTE')
+FROM tb_documentos
+WHERE id_catequisando IN (%s)
+ORDER BY id_documento`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		item, err := scanDocumento(rows)
+		if err != nil {
+			return nil, err
+		}
+		if item.Catequisando != nil {
+			result[item.Catequisando.IDCatequisando] = append(result[item.Catequisando.IDCatequisando], item)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 type scanner interface{ Scan(dest ...any) error }

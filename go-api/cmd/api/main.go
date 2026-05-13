@@ -17,6 +17,7 @@ import (
 	"catequese-escada/go-api/internal/documento"
 	"catequese-escada/go-api/internal/evento"
 	"catequese-escada/go-api/internal/ficha"
+	"catequese-escada/go-api/internal/http/response"
 	"catequese-escada/go-api/internal/http/router"
 	"catequese-escada/go-api/internal/permissao"
 	"catequese-escada/go-api/internal/presenca"
@@ -30,6 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
+	response.SetAppEnv(cfg.AppEnv)
 
 	jwtService, err := auth.NewJWTService(cfg.JWTSecret, cfg.JWTExpiration)
 	if err != nil {
@@ -46,12 +48,13 @@ func main() {
 	defer db.Close()
 	authService := auth.NewService(db, authRepo, jwtService, cfg.JWTExpiration, cfg.JWTRefreshExpiration)
 	cateqRepo := catequisando.NewRepository(db)
+	documentoService := documento.NewService(documento.NewRepository(db))
+	cateqService := catequisando.NewService(cateqRepo, documentoService)
 	fichaService := ficha.NewService(ficha.NewRepository(db))
 	comunidadeService := comunidade.NewService(comunidade.NewRepository(db))
 	turmaService := turma.NewService(turma.NewRepository(db))
 	eventoService := evento.NewService(evento.NewRepository(db))
 	presencaService := presenca.NewService(presenca.NewRepository(db))
-	documentoService := documento.NewService(documento.NewRepository(db))
 	catequistaService := catequista.NewService(catequista.NewRepository(db))
 	coordenadorService := coordenador.NewService(coordenador.NewRepository(db))
 	conhecimentoService := conhecimento.NewService(conhecimento.NewRepository(db))
@@ -74,7 +77,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           router.New(jwtService, authService, cateqRepo, fichaService, comunidadeService, turmaService, eventoService, presencaService, documentoService, catequistaService, coordenadorService, conhecimentoService, permissaoService, uploadService, cfg.UploadMaxMB, usuarioService),
+		Handler:           router.New(jwtService, authService, cateqService, fichaService, comunidadeService, turmaService, eventoService, presencaService, documentoService, catequistaService, coordenadorService, conhecimentoService, permissaoService, uploadService, cfg.UploadMaxMB, usuarioService),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,

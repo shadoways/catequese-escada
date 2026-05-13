@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 
 	"catequese-escada/go-api/internal/auth"
@@ -24,10 +25,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type catequisandoStore interface {
+	FindAll(ctx context.Context) ([]catequisando.Catequisando, error)
+	FindByID(ctx context.Context, id int64) (catequisando.Catequisando, error)
+	Create(ctx context.Context, c catequisando.Catequisando) (int64, error)
+	Update(ctx context.Context, id int64, c catequisando.Catequisando) error
+	Delete(ctx context.Context, id int64) error
+}
+
 func New(
 	jwtService *auth.JWTService,
 	authService *auth.Service,
-	cateqRepo *catequisando.Repository,
+	cateqRepo catequisandoStore,
 	fichaService *ficha.Service,
 	comunidadeService *comunidade.Service,
 	turmaService *turma.Service,
@@ -44,6 +53,7 @@ func New(
 ) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestLogger())
+	r.Use(middleware.Recoverer())
 	authHandler := handlers.NewAuthHandler(jwtService, authService)
 	cateqHandler := handlers.NewCatequisandoHandler(cateqRepo)
 	fichaHandler := handlers.NewFichaHandler(fichaService)
@@ -56,14 +66,13 @@ func New(
 	coordenadorHandler := handlers.NewCoordenadorHandler(coordenadorService)
 	conhecimentoHandler := handlers.NewConhecimentoHandler(conhecimentoService)
 	permissaoHandler := handlers.NewPermissaoHandler(permissaoService)
-	uploadHandler := handlers.NewUploadHandler(uploadService, uploadMaxMB)
+	uploadHandler := handlers.NewUploadHandler(uploadService, documentoService, uploadMaxMB)
 	usuarioHandler := handlers.NewUsuarioHandler(usuarioService)
 	authMW := middleware.JWTAuth(jwtService)
 
 	// Public auth endpoints (same path contract, incremental implementation).
 	r.Post("/api/auth/login", authHandler.Login)
 	r.Post("/api/auth/refresh", authHandler.Refresh)
-	r.Post("/api/auth/logout", authHandler.Logout)
 	r.Post("/api/auth/password-reset/request", authHandler.RequestPasswordReset)
 	r.Post("/api/auth/password-reset/confirm", authHandler.ConfirmPasswordReset)
 	r.Get("/api/auth/health", authHandler.Health)
@@ -72,6 +81,7 @@ func New(
 	r.Group(func(api chi.Router) {
 		api.Use(authMW)
 		api.Get("/api/auth/validate", authHandler.Validate)
+		api.Post("/api/auth/logout", authHandler.Logout)
 
 		api.Route("/api/catequisandos", func(c chi.Router) {
 			c.Get("/", cateqHandler.GetAll)
@@ -163,8 +173,7 @@ func New(
 			p.Delete("/{id}", permissaoHandler.Delete)
 		})
 
-		api.Post("/api/files", uploadHandler.Upload)
-		api.Post("/api/files/batch", uploadHandler.UploadBatch)
+		api.Post("/api/documentos/upload", uploadHandler.UploadDocumento)
 
 		api.Route("/api/usuarios", func(u chi.Router) {
 			u.Use(middleware.RequireRole("COORDENADOR_PAROQUIAL"))

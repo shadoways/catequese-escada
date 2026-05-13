@@ -3,6 +3,7 @@ package catequisando
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 type Repository struct {
@@ -56,6 +57,9 @@ ORDER BY c.id_catequisando ASC`
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	for i := range result {
+		result[i].Arquivos = EmptyArquivosResumo()
 	}
 	return result, nil
 }
@@ -192,12 +196,34 @@ func (r *Repository) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
+func (r *Repository) ExistsDocumentoCivilEmOutroCatequisando(ctx context.Context, numeroDocumento, tipoDocumento string, excludeID int64) (bool, error) {
+	var exists bool
+	numero := strings.ToUpper(strings.TrimSpace(numeroDocumento))
+	tipo := strings.ToUpper(strings.TrimSpace(tipoDocumento))
+
+	const query = `
+SELECT EXISTS(
+    SELECT 1
+    FROM tb_catequisando
+    WHERE UPPER(TRIM(COALESCE(numero_documento, ''))) = ?
+      AND UPPER(TRIM(COALESCE(tipo_documento, ''))) = ?
+      AND (? = 0 OR id_catequisando <> ?)
+)`
+
+	if err := r.db.QueryRowContext(ctx, query, numero, tipo, excludeID, excludeID).Scan(&exists); err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }
 
 func scanCatequisando(scanner rowScanner) (Catequisando, error) {
 	var c Catequisando
+	c.Arquivos = EmptyArquivosResumo()
 	var turmaID sql.NullInt64
 	var turmaNome string
 	var comunidadeID sql.NullInt64

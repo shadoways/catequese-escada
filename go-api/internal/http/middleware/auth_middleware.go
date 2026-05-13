@@ -19,13 +19,18 @@ const (
 func JWTAuth(jwtService *auth.JWTService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
-			if !strings.HasPrefix(authHeader, "Bearer ") {
+			// Preflight requests do not carry bearer credentials.
+			if r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			token, ok := extractBearerToken(r.Header.Get("Authorization"))
+			if !ok {
 				response.Error(w, http.StatusUnauthorized, "Não autenticado")
 				return
 			}
 
-			token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 			valid, claims := jwtService.ValidateToken(token)
 			if !valid || claims == nil {
 				response.Error(w, http.StatusUnauthorized, "Não autenticado")
@@ -37,6 +42,17 @@ func JWTAuth(jwtService *auth.JWTService) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func extractBearerToken(authHeader string) (string, bool) {
+	parts := strings.Fields(strings.TrimSpace(authHeader))
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", false
+	}
+	if parts[1] == "" {
+		return "", false
+	}
+	return parts[1], true
 }
 
 func RequireRole(required string) func(http.Handler) http.Handler {

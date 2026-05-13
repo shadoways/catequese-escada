@@ -10,6 +10,24 @@ type ComunidadeRef struct {
 	Nome         string `json:"nome,omitempty"`
 }
 
+type DocumentoArquivo struct {
+	IDDocumento    int64  `json:"idDocumento"`
+	TipoDocumento  string `json:"tipoDocumento,omitempty"`
+	CaminhoArquivo string `json:"caminhoArquivo,omitempty"`
+	DataEnvio      string `json:"dataEnvio,omitempty"`
+	TipoStatus     string `json:"tipoStatus,omitempty"`
+}
+
+type ArquivosResumo struct {
+	Itens   []DocumentoArquivo `json:"itens"`
+	Total   int                `json:"total"`
+	Parcial bool               `json:"parcial,omitempty"`
+}
+
+func EmptyArquivosResumo() ArquivosResumo {
+	return ArquivosResumo{Itens: []DocumentoArquivo{}, Total: 0}
+}
+
 type Catequisando struct {
 	IDCatequisando        int64          `json:"idCatequisando"`
 	Nome                  string         `json:"nome"`
@@ -28,4 +46,5 @@ type Catequisando struct {
 	Ativo                 bool           `json:"ativo"`
 	Turma                 *TurmaRef      `json:"turma,omitempty"`
 	Comunidade            *ComunidadeRef `json:"comunidade,omitempty"`
+	Arquivos              ArquivosResumo `json:"arquivos"`
 }

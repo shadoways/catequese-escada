@@ -417,6 +417,8 @@ canvas {
 
 .tab-content[hidden] { display: none; }
 
+.tabs[hidden] { display: none; }
+
 /* ==========================================================================
    Menu inicial — tela de entrada com os atalhos para cadastro e consultas.
    Reaproveita as variáveis, sombra e raio já definidos acima.

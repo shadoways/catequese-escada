@@ -926,6 +926,10 @@ const switchTab = (tabName) => {
   document.querySelectorAll('.tab-content').forEach((el) => {
     el.hidden = el.dataset.tabContent !== tabName;
   });
+  // Na tela inicial os botões grandes já bastam; a barra de navegação
+  // só aparece depois que o usuário escolhe uma das opções, servindo
+  // de guia (o botão ativo mostra em qual tela ele está).
+  document.getElementById('main-tabs').hidden = tabName === 'menu';
   if (tabName === 'consulta') carregarConsulta();
   if (tabName === 'dashboard') carregarDashboard();
 };

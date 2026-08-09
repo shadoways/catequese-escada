@@ -219,7 +219,23 @@
         <div class="row" style="justify-content: space-between;">
           <h2>Catequistas, turmas e documentos</h2>
         </div>
-        <p class="muted">Para cada turma, veja os catequisandos e quais documentos ainda estão faltando.</p>
+        <p class="muted">Escolha a turma e/ou a comunidade e clique em Consultar. A busca só é feita depois do filtro, para não carregar a base inteira.</p>
+        <div class="row">
+          <label style="min-width: 190px;">
+            Turma
+            <select id="painel-turma-filtro">
+              <option value="">Todas as turmas</option>
+            </select>
+          </label>
+          <label style="min-width: 190px;">
+            Comunidade
+            <select id="painel-comunidade-filtro">
+              <option value="">Todas as comunidades</option>
+            </select>
+          </label>
+          <button type="button" id="btn-painel-consultar">Consultar</button>
+        </div>
+        <div id="painel-status" class="summary"></div>
         <div id="dashboard-conteudo"></div>
       </section>
     </div>

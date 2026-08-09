@@ -907,7 +907,7 @@ const DOC_TYPES_ESPERADOS = ['DOCUMENTO', 'CERTIDAO', 'FOTO', 'ASSINATURA'];
 
 let catequisandosCache = [];
 let consultaFiltrados = [];
-let dashboardCache = { catequisandos: [], turmas: [] };
+let dashboardCache = { catequisandos: [], turmas: [], catequistas: [] };
 
 const escapeHtml = (value) => {
   const div = document.createElement('div');
@@ -1037,54 +1037,143 @@ document.getElementById('btn-imprimir-lote').addEventListener('click', () => {
 });
 
 // ---- Painel: catequistas, turmas e documentos faltantes ----
-const carregarDashboard = async () => {
-  const container = document.getElementById('dashboard-conteudo');
-  container.innerHTML = '<p class="muted">Carregando...</p>';
-  try {
-    const [catequistas, turmas, catequisandos, documentos] = await Promise.all([
-      fetchJson('/api/catequistas'),
-      fetchJson('/api/turmas'),
-      fetchJson('/api/catequisandos'),
-      fetchJson('/api/documentos')
-    ]);
+//
+// A consulta pesada (catequisandos + documentos) só acontece depois que o
+// filtro é aplicado. Antes, o painel carrega apenas as listas curtas que
+// alimentam os selects.
 
-    dashboardCache = { catequisandos, turmas };
+const setStatusPainel = (texto, tipo = '') => {
+  const box = document.getElementById('painel-status');
+  box.innerHTML = texto ? `<div class="status ${tipo}">${escapeHtml(texto)}</div>` : '';
+};
 
-    const docsPorCatequisando = {};
-    documentos.forEach((doc) => {
-      const id = doc.catequisando?.idCatequisando;
-      if (!id) return;
-      if (!docsPorCatequisando[id]) docsPorCatequisando[id] = new Set();
-      docsPorCatequisando[id].add(doc.tipoDocumento);
-    });
-
-    const idsComCatequista = new Set();
-    let html = '';
-    catequistas.forEach((catequista) => {
-      const turmasDoCatequista = turmas.filter((t) => t.catequista?.idCatequista === catequista.idCatequista);
-      turmasDoCatequista.forEach((turma) => {
-        idsComCatequista.add(turma.idTurma);
-        html += renderTurmaCard(turma, catequista, catequisandos, docsPorCatequisando);
-      });
-    });
-    turmas.filter((t) => !idsComCatequista.has(t.idTurma)).forEach((turma) => {
-      html += renderTurmaCard(turma, null, catequisandos, docsPorCatequisando);
-    });
-
-    container.innerHTML = html || '<p class="muted">Nenhuma turma cadastrada.</p>';
-
-    container.querySelectorAll('[data-imprimir-turma]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        abrirFichaEmNovaAba(`turma=${btn.dataset.imprimirTurma}&print=1`);
-      });
-    });
-  } catch (err) {
-    container.innerHTML = `<p class="status error">Erro ao carregar painel: ${escapeHtml(err.message)}</p>`;
+// Executa em grupos, para não disparar centenas de requisições de uma vez.
+const emLotes = async (itens, tamanho, fn) => {
+  for (let i = 0; i < itens.length; i += tamanho) {
+    await Promise.all(itens.slice(i, i + tamanho).map(fn));
   }
 };
 
+// Só as listas leves: turmas, comunidades e catequistas.
+const carregarDashboard = async () => {
+  if (dashboardCache.turmas.length) return;
+
+  try {
+    const [catequistas, turmas, comunidades] = await Promise.all([
+      fetchJson('/api/catequistas'),
+      fetchJson('/api/turmas'),
+      fetchJson('/api/comunidades')
+    ]);
+
+    dashboardCache = { catequisandos: [], turmas, catequistas };
+
+    preencherFiltro('painel-turma-filtro', 'Todas as turmas', turmas,
+      (t) => t.idTurma, (t) => t.nome);
+    preencherFiltro('painel-comunidade-filtro', 'Todas as comunidades', comunidades,
+      (c) => c.idComunidade, (c) => c.nome);
+  } catch (err) {
+    setStatusPainel(`Erro ao carregar os filtros: ${err.message}`, 'error');
+  }
+};
+
+const consultarPainel = async () => {
+  const idTurma = document.getElementById('painel-turma-filtro').value;
+  const idComunidade = document.getElementById('painel-comunidade-filtro').value;
+  const container = document.getElementById('dashboard-conteudo');
+  const botao = document.getElementById('btn-painel-consultar');
+
+  if (!idTurma && !idComunidade) {
+    const ok = window.confirm(
+      'Sem nenhum filtro, o painel vai consultar os documentos de todos os catequisandos da base. ' +
+      'Isso pode demorar bastante. Deseja continuar?'
+    );
+    if (!ok) return;
+  }
+
+  botao.disabled = true;
+  container.innerHTML = '';
+  setStatusPainel('Carregando catequisandos...');
+
+  try {
+    // A lista de catequisandos é buscada uma vez e reaproveitada nos filtros seguintes.
+    if (!dashboardCache.catequisandos.length) {
+      dashboardCache.catequisandos = await fetchJson('/api/catequisandos');
+    }
+
+    const selecionados = dashboardCache.catequisandos
+      .filter((c) => !idTurma || String(c.turma?.idTurma ?? '') === idTurma)
+      .filter((c) => !idComunidade || String(c.comunidade?.idComunidade ?? '') === idComunidade);
+
+    if (!selecionados.length) {
+      setStatusPainel('Nenhum catequisando encontrado para esse filtro.', 'warning');
+      return;
+    }
+
+    // Em vez de baixar /api/documentos inteiro, consulta só quem está no filtro.
+    const docsPorCatequisando = {};
+    let processados = 0;
+    await emLotes(selecionados, 6, async (c) => {
+      try {
+        const docs = await fetchJson(`/api/documentos/catequisando/${c.idCatequisando}`);
+        docsPorCatequisando[c.idCatequisando] = new Set(docs.map((d) => d.tipoDocumento));
+      } catch (err) {
+        docsPorCatequisando[c.idCatequisando] = new Set();
+        console.warn(`Documentos do catequisando ${c.idCatequisando}:`, err.message);
+      }
+      processados += 1;
+      setStatusPainel(`Consultando documentos... ${processados} de ${selecionados.length}`);
+    });
+
+    // Mostra apenas as turmas que têm alguém na seleção.
+    const idsTurmas = new Set(selecionados.map((c) => c.turma?.idTurma).filter(Boolean));
+    const turmasVisiveis = dashboardCache.turmas.filter((t) => idsTurmas.has(t.idTurma));
+
+    let html = turmasVisiveis
+      .map((t) => renderTurmaCard(
+        t,
+        dashboardCache.catequistas.find((k) => k.idCatequista === t.catequista?.idCatequista) || t.catequista,
+        selecionados,
+        docsPorCatequisando
+      ))
+      .join('');
+
+    // Quem está sem turma não pode sumir do controle de documentos.
+    const semTurma = selecionados.filter((c) => !c.turma?.idTurma);
+    if (semTurma.length) {
+      html += renderTurmaCard({ idTurma: null, nome: 'Sem turma definida' }, null,
+        semTurma, docsPorCatequisando);
+    }
+
+    container.innerHTML = html || '<p class="muted">Nenhuma turma encontrada.</p>';
+
+    container.querySelectorAll('[data-imprimir-turma]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const extra = idComunidade ? `&comunidade=${idComunidade}` : '';
+        abrirFichaEmNovaAba(`turma=${btn.dataset.imprimirTurma}${extra}&print=1`);
+      });
+    });
+
+    container.querySelectorAll('[data-imprimir-ids]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        abrirFichaEmNovaAba(`ids=${btn.dataset.imprimirIds}&print=1`);
+      });
+    });
+
+    setStatusPainel(`${selecionados.length} catequisando(s) em ${turmasVisiveis.length + (semTurma.length ? 1 : 0)} turma(s).`, 'ok');
+  } catch (err) {
+    setStatusPainel(`Erro ao consultar: ${err.message}`, 'error');
+  } finally {
+    botao.disabled = false;
+  }
+};
+
+document.getElementById('btn-painel-consultar').addEventListener('click', consultarPainel);
+
 const renderTurmaCard = (turma, catequista, catequisandos, docsPorCatequisando) => {
-  const catequisandosDaTurma = catequisandos.filter((c) => c.turma?.idTurma === turma.idTurma);
+  // turma.idTurma nulo é o cartão "Sem turma definida"
+  const catequisandosDaTurma = turma.idTurma
+    ? catequisandos.filter((c) => c.turma?.idTurma === turma.idTurma)
+    : catequisandos.filter((c) => !c.turma?.idTurma);
 
   let linhas = '';
   if (!catequisandosDaTurma.length) {
@@ -1106,9 +1195,14 @@ const renderTurmaCard = (turma, catequista, catequisandos, docsPorCatequisando) 
     });
   }
 
-  const botaoImprimir = catequisandosDaTurma.length
-    ? `<button type="button" class="secondary" data-imprimir-turma="${turma.idTurma}">Imprimir ${catequisandosDaTurma.length} ficha(s) desta turma</button>`
-    : '';
+  // Sem turma, não dá para imprimir por turma: usa a lista de ids.
+  let botaoImprimir = '';
+  if (catequisandosDaTurma.length) {
+    const rotulo = `Imprimir ${catequisandosDaTurma.length} ficha(s)`;
+    botaoImprimir = turma.idTurma
+      ? `<button type="button" class="secondary" data-imprimir-turma="${turma.idTurma}">${rotulo} desta turma</button>`
+      : `<button type="button" class="secondary" data-imprimir-ids="${catequisandosDaTurma.map((c) => c.idCatequisando).join(',')}">${rotulo}</button>`;
+  }
 
   return `
     <div class="turma-card">

@@ -915,6 +915,8 @@ const ESTADO_CONJUGAL_LABELS = {
 };
 
 let catequisandosCache = [];
+let consultaFiltrados = [];
+let dashboardCache = { catequisandos: [], turmas: [] };
 let blobUrlsAtivos = [];
 
 const escapeHtml = (value) => {
@@ -933,6 +935,23 @@ const formatDateSimple = (dateStr) => {
 const revogarBlobsAtivos = () => {
   blobUrlsAtivos.forEach((url) => URL.revokeObjectURL(url));
   blobUrlsAtivos = [];
+};
+
+// Sem isso, window.print() pode disparar antes de o navegador terminar de
+// decodificar as imagens da area de impressao, e o documento sai em branco.
+const aguardarImagens = (container, timeoutMs = 20000) => {
+  const imgs = Array.from(container.querySelectorAll('img'));
+  const pendentes = imgs.filter((img) => !(img.complete && img.naturalWidth > 0));
+  if (!pendentes.length) return Promise.resolve();
+
+  const carregadas = Promise.all(pendentes.map((img) => new Promise((resolve) => {
+    img.addEventListener('load', resolve, { once: true });
+    img.addEventListener('error', resolve, { once: true });
+  })));
+
+  // Guarda de seguranca: nunca travar a impressao por causa de um anexo ruim.
+  const limite = new Promise((resolve) => setTimeout(resolve, timeoutMs));
+  return Promise.race([carregadas, limite]);
 };
 
 // ---- Navegação por abas ----
@@ -991,6 +1010,16 @@ const renderConsultaLista = () => {
     return nomeOk && turmaOk;
   });
 
+  // Guardado para a impressão em lote respeitar exatamente o filtro atual.
+  consultaFiltrados = filtrados;
+
+  const contador = document.getElementById('consulta-contador');
+  const botaoLote = document.getElementById('btn-imprimir-lote');
+  contador.textContent = filtrados.length
+    ? `${filtrados.length} catequisando(s) na seleção atual`
+    : '';
+  botaoLote.disabled = !filtrados.length;
+
   if (!filtrados.length) {
     lista.innerHTML = '<p class="muted">Nenhum catequisando encontrado.</p>';
     return;
@@ -1023,12 +1052,15 @@ document.getElementById('btn-fechar-ficha').addEventListener('click', () => {
 // Busca o conteúdo do documento pelo endpoint do backend (que lê do bucket de
 // produção com as credenciais configuradas) e devolve uma URL de blob local,
 // evitando depender do bucket GCS ter leitura pública.
-const carregarArquivoDocumento = async (idDocumento) => {
+// O parâmetro "coletor" permite que a impressão em lote registre as URLs numa
+// lista própria e as libere ao final, sem derrubar as imagens da ficha aberta
+// na tela.
+const carregarArquivoDocumento = async (idDocumento, coletor) => {
   const res = await fetch(`/api/documentos/${idDocumento}/arquivo`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
-  blobUrlsAtivos.push(url);
+  (coletor || blobUrlsAtivos).push(url);
   return { url, contentType: blob.type };
 };
 
@@ -1062,7 +1094,7 @@ const buildFichaInscricaoHtml = (fichas) => {
 
 // Monta o bloco de documentos já com a prévia carregada: imagens embutidas,
 // PDFs em iframe, e qualquer outro tipo como link para abrir em nova aba.
-const buildDocumentosHtml = async (documentos) => {
+const buildDocumentosHtml = async (documentos, coletor) => {
   let html = '<h3>Documentos entregues</h3>';
   if (!documentos.length) {
     html += '<p class="muted">Nenhum documento enviado.</p>';
@@ -1073,11 +1105,14 @@ const buildDocumentosHtml = async (documentos) => {
     const titulo = DOC_TYPE_LABELS[doc.tipoDocumento] || doc.tipoDocumento;
     html += `<div class="doc-item"><span class="doc-titulo">${escapeHtml(titulo)} — enviado em ${formatDateSimple(doc.dataEnvio)}</span>`;
     try {
-      const arquivo = await carregarArquivoDocumento(doc.idDocumento);
+      const arquivo = await carregarArquivoDocumento(doc.idDocumento, coletor);
       if (arquivo.contentType && arquivo.contentType.startsWith('image/')) {
         html += `<img src="${arquivo.url}" alt="${escapeHtml(titulo)}" />`;
       } else if (arquivo.contentType === 'application/pdf') {
+        // Alguns navegadores nao renderizam PDF em iframe na impressao; por isso
+        // o link direto, que abre o visualizador nativo e imprime de forma confiavel.
         html += `<iframe src="${arquivo.url}" title="${escapeHtml(titulo)}"></iframe>`;
+        html += `<div class="doc-aviso">PDF — se não sair na folha impressa, <a href="${arquivo.url}" target="_blank" rel="noopener">abra em nova aba</a> e imprima por lá.</div>`;
       } else {
         html += `<a href="${arquivo.url}" target="_blank" rel="noopener">Abrir arquivo (${escapeHtml(arquivo.contentType || 'arquivo')})</a>`;
       }
@@ -1114,13 +1149,129 @@ const abrirFichaDetalhe = async (idCatequisando) => {
   }
 };
 
-document.getElementById('btn-imprimir-ficha').addEventListener('click', () => {
+document.getElementById('btn-imprimir-ficha').addEventListener('click', async () => {
   const conteudo = document.getElementById('ficha-detalhe-conteudo');
   const fichaView = conteudo.querySelector('.ficha-view');
   if (!fichaView) return;
+  const botao = document.getElementById('btn-imprimir-ficha');
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = `<h1 style="font-family: Arial, sans-serif;">Ficha do Catequisando</h1>${fichaView.innerHTML}`;
+
+  botao.disabled = true;
+  try {
+    await aguardarImagens(printArea);
+    window.print();
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+// ---- Impressão em lote (migração: imprimir para arquivar em papel) ----
+
+const LOTE_AVISO_ACIMA_DE = 30;
+
+const setProgressoLote = (texto, tipo = '') => {
+  const box = document.getElementById('lote-progresso');
+  if (!texto) {
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = `<div class="status ${tipo}">${escapeHtml(texto)}</div>`;
+};
+
+// Monta o HTML de uma ficha (dados + inscrição + documentos) para o lote.
+const montarFichaParaLote = async (catequisandoResumo, coletor) => {
+  const id = catequisandoResumo.idCatequisando;
+  const [catequisando, fichas, documentos] = await Promise.all([
+    fetchJson(`/api/catequisandos/${id}`),
+    fetchJson(`/api/fichas/catequisando/${id}`),
+    fetchJson(`/api/documentos/catequisando/${id}`)
+  ]);
+
+  const corpo = buildDadosCadastraisHtml(catequisando)
+    + buildFichaInscricaoHtml(fichas)
+    + await buildDocumentosHtml(documentos, coletor);
+
+  return `
+    <div class="ficha-print">
+      <h1 class="print-nome">Ficha do Catequisando</h1>
+      <div class="print-sub">${escapeHtml(catequisando.nome)} · ${escapeHtml(catequisando.turma?.nome || 'Sem turma')} · ${escapeHtml(catequisando.comunidade?.nome || 'Sem comunidade')}</div>
+      <div class="ficha-view">${corpo}</div>
+    </div>
+  `;
+};
+
+const imprimirLote = async (lista, descricao) => {
+  if (!lista || !lista.length) {
+    setProgressoLote('Nenhum catequisando na seleção atual.', 'warning');
+    return;
+  }
+
+  if (lista.length > LOTE_AVISO_ACIMA_DE) {
+    const ok = window.confirm(
+      `Você vai carregar ${lista.length} fichas com todos os anexos de uma vez. ` +
+      `Lotes grandes consomem bastante memória do navegador e podem demorar. ` +
+      `Recomendado imprimir turma por turma. Deseja continuar mesmo assim?`
+    );
+    if (!ok) return;
+  }
+
+  // URLs de blob deste lote: liberadas assim que a impressão terminar.
+  const coletor = [];
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = '';
+
+  let html = '';
+  const falhas = [];
+
+  for (let i = 0; i < lista.length; i += 1) {
+    const item = lista[i];
+    setProgressoLote(`Preparando ${i + 1} de ${lista.length}: ${item.nome}...`);
+    try {
+      html += await montarFichaParaLote(item, coletor);
+    } catch (err) {
+      falhas.push(`${item.nome}: ${err.message}`);
+      html += `
+        <div class="ficha-print">
+          <h1 class="print-nome">Ficha do Catequisando</h1>
+          <div class="print-sub">${escapeHtml(item.nome)}</div>
+          <p class="status error">Não foi possível carregar esta ficha: ${escapeHtml(err.message)}</p>
+        </div>
+      `;
+    }
+  }
+
+  printArea.innerHTML = html;
+
+  setProgressoLote(`Carregando anexos de ${lista.length} ficha(s) para impressão...`);
+  await aguardarImagens(printArea);
+
+  // Libera a memória dos anexos só depois que a janela de impressão fechar.
+  const aoTerminar = () => {
+    printArea.innerHTML = '';
+    coletor.forEach((url) => URL.revokeObjectURL(url));
+    window.removeEventListener('afterprint', aoTerminar);
+  };
+  window.addEventListener('afterprint', aoTerminar);
+
+  if (falhas.length) {
+    setProgressoLote(`${descricao}: ${lista.length} ficha(s) preparada(s), ${falhas.length} com erro. Confira antes de excluir do bucket.`, 'warning');
+    console.warn('Fichas com erro no lote:', falhas);
+  } else {
+    setProgressoLote(`${descricao}: ${lista.length} ficha(s) prontas para impressão.`, 'ok');
+  }
+
   window.print();
+};
+
+document.getElementById('btn-imprimir-lote').addEventListener('click', () => {
+  const turmaFiltro = document.getElementById('consulta-turma-filtro');
+  const descricao = turmaFiltro.value
+    ? `Turma ${turmaFiltro.options[turmaFiltro.selectedIndex].textContent}`
+    : 'Todos os catequisandos listados';
+  imprimirLote(consultaFiltrados, descricao);
 });
 
 // ---- Painel: catequistas, turmas e documentos faltantes ----
@@ -1134,6 +1285,8 @@ const carregarDashboard = async () => {
       fetchJson('/api/catequisandos'),
       fetchJson('/api/documentos')
     ]);
+
+    dashboardCache = { catequisandos, turmas };
 
     const docsPorCatequisando = {};
     documentos.forEach((doc) => {
@@ -1164,6 +1317,15 @@ const carregarDashboard = async () => {
         abrirFichaDetalhe(Number(el.dataset.abrirFicha));
       });
     });
+
+    container.querySelectorAll('[data-imprimir-turma]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idTurma = Number(btn.dataset.imprimirTurma);
+        const turma = dashboardCache.turmas.find((t) => t.idTurma === idTurma);
+        const daTurma = dashboardCache.catequisandos.filter((c) => c.turma?.idTurma === idTurma);
+        imprimirLote(daTurma, `Turma ${turma?.nome || idTurma}`);
+      });
+    });
   } catch (err) {
     container.innerHTML = `<p class="status error">Erro ao carregar painel: ${escapeHtml(err.message)}</p>`;
   }
@@ -1192,10 +1354,19 @@ const renderTurmaCard = (turma, catequista, catequisandos, docsPorCatequisando) 
     });
   }
 
+  const botaoImprimir = catequisandosDaTurma.length
+    ? `<button type="button" class="secondary" data-imprimir-turma="${turma.idTurma}">Imprimir ${catequisandosDaTurma.length} ficha(s) desta turma</button>`
+    : '';
+
   return `
     <div class="turma-card">
-      <h3>${escapeHtml(turma.nome)}${turma.ano ? ' (' + turma.ano + ')' : ''}</h3>
-      <div class="catequista-nome">Catequista: ${escapeHtml(catequista?.nome || 'Sem catequista responsável')}</div>
+      <div class="row" style="justify-content: space-between; align-items: flex-start;">
+        <div>
+          <h3>${escapeHtml(turma.nome)}${turma.ano ? ' (' + turma.ano + ')' : ''}</h3>
+          <div class="catequista-nome">Catequista: ${escapeHtml(catequista?.nome || 'Sem catequista responsável')}</div>
+        </div>
+        ${botaoImprimir}
+      </div>
       ${linhas}
     </div>
   `;

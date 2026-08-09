@@ -491,8 +491,6 @@ canvas {
   border-top: 1px solid var(--stroke);
 }
 
-.catequisando-row:first-of-type { border-top: none; }
-
 .catequisando-row .docs { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .ficha-view h3 {
@@ -535,18 +533,55 @@ canvas {
 
 .ficha-view .doc-item iframe { width: 100%; height: 420px; }
 
+.ficha-view .doc-aviso {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+
 #print-area { display: none; }
 
+.ficha-print { margin-bottom: 28px; }
+
+.ficha-print .print-nome {
+  margin: 0 0 4px;
+  font-family: Arial, sans-serif;
+  font-size: 1.3rem;
+}
+
+.ficha-print .print-sub {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
 @media print {
-  header, .tabs, #main-tabs, .tab-content { display: none !important; }
+  /* #print-area fica fora de .shell, entao basta esconder toda a interface */
+  .shell { display: none !important; }
   body { background: #fff; padding: 0; }
-  .shell { max-width: none; }
   #print-area {
     display: block;
     background: #fff;
     color: var(--ink);
     font-family: Arial, sans-serif;
     padding: 0 10px;
+  }
+
+  /* Cada ficha do lote começa numa folha nova */
+  .ficha-print {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .ficha-print:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Evita cortar um documento no meio da página */
+  .ficha-view .doc-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }
 

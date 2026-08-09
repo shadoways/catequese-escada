@@ -20,6 +20,8 @@
       <button type="button" class="tab-btn" data-tab="dashboard">Turmas e documentos</button>
     </nav>
 
+    <div id="lote-progresso" class="summary" hidden></div>
+
     <div class="layout tab-content" id="tab-cadastro" data-tab-content="cadastro">
       <section class="panel" id="section-catequisando">
         <div class="row" style="justify-content: space-between;">
@@ -197,6 +199,10 @@
               <option value="">Todas as turmas</option>
             </select>
           </label>
+        </div>
+        <div class="row" style="justify-content: space-between;">
+          <span class="muted" id="consulta-contador"></span>
+          <button type="button" id="btn-imprimir-lote">Imprimir fichas listadas</button>
         </div>
         <div id="consulta-lista" class="result-list"></div>
       </section>

@@ -891,10 +891,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ============================================================
-// Consulta de catequisandos, ficha completa (impressão/PDF)
-// e painel de turmas/catequistas com status de documentos.
-// Reaproveita fetchJson, o layout de .panel/.grid/.row e as
-// variáveis de estilo já definidas em style.css.
+// Consulta de catequisandos e painel de turmas/catequistas com
+// status de documentos.
+// A ficha em si é renderizada em ficha.html / ficha.js, que abre
+// numa aba própria.
 // ============================================================
 
 const DOC_TYPE_LABELS = {
@@ -905,19 +905,9 @@ const DOC_TYPE_LABELS = {
 };
 const DOC_TYPES_ESPERADOS = ['DOCUMENTO', 'CERTIDAO', 'FOTO', 'ASSINATURA'];
 
-const ESTADO_CONJUGAL_LABELS = {
-  SOLTEIRO: 'Solteiro(a)',
-  CASADO_IGREJA: 'Casado(a) na Igreja',
-  CASADO_CIVIL: 'Casado(a) apenas no civil',
-  UNIAO_ESTAVEL: 'União estável',
-  VIVE_COMPANHEIRO: 'Vive com companheiro(a)',
-  SEGUNDA_UNIAO: 'Segunda união'
-};
-
 let catequisandosCache = [];
 let consultaFiltrados = [];
 let dashboardCache = { catequisandos: [], turmas: [] };
-let blobUrlsAtivos = [];
 
 const escapeHtml = (value) => {
   const div = document.createElement('div');
@@ -925,34 +915,8 @@ const escapeHtml = (value) => {
   return div.innerHTML;
 };
 
-const formatDateSimple = (dateStr) => {
-  if (!dateStr) return '—';
-  const [ano, mes, dia] = dateStr.split('-');
-  if (!ano || !mes || !dia) return dateStr;
-  return `${dia}/${mes}/${ano}`;
-};
-
-const revogarBlobsAtivos = () => {
-  blobUrlsAtivos.forEach((url) => URL.revokeObjectURL(url));
-  blobUrlsAtivos = [];
-};
-
-// Sem isso, window.print() pode disparar antes de o navegador terminar de
-// decodificar as imagens da area de impressao, e o documento sai em branco.
-const aguardarImagens = (container, timeoutMs = 20000) => {
-  const imgs = Array.from(container.querySelectorAll('img'));
-  const pendentes = imgs.filter((img) => !(img.complete && img.naturalWidth > 0));
-  if (!pendentes.length) return Promise.resolve();
-
-  const carregadas = Promise.all(pendentes.map((img) => new Promise((resolve) => {
-    img.addEventListener('load', resolve, { once: true });
-    img.addEventListener('error', resolve, { once: true });
-  })));
-
-  // Guarda de seguranca: nunca travar a impressao por causa de um anexo ruim.
-  const limite = new Promise((resolve) => setTimeout(resolve, timeoutMs));
-  return Promise.race([carregadas, limite]);
-};
+// A ficha abre sempre em aba nova, para não misturar com a listagem.
+const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blank', 'noopener');
 
 // ---- Navegação por abas ----
 const switchTab = (tabName) => {
@@ -971,27 +935,35 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 });
 
 // ---- Consulta de catequisandos ----
+// Preenche um <select> de filtro preservando a opção que já estava marcada.
+const preencherFiltro = (selectId, textoPadrao, itens, getValor, getTexto) => {
+  const select = document.getElementById(selectId);
+  const selecionado = select.value;
+  select.innerHTML = `<option value="">${textoPadrao}</option>`;
+  itens.forEach((item) => {
+    const option = document.createElement('option');
+    option.value = getValor(item);
+    option.textContent = getTexto(item);
+    select.appendChild(option);
+  });
+  select.value = selecionado || '';
+};
+
 const carregarConsulta = async () => {
   const lista = document.getElementById('consulta-lista');
   lista.innerHTML = '<p class="muted">Carregando...</p>';
-  document.getElementById('ficha-detalhe').hidden = true;
   try {
-    const [catequisandos, turmas] = await Promise.all([
+    const [catequisandos, turmas, comunidades] = await Promise.all([
       fetchJson('/api/catequisandos'),
-      fetchJson('/api/turmas')
+      fetchJson('/api/turmas'),
+      fetchJson('/api/comunidades')
     ]);
     catequisandosCache = catequisandos;
 
-    const filtroTurma = document.getElementById('consulta-turma-filtro');
-    const selecionado = filtroTurma.value;
-    filtroTurma.innerHTML = '<option value="">Todas as turmas</option>';
-    turmas.forEach((turma) => {
-      const option = document.createElement('option');
-      option.value = turma.idTurma;
-      option.textContent = turma.nome;
-      filtroTurma.appendChild(option);
-    });
-    filtroTurma.value = selecionado || '';
+    preencherFiltro('consulta-turma-filtro', 'Todas as turmas', turmas,
+      (t) => t.idTurma, (t) => t.nome);
+    preencherFiltro('consulta-comunidade-filtro', 'Todas as comunidades', comunidades,
+      (c) => c.idComunidade, (c) => c.nome);
 
     renderConsultaLista();
   } catch (err) {
@@ -1003,11 +975,13 @@ const renderConsultaLista = () => {
   const lista = document.getElementById('consulta-lista');
   const termo = (document.getElementById('consulta-busca').value || '').trim().toLowerCase();
   const turmaFiltro = document.getElementById('consulta-turma-filtro').value;
+  const comunidadeFiltro = document.getElementById('consulta-comunidade-filtro').value;
 
   const filtrados = catequisandosCache.filter((c) => {
     const nomeOk = !termo || c.nome.toLowerCase().includes(termo);
     const turmaOk = !turmaFiltro || String(c.turma?.idTurma ?? '') === turmaFiltro;
-    return nomeOk && turmaOk;
+    const comunidadeOk = !comunidadeFiltro || String(c.comunidade?.idComunidade ?? '') === comunidadeFiltro;
+    return nomeOk && turmaOk && comunidadeOk;
   });
 
   // Guardado para a impressão em lote respeitar exatamente o filtro atual.
@@ -1025,317 +999,41 @@ const renderConsultaLista = () => {
     return;
   }
 
-  lista.innerHTML = '';
-  filtrados.forEach((c) => {
-    const item = document.createElement('div');
-    item.className = 'result-item';
-    item.innerHTML = `
-      <div>
-        <div class="nome">${escapeHtml(c.nome)}</div>
-        <div class="meta">${escapeHtml(c.turma?.nome || 'Sem turma')} · ${escapeHtml(c.comunidade?.nome || 'Sem comunidade')}</div>
-      </div>
-      <button type="button" class="secondary">Ver ficha</button>
-    `;
-    item.addEventListener('click', () => abrirFichaDetalhe(c.idCatequisando));
-    lista.appendChild(item);
-  });
+  // Link de verdade: permite abrir em nova aba, nova janela ou com o botão do meio.
+  lista.innerHTML = filtrados.map((c) => `
+    <a class="result-item" href="ficha.html?id=${c.idCatequisando}" target="_blank" rel="noopener">
+      <span>
+        <span class="nome">${escapeHtml(c.nome)}</span>
+        <span class="meta">${escapeHtml(c.turma?.nome || 'Sem turma')} · ${escapeHtml(c.comunidade?.nome || 'Sem comunidade')}</span>
+      </span>
+      <span class="botao-falso">Ver ficha</span>
+    </a>
+  `).join('');
 };
 
 document.getElementById('consulta-busca').addEventListener('input', renderConsultaLista);
 document.getElementById('consulta-turma-filtro').addEventListener('change', renderConsultaLista);
-document.getElementById('btn-fechar-ficha').addEventListener('click', () => {
-  document.getElementById('ficha-detalhe').hidden = true;
-});
+document.getElementById('consulta-comunidade-filtro').addEventListener('change', renderConsultaLista);
 
-// ---- Ficha completa (usada tanto na tela quanto na impressão) ----
-
-// Busca o conteúdo do documento pelo endpoint do backend (que lê do bucket de
-// produção com as credenciais configuradas) e devolve uma URL de blob local,
-// evitando depender do bucket GCS ter leitura pública.
-// O parâmetro "coletor" permite que a impressão em lote registre as URLs numa
-// lista própria e as libere ao final, sem derrubar as imagens da ficha aberta
-// na tela.
-const carregarArquivoDocumento = async (idDocumento, coletor) => {
-  const res = await fetch(`/api/documentos/${idDocumento}/arquivo`);
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  (coletor || blobUrlsAtivos).push(url);
-  return { url, contentType: blob.type };
-};
-
-// Campo rotulado, no mesmo padrão visual dos inputs do formulário de cadastro.
-const campo = (rotulo, valor, largo = false) => {
-  const vazio = valor === null || valor === undefined || valor === '';
-  return `
-    <div class="ficha-campo${largo ? ' largo' : ''}">
-      <span class="rotulo">${escapeHtml(rotulo)}</span>
-      <span class="valor">${vazio ? '—' : escapeHtml(valor)}</span>
-    </div>`;
-};
-
-// Reproduz os checkboxes do formulário, marcados conforme o cadastro.
-const marca = (ativo, texto) =>
-  `<span class="ficha-marca${ativo ? ' ativa' : ''}">${ativo ? '☑' : '☐'} ${escapeHtml(texto)}</span>`;
-
-const buildCabecalhoFicha = (c) => `
-  <header class="ficha-cabecalho">
-    <div>
-      <h1>FICHA DE CATEQUESE</h1>
-      <p class="ficha-sub">${escapeHtml(c.nome)} · ${escapeHtml(c.turma?.nome || 'Sem turma')} · ${escapeHtml(c.comunidade?.nome || 'Sem comunidade')}</p>
-    </div>
-    <img src="logo.png" alt="Logo Catequese" />
-  </header>
-`;
-
-const buildDadosCadastraisHtml = (c) => `
-  <section class="ficha-bloco">
-    <h2>Dados do catequisando</h2>
-    <div class="ficha-grid">
-      ${campo('Nome completo', c.nome, true)}
-      ${campo('Telefone', c.telefone)}
-      ${campo('Email', c.email)}
-      ${campo('Data de nascimento', formatDateSimple(c.dataNascimento))}
-      ${campo('Nome do responsável', c.nomeResponsavel)}
-      ${campo('Telefone do responsável', c.telefoneResponsavel)}
-      ${campo('Endereço', c.endereco, true)}
-      ${campo('Tipo de documento', c.tipoDocumento)}
-      ${campo('Número do documento', c.numeroDocumento)}
-      ${campo('Turma', c.turma?.nome)}
-      ${campo('Comunidade', c.comunidade?.nome)}
-      ${campo('Estado civil / convivência conjugal', ESTADO_CONJUGAL_LABELS[c.estadoConjugal] || c.estadoConjugal, true)}
-    </div>
-    <div class="ficha-marcas">
-      <span class="rotulo">Sacramentos e observações de saúde</span>
-      <div class="marcas-linha">
-        ${marca(c.foiBatizado, 'Batismo')}
-        ${marca(c.fezPrimeiraEucaristia, 'Primeira Eucaristia')}
-        ${marca(c.intoleranteGluten, 'Intolerante a glúten')}
-      </div>
-    </div>
-  </section>
-`;
-
-const buildFichaInscricaoHtml = (fichas) => {
-  const ficha = fichas[0];
-  return `
-    <section class="ficha-bloco">
-      <h2>Ficha de inscrição</h2>
-      <div class="ficha-grid">
-        ${campo('Data de inscrição', ficha ? formatDateSimple(ficha.dataInscricao) : null)}
-        ${campo('Nº da ficha', ficha ? ficha.idFicha : null)}
-        ${campo('Observações', ficha ? ficha.observacoes : null, true)}
-      </div>
-    </section>
-  `;
-};
-
-// Monta o bloco de documentos já com a prévia carregada: imagens embutidas,
-// PDFs em iframe, e qualquer outro tipo como link para abrir em nova aba.
-const buildDocumentosHtml = async (documentos, coletor) => {
-  if (!documentos.length) {
-    return `
-      <section class="ficha-bloco">
-        <h2>Documentos e anexos</h2>
-        <p class="muted">Nenhum documento enviado.</p>
-      </section>`;
-  }
-
-  let html = '<section class="ficha-bloco"><h2>Documentos e anexos</h2><div class="ficha-docs">';
-
-  for (const doc of documentos) {
-    const titulo = DOC_TYPE_LABELS[doc.tipoDocumento] || doc.tipoDocumento;
-    html += `
-      <div class="doc-item">
-        <div class="doc-cabecalho">
-          <span class="doc-titulo">${escapeHtml(titulo)}</span>
-          <span class="doc-data">Enviado em ${formatDateSimple(doc.dataEnvio)}</span>
-        </div>`;
-    try {
-      const arquivo = await carregarArquivoDocumento(doc.idDocumento, coletor);
-      if (arquivo.contentType && arquivo.contentType.startsWith('image/')) {
-        html += `<div class="doc-preview"><img src="${arquivo.url}" alt="${escapeHtml(titulo)}" /></div>`;
-      } else if (arquivo.contentType === 'application/pdf') {
-        // Alguns navegadores nao renderizam PDF em iframe na impressao; por isso
-        // o link direto, que abre o visualizador nativo e imprime de forma confiavel.
-        html += `<div class="doc-preview"><iframe src="${arquivo.url}" title="${escapeHtml(titulo)}"></iframe></div>`;
-        html += `<div class="doc-aviso">PDF — se não sair na folha impressa, <a href="${arquivo.url}" target="_blank" rel="noopener">abra em nova aba</a> e imprima por lá.</div>`;
-      } else {
-        html += `<div class="doc-aviso"><a href="${arquivo.url}" target="_blank" rel="noopener">Abrir arquivo (${escapeHtml(arquivo.contentType || 'arquivo')})</a></div>`;
-      }
-    } catch (err) {
-      html += `<div class="doc-aviso status error">Não foi possível carregar o arquivo: ${escapeHtml(err.message)}</div>`;
-    }
-    html += '</div>';
-  }
-
-  html += '</div></section>';
-  return html;
-};
-
-// Documento completo da ficha — mesma marcação na tela e na impressão.
-const montarFichaDocumento = (c, fichas, documentosHtml) => `
-  <article class="ficha-doc">
-    ${buildCabecalhoFicha(c)}
-    ${buildDadosCadastraisHtml(c)}
-    ${buildFichaInscricaoHtml(fichas)}
-    ${documentosHtml}
-  </article>
-`;
-
-const PLACEHOLDER_DOCS = `
-  <section class="ficha-bloco">
-    <h2>Documentos e anexos</h2>
-    <p class="muted">Carregando anexos...</p>
-  </section>`;
-
-const abrirFichaDetalhe = async (idCatequisando) => {
-  const painel = document.getElementById('ficha-detalhe');
-  const conteudo = document.getElementById('ficha-detalhe-conteudo');
-  revogarBlobsAtivos();
-  painel.hidden = false;
-  conteudo.innerHTML = '<p class="muted">Carregando ficha...</p>';
-  painel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-  try {
-    const [catequisando, fichas, documentos] = await Promise.all([
-      fetchJson(`/api/catequisandos/${idCatequisando}`),
-      fetchJson(`/api/fichas/catequisando/${idCatequisando}`),
-      fetchJson(`/api/documentos/catequisando/${idCatequisando}`)
-    ]);
-
-    conteudo.innerHTML = montarFichaDocumento(catequisando, fichas, PLACEHOLDER_DOCS);
-
-    const documentosHtml = await buildDocumentosHtml(documentos);
-    conteudo.innerHTML = montarFichaDocumento(catequisando, fichas, documentosHtml);
-  } catch (err) {
-    conteudo.innerHTML = `<p class="status error">Erro ao carregar ficha: ${escapeHtml(err.message)}</p>`;
-  }
-};
-
-document.getElementById('btn-imprimir-ficha').addEventListener('click', async () => {
-  const conteudo = document.getElementById('ficha-detalhe-conteudo');
-  const fichaDoc = conteudo.querySelector('.ficha-doc');
-  if (!fichaDoc) return;
-  const botao = document.getElementById('btn-imprimir-ficha');
-  const printArea = document.getElementById('print-area');
-  printArea.innerHTML = `<div class="ficha-print">${fichaDoc.outerHTML}</div>`;
-
-  botao.disabled = true;
-  try {
-    await aguardarImagens(printArea);
-    window.print();
-  } finally {
-    botao.disabled = false;
-  }
-});
-
-// ---- Impressão em lote (migração: imprimir para arquivar em papel) ----
-
-const LOTE_AVISO_ACIMA_DE = 30;
-
-const setProgressoLote = (texto, tipo = '') => {
-  const box = document.getElementById('lote-progresso');
-  if (!texto) {
-    box.hidden = true;
-    box.innerHTML = '';
-    return;
-  }
-  box.hidden = false;
-  box.innerHTML = `<div class="status ${tipo}">${escapeHtml(texto)}</div>`;
-};
-
-// Monta o HTML de uma ficha (dados + inscrição + documentos) para o lote.
-const montarFichaParaLote = async (catequisandoResumo, coletor) => {
-  const id = catequisandoResumo.idCatequisando;
-  const [catequisando, fichas, documentos] = await Promise.all([
-    fetchJson(`/api/catequisandos/${id}`),
-    fetchJson(`/api/fichas/catequisando/${id}`),
-    fetchJson(`/api/documentos/catequisando/${id}`)
-  ]);
-
-  const documentosHtml = await buildDocumentosHtml(documentos, coletor);
-  return `<div class="ficha-print">${montarFichaDocumento(catequisando, fichas, documentosHtml)}</div>`;
-};
-
-const imprimirLote = async (lista, descricao) => {
-  if (!lista || !lista.length) {
-    setProgressoLote('Nenhum catequisando na seleção atual.', 'warning');
-    return;
-  }
-
-  if (lista.length > LOTE_AVISO_ACIMA_DE) {
-    const ok = window.confirm(
-      `Você vai carregar ${lista.length} fichas com todos os anexos de uma vez. ` +
-      `Lotes grandes consomem bastante memória do navegador e podem demorar. ` +
-      `Recomendado imprimir turma por turma. Deseja continuar mesmo assim?`
-    );
-    if (!ok) return;
-  }
-
-  // URLs de blob deste lote: liberadas assim que a impressão terminar.
-  const coletor = [];
-  const printArea = document.getElementById('print-area');
-  printArea.innerHTML = '';
-
-  let html = '';
-  const falhas = [];
-
-  for (let i = 0; i < lista.length; i += 1) {
-    const item = lista[i];
-    setProgressoLote(`Preparando ${i + 1} de ${lista.length}: ${item.nome}...`);
-    try {
-      html += await montarFichaParaLote(item, coletor);
-    } catch (err) {
-      falhas.push(`${item.nome}: ${err.message}`);
-      html += `
-        <div class="ficha-print">
-          <article class="ficha-doc">
-            <header class="ficha-cabecalho">
-              <div>
-                <h1>FICHA DE CATEQUESE</h1>
-                <p class="ficha-sub">${escapeHtml(item.nome)}</p>
-              </div>
-              <img src="logo.png" alt="Logo Catequese" />
-            </header>
-            <section class="ficha-bloco">
-              <p class="status error">Não foi possível carregar esta ficha: ${escapeHtml(err.message)}</p>
-            </section>
-          </article>
-        </div>
-      `;
-    }
-  }
-
-  printArea.innerHTML = html;
-
-  setProgressoLote(`Carregando anexos de ${lista.length} ficha(s) para impressão...`);
-  await aguardarImagens(printArea);
-
-  // Libera a memória dos anexos só depois que a janela de impressão fechar.
-  const aoTerminar = () => {
-    printArea.innerHTML = '';
-    coletor.forEach((url) => URL.revokeObjectURL(url));
-    window.removeEventListener('afterprint', aoTerminar);
-  };
-  window.addEventListener('afterprint', aoTerminar);
-
-  if (falhas.length) {
-    setProgressoLote(`${descricao}: ${lista.length} ficha(s) preparada(s), ${falhas.length} com erro. Confira antes de excluir do bucket.`, 'warning');
-    console.warn('Fichas com erro no lote:', falhas);
-  } else {
-    setProgressoLote(`${descricao}: ${lista.length} ficha(s) prontas para impressão.`, 'ok');
-  }
-
-  window.print();
-};
-
+// Impressão em lote: abre uma aba com todas as fichas da seleção e já manda imprimir.
 document.getElementById('btn-imprimir-lote').addEventListener('click', () => {
-  const turmaFiltro = document.getElementById('consulta-turma-filtro');
-  const descricao = turmaFiltro.value
-    ? `Turma ${turmaFiltro.options[turmaFiltro.selectedIndex].textContent}`
-    : 'Todos os catequisandos listados';
-  imprimirLote(consultaFiltrados, descricao);
+  if (!consultaFiltrados.length) return;
+
+  const turma = document.getElementById('consulta-turma-filtro').value;
+  const comunidade = document.getElementById('consulta-comunidade-filtro').value;
+  const termo = (document.getElementById('consulta-busca').value || '').trim();
+
+  // Sem busca por nome, basta repassar os filtros — evita uma URL gigante.
+  let query;
+  if (!termo && (turma || comunidade)) {
+    query = new URLSearchParams(
+      Object.assign({ print: '1' }, turma ? { turma } : {}, comunidade ? { comunidade } : {})
+    ).toString();
+  } else {
+    query = `ids=${consultaFiltrados.map((c) => c.idCatequisando).join(',')}&print=1`;
+  }
+
+  abrirFichaEmNovaAba(query);
 });
 
 // ---- Painel: catequistas, turmas e documentos faltantes ----
@@ -1375,19 +1073,9 @@ const carregarDashboard = async () => {
 
     container.innerHTML = html || '<p class="muted">Nenhuma turma cadastrada.</p>';
 
-    container.querySelectorAll('[data-abrir-ficha]').forEach((el) => {
-      el.addEventListener('click', () => {
-        switchTab('consulta');
-        abrirFichaDetalhe(Number(el.dataset.abrirFicha));
-      });
-    });
-
     container.querySelectorAll('[data-imprimir-turma]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const idTurma = Number(btn.dataset.imprimirTurma);
-        const turma = dashboardCache.turmas.find((t) => t.idTurma === idTurma);
-        const daTurma = dashboardCache.catequisandos.filter((c) => c.turma?.idTurma === idTurma);
-        imprimirLote(daTurma, `Turma ${turma?.nome || idTurma}`);
+        abrirFichaEmNovaAba(`turma=${btn.dataset.imprimirTurma}&print=1`);
       });
     });
   } catch (err) {
@@ -1411,7 +1099,7 @@ const renderTurmaCard = (turma, catequista, catequisandos, docsPorCatequisando) 
       }).join('');
       linhas += `
         <div class="catequisando-row">
-          <span class="nome" style="cursor: pointer; color: var(--accent-2);" data-abrir-ficha="${c.idCatequisando}">${escapeHtml(c.nome)}</span>
+          <a class="nome-link" href="ficha.html?id=${c.idCatequisando}" target="_blank" rel="noopener">${escapeHtml(c.nome)}</a>
           <div class="docs">${badges}</div>
         </div>
       `;

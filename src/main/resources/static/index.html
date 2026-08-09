@@ -193,10 +193,16 @@
             Buscar por nome
             <input id="consulta-busca" type="text" placeholder="Digite o nome..." />
           </label>
-          <label style="min-width: 200px;">
+          <label style="min-width: 190px;">
             Turma
             <select id="consulta-turma-filtro">
               <option value="">Todas as turmas</option>
+            </select>
+          </label>
+          <label style="min-width: 190px;">
+            Comunidade
+            <select id="consulta-comunidade-filtro">
+              <option value="">Todas as comunidades</option>
             </select>
           </label>
         </div>
@@ -205,17 +211,6 @@
           <button type="button" id="btn-imprimir-lote">Imprimir fichas listadas</button>
         </div>
         <div id="consulta-lista" class="result-list"></div>
-      </section>
-
-      <section class="panel" id="ficha-detalhe" hidden>
-        <div class="row" style="justify-content: space-between;">
-          <h2>Ficha completa</h2>
-          <div class="row">
-            <button type="button" class="secondary" id="btn-fechar-ficha">Fechar</button>
-            <button type="button" id="btn-imprimir-ficha">Imprimir / Exportar PDF</button>
-          </div>
-        </div>
-        <div id="ficha-detalhe-conteudo"></div>
       </section>
     </div>
 
@@ -229,8 +224,6 @@
       </section>
     </div>
   </div>
-
-  <div id="print-area"></div>
 
   <script src="script.js"></script>
 </body>

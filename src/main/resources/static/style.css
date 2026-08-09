@@ -434,16 +434,40 @@ canvas {
   border-radius: 12px;
   cursor: pointer;
   transition: border-color 160ms ease;
+  text-decoration: none;
+  color: var(--ink);
 }
 
 .result-item:hover { border-color: var(--accent-2); }
 
-.result-item .nome { font-weight: 600; }
+.result-item .nome {
+  display: block;
+  font-weight: 600;
+}
 
 .result-item .meta {
+  display: block;
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* Aparência de botão dentro do link da listagem */
+.botao-falso {
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.nome-link {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.nome-link:hover { text-decoration: underline; }
 
 .doc-status {
   display: inline-flex;
@@ -648,24 +672,35 @@ canvas {
   color: var(--muted);
 }
 
+/* A div acompanha a imagem: sem altura fixa e sem iframe. */
 .doc-preview {
   background: #fff;
   border: 1px solid var(--stroke);
   border-radius: 8px;
   padding: 8px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .doc-preview img {
+  display: block;
   max-width: 100%;
-  max-height: 420px;
+  width: auto;
+  height: auto;
+  /* Na tela, limita para a ficha não ficar quilométrica */
+  max-height: 70vh;
 }
 
-.doc-preview iframe {
-  width: 100%;
-  height: 420px;
-  border: none;
+.doc-preview-link {
+  display: block;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 16px 12px;
 }
+
+.doc-preview-link p { margin: 4px 0; }
 
 .doc-aviso {
   color: var(--muted);
@@ -673,7 +708,18 @@ canvas {
   margin-top: 6px;
 }
 
-#print-area { display: none; }
+/* Barra de ações da página da ficha (não vai para o papel) */
+.ficha-barra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--paper-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
 
 .ficha-print { margin-bottom: 28px; }
 
@@ -683,30 +729,43 @@ canvas {
 }
 
 @media print {
-  /* #print-area fica fora de .shell, entao basta esconder toda a interface */
-  .shell { display: none !important; }
+  /* Some com tudo que nao e ficha: barra de acoes e a interface do index */
+  .ficha-barra,
+  #main-tabs,
+  .tabs,
+  .tab-content,
+  #header {
+    display: none !important;
+  }
 
   body {
     background: #fff;
     padding: 0;
-  }
-
-  /* Mantem as cores dos paineis e cabecalhos no papel/PDF.
-     No Chrome ainda depende da opcao "Graficos de plano de fundo". */
-  #print-area,
-  #print-area * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  #print-area {
-    display: block;
-    background: #fff;
     color: var(--ink);
     font-family: Arial, sans-serif;
   }
 
-  /* Cada ficha do lote começa numa folha nova */
+  .shell {
+    max-width: none;
+    display: block;
+    gap: 0;
+  }
+
+  /* Mantem as cores dos paineis no papel/PDF. No Chrome ainda depende da
+     opcao "Graficos de plano de fundo" na janela de impressao.
+     Nenhuma animacao pode rodar: o quadro capturado poderia pegar o
+     elemento ainda em opacity 0. */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Cada ficha comeca numa folha nova */
   .ficha-print {
     page-break-after: always;
     break-after: page;
@@ -718,17 +777,6 @@ canvas {
     break-after: auto;
   }
 
-  /* Nenhuma animacao pode rodar durante a impressao: o quadro capturado
-     poderia pegar o elemento ainda em opacity 0. */
-  #print-area,
-  #print-area *,
-  #print-area *::before,
-  #print-area *::after {
-    animation: none !important;
-    transition: none !important;
-    opacity: 1 !important;
-  }
-
   /* Anexos e campos nao podem ser cortados no meio da pagina. O bloco de
      documentos pode fluir entre paginas, senao sobra folha em branco. */
   .doc-item,
@@ -738,11 +786,7 @@ canvas {
   }
 
   /* Evita titulo de secao orfao no rodape da pagina */
-  .ficha-bloco > h2 {
-    page-break-after: avoid;
-    break-after: avoid;
-  }
-
+  .ficha-bloco > h2,
   .ficha-cabecalho {
     page-break-after: avoid;
     break-after: avoid;
@@ -760,13 +804,14 @@ canvas {
 
   .ficha-cabecalho img { height: 46px; }
 
-  /* Anexos menores para caber junto dos dados na folha */
-  .doc-preview img { max-height: 75mm; }
-
-  .doc-preview iframe { height: 90mm; }
-
-  /* Link do PDF nao faz sentido no papel */
-  .doc-aviso a { text-decoration: none; color: var(--muted); }
+  /* A imagem ocupa o maximo possivel sem estourar a folha A4.
+     Util: 190mm x 277mm com as margens de 10mm da regra @page. */
+  .doc-preview img {
+    max-width: 100%;
+    max-height: 200mm;
+    width: auto;
+    height: auto;
+  }
 }
 
 @media (max-width: 480px) {

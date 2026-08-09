@@ -14,7 +14,13 @@
       <img src="logo.png" alt="Logo Catequese" />
     </header>
 
-    <div class="layout">
+    <nav class="tabs" id="main-tabs">
+      <button type="button" class="tab-btn active" data-tab="cadastro">Cadastro</button>
+      <button type="button" class="tab-btn" data-tab="consulta">Consultar catequisandos</button>
+      <button type="button" class="tab-btn" data-tab="dashboard">Turmas e documentos</button>
+    </nav>
+
+    <div class="layout tab-content" id="tab-cadastro" data-tab-content="cadastro">
       <section class="panel" id="section-catequisando">
         <div class="row" style="justify-content: space-between;">
           <h2>Dados do catequisando</h2>
@@ -174,7 +180,51 @@
         <div id="result" class="summary"></div>
       </section>
     </div>
+
+    <div class="tab-content" id="tab-consulta" data-tab-content="consulta" hidden>
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Consultar catequisandos</h2>
+        </div>
+        <div class="row">
+          <label style="flex: 1; min-width: 220px;">
+            Buscar por nome
+            <input id="consulta-busca" type="text" placeholder="Digite o nome..." />
+          </label>
+          <label style="min-width: 200px;">
+            Turma
+            <select id="consulta-turma-filtro">
+              <option value="">Todas as turmas</option>
+            </select>
+          </label>
+        </div>
+        <div id="consulta-lista" class="result-list"></div>
+      </section>
+
+      <section class="panel" id="ficha-detalhe" hidden>
+        <div class="row" style="justify-content: space-between;">
+          <h2>Ficha completa</h2>
+          <div class="row">
+            <button type="button" class="secondary" id="btn-fechar-ficha">Fechar</button>
+            <button type="button" id="btn-imprimir-ficha">Imprimir / Exportar PDF</button>
+          </div>
+        </div>
+        <div id="ficha-detalhe-conteudo"></div>
+      </section>
+    </div>
+
+    <div class="tab-content" id="tab-dashboard" data-tab-content="dashboard" hidden>
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Catequistas, turmas e documentos</h2>
+        </div>
+        <p class="muted">Para cada turma, veja os catequisandos e quais documentos ainda estão faltando.</p>
+        <div id="dashboard-conteudo"></div>
+      </section>
+    </div>
   </div>
+
+  <div id="print-area"></div>
 
   <script src="script.js"></script>
 </body>

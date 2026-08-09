@@ -390,6 +390,166 @@ canvas {
   }
 }
 
+/* ==========================================================================
+   Abas (Cadastro / Consulta / Turmas e documentos)
+   Reaproveita as variáveis, fonte e raio já definidos acima — sem novo estilo.
+   ========================================================================== */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tab-btn {
+  background: #fff;
+  color: var(--muted);
+  border: 1px solid var(--stroke);
+  box-shadow: none;
+}
+
+.tab-btn.active {
+  background: var(--accent-2);
+  color: #fff;
+  border-color: var(--accent-2);
+}
+
+.tab-content[hidden] { display: none; }
+
+.result-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.result-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease;
+}
+
+.result-item:hover { border-color: var(--accent-2); }
+
+.result-item .nome { font-weight: 600; }
+
+.result-item .meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.doc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  background: rgba(47, 111, 126, 0.12);
+  color: var(--accent-2);
+}
+
+.doc-status.faltando {
+  background: rgba(192, 95, 60, 0.16);
+  color: var(--accent);
+}
+
+.turma-card {
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: #fff;
+  margin-bottom: 14px;
+}
+
+.turma-card h3 {
+  margin: 0 0 4px;
+  font-family: Arial, sans-serif;
+  font-size: 1.15rem;
+}
+
+.turma-card .catequista-nome {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.catequisando-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--stroke);
+}
+
+.catequisando-row:first-of-type { border-top: none; }
+
+.catequisando-row .docs { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.ficha-view h3 {
+  margin: 18px 0 8px;
+  font-family: Arial, sans-serif;
+  font-size: 1.05rem;
+  border-bottom: 1px solid var(--stroke);
+  padding-bottom: 4px;
+}
+
+.ficha-view h3:first-child { margin-top: 0; }
+
+.ficha-view .campo {
+  margin-bottom: 6px;
+  font-size: 0.92rem;
+}
+
+.ficha-view .campo strong {
+  color: var(--muted);
+  margin-right: 6px;
+}
+
+.ficha-view .doc-item {
+  margin-bottom: 16px;
+}
+
+.ficha-view .doc-item .doc-titulo {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.ficha-view .doc-item img,
+.ficha-view .doc-item iframe {
+  max-width: 100%;
+  max-height: 420px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+
+.ficha-view .doc-item iframe { width: 100%; height: 420px; }
+
+#print-area { display: none; }
+
+@media print {
+  header, .tabs, #main-tabs, .tab-content { display: none !important; }
+  body { background: #fff; padding: 0; }
+  .shell { max-width: none; }
+  #print-area {
+    display: block;
+    background: #fff;
+    color: var(--ink);
+    font-family: Arial, sans-serif;
+    padding: 0 10px;
+  }
+}
+
 @media (max-width: 480px) {
   body {
     padding: 10px 8px 25px;

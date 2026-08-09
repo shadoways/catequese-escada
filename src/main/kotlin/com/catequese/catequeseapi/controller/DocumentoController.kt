@@ -5,7 +5,10 @@ import com.catequese.catequeseapi.exception.ResourceNotFoundException
 import com.catequese.catequeseapi.model.Documento
 import com.catequese.catequeseapi.repository.DocumentoRepository
 import com.catequese.catequeseapi.repository.CatequisandoRepository
+import com.catequese.catequeseapi.service.FileStorageService
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -21,7 +24,8 @@ import java.net.URI
 @RequestMapping("/api/documentos")
 class DocumentoController(
     private val repo: DocumentoRepository,
-    private val cateqRepo: CatequisandoRepository
+    private val cateqRepo: CatequisandoRepository,
+    private val storage: FileStorageService
 ) {
 
     companion object {
@@ -42,6 +46,32 @@ class DocumentoController(
         val result = repo.findById(id).orElseThrow { ResourceNotFoundException("Documento não encontrado") }
         logger.info("✅ Documento encontrado: ${result.tipoDocumento}")
         return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("/catequisando/{catequisandoId}")
+    fun getByCatequisando(@PathVariable catequisandoId: Long): ResponseEntity<List<Documento>> {
+        logger.info("🔍 GET /api/documentos/catequisando/$catequisandoId - Buscando documentos do catequisando")
+        val catequisando = cateqRepo.findById(catequisandoId)
+            .orElseThrow { ResourceNotFoundException("Catequisando id=$catequisandoId não encontrado") }
+        val result = repo.findByCatequisando(catequisando)
+        logger.info("✅ Encontrados ${result.size} documento(s)")
+        return ResponseEntity.ok(result)
+    }
+
+    @GetMapping("/{id}/arquivo")
+    fun getArquivo(@PathVariable id: Long): ResponseEntity<ByteArray> {
+        logger.info("📥 GET /api/documentos/$id/arquivo - Baixando conteúdo do documento")
+        val documento = repo.findById(id).orElseThrow { ResourceNotFoundException("Documento não encontrado") }
+        val caminho = documento.caminhoArquivo
+            ?: throw ResourceNotFoundException("Documento id=$id não possui arquivo associado")
+
+        val arquivo = storage.download(caminho)
+        logger.info("✅ Arquivo carregado: ${arquivo.fileName} (${arquivo.contentType})")
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(arquivo.contentType))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"${arquivo.fileName}\"")
+            .body(arquivo.bytes)
     }
 
     @PostMapping

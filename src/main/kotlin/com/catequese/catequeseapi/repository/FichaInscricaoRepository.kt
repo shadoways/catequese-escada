@@ -10,4 +10,6 @@ import org.springframework.transaction.annotation.Transactional
 interface FichaInscricaoRepository : JpaRepository<FichaInscricao, Long> {
     @Transactional
     fun deleteByCatequisando(catequisando: Catequisando)
+
+    fun findByCatequisando(catequisando: Catequisando): List<FichaInscricao>
 }

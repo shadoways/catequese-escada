@@ -890,3 +890,314 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
+// ============================================================
+// Consulta de catequisandos, ficha completa (impressão/PDF)
+// e painel de turmas/catequistas com status de documentos.
+// Reaproveita fetchJson, o layout de .panel/.grid/.row e as
+// variáveis de estilo já definidas em style.css.
+// ============================================================
+
+const DOC_TYPE_LABELS = {
+  DOCUMENTO: 'Documento (RG/CPF)',
+  CERTIDAO: 'Certidão de Batismo',
+  FOTO: 'Foto do Catequisando',
+  ASSINATURA: 'Assinatura'
+};
+const DOC_TYPES_ESPERADOS = ['DOCUMENTO', 'CERTIDAO', 'FOTO', 'ASSINATURA'];
+
+const ESTADO_CONJUGAL_LABELS = {
+  SOLTEIRO: 'Solteiro(a)',
+  CASADO_IGREJA: 'Casado(a) na Igreja',
+  CASADO_CIVIL: 'Casado(a) apenas no civil',
+  UNIAO_ESTAVEL: 'União estável',
+  VIVE_COMPANHEIRO: 'Vive com companheiro(a)',
+  SEGUNDA_UNIAO: 'Segunda união'
+};
+
+let catequisandosCache = [];
+let blobUrlsAtivos = [];
+
+const escapeHtml = (value) => {
+  const div = document.createElement('div');
+  div.textContent = value === null || value === undefined ? '' : String(value);
+  return div.innerHTML;
+};
+
+const formatDateSimple = (dateStr) => {
+  if (!dateStr) return '—';
+  const [ano, mes, dia] = dateStr.split('-');
+  if (!ano || !mes || !dia) return dateStr;
+  return `${dia}/${mes}/${ano}`;
+};
+
+const revogarBlobsAtivos = () => {
+  blobUrlsAtivos.forEach((url) => URL.revokeObjectURL(url));
+  blobUrlsAtivos = [];
+};
+
+// ---- Navegação por abas ----
+const switchTab = (tabName) => {
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.tab-content').forEach((el) => {
+    el.hidden = el.dataset.tabContent !== tabName;
+  });
+  if (tabName === 'consulta') carregarConsulta();
+  if (tabName === 'dashboard') carregarDashboard();
+};
+
+document.querySelectorAll('.tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// ---- Consulta de catequisandos ----
+const carregarConsulta = async () => {
+  const lista = document.getElementById('consulta-lista');
+  lista.innerHTML = '<p class="muted">Carregando...</p>';
+  document.getElementById('ficha-detalhe').hidden = true;
+  try {
+    const [catequisandos, turmas] = await Promise.all([
+      fetchJson('/api/catequisandos'),
+      fetchJson('/api/turmas')
+    ]);
+    catequisandosCache = catequisandos;
+
+    const filtroTurma = document.getElementById('consulta-turma-filtro');
+    const selecionado = filtroTurma.value;
+    filtroTurma.innerHTML = '<option value="">Todas as turmas</option>';
+    turmas.forEach((turma) => {
+      const option = document.createElement('option');
+      option.value = turma.idTurma;
+      option.textContent = turma.nome;
+      filtroTurma.appendChild(option);
+    });
+    filtroTurma.value = selecionado || '';
+
+    renderConsultaLista();
+  } catch (err) {
+    lista.innerHTML = `<p class="status error">Erro ao carregar catequisandos: ${escapeHtml(err.message)}</p>`;
+  }
+};
+
+const renderConsultaLista = () => {
+  const lista = document.getElementById('consulta-lista');
+  const termo = (document.getElementById('consulta-busca').value || '').trim().toLowerCase();
+  const turmaFiltro = document.getElementById('consulta-turma-filtro').value;
+
+  const filtrados = catequisandosCache.filter((c) => {
+    const nomeOk = !termo || c.nome.toLowerCase().includes(termo);
+    const turmaOk = !turmaFiltro || String(c.turma?.idTurma ?? '') === turmaFiltro;
+    return nomeOk && turmaOk;
+  });
+
+  if (!filtrados.length) {
+    lista.innerHTML = '<p class="muted">Nenhum catequisando encontrado.</p>';
+    return;
+  }
+
+  lista.innerHTML = '';
+  filtrados.forEach((c) => {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    item.innerHTML = `
+      <div>
+        <div class="nome">${escapeHtml(c.nome)}</div>
+        <div class="meta">${escapeHtml(c.turma?.nome || 'Sem turma')} · ${escapeHtml(c.comunidade?.nome || 'Sem comunidade')}</div>
+      </div>
+      <button type="button" class="secondary">Ver ficha</button>
+    `;
+    item.addEventListener('click', () => abrirFichaDetalhe(c.idCatequisando));
+    lista.appendChild(item);
+  });
+};
+
+document.getElementById('consulta-busca').addEventListener('input', renderConsultaLista);
+document.getElementById('consulta-turma-filtro').addEventListener('change', renderConsultaLista);
+document.getElementById('btn-fechar-ficha').addEventListener('click', () => {
+  document.getElementById('ficha-detalhe').hidden = true;
+});
+
+// ---- Ficha completa (usada tanto na tela quanto na impressão) ----
+
+// Busca o conteúdo do documento pelo endpoint do backend (que lê do bucket de
+// produção com as credenciais configuradas) e devolve uma URL de blob local,
+// evitando depender do bucket GCS ter leitura pública.
+const carregarArquivoDocumento = async (idDocumento) => {
+  const res = await fetch(`/api/documentos/${idDocumento}/arquivo`);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  blobUrlsAtivos.push(url);
+  return { url, contentType: blob.type };
+};
+
+const buildDadosCadastraisHtml = (c) => `
+  <h3>Dados cadastrais</h3>
+  <div class="campo"><strong>Nome:</strong> ${escapeHtml(c.nome)}</div>
+  <div class="campo"><strong>Telefone:</strong> ${escapeHtml(c.telefone || '—')}</div>
+  <div class="campo"><strong>Email:</strong> ${escapeHtml(c.email || '—')}</div>
+  <div class="campo"><strong>Data de nascimento:</strong> ${formatDateSimple(c.dataNascimento)}</div>
+  <div class="campo"><strong>Nome do responsável:</strong> ${escapeHtml(c.nomeResponsavel || '—')}</div>
+  <div class="campo"><strong>Telefone do responsável:</strong> ${escapeHtml(c.telefoneResponsavel || '—')}</div>
+  <div class="campo"><strong>Endereço:</strong> ${escapeHtml(c.endereco || '—')}</div>
+  <div class="campo"><strong>Documento:</strong> ${escapeHtml(c.tipoDocumento || '—')} ${escapeHtml(c.numeroDocumento || '')}</div>
+  <div class="campo"><strong>Turma:</strong> ${escapeHtml(c.turma?.nome || '—')}</div>
+  <div class="campo"><strong>Comunidade:</strong> ${escapeHtml(c.comunidade?.nome || '—')}</div>
+  <div class="campo"><strong>Intolerante a glúten:</strong> ${c.intoleranteGluten ? 'Sim' : 'Não'}</div>
+  <div class="campo"><strong>Batizado:</strong> ${c.foiBatizado ? 'Sim' : 'Não'}</div>
+  <div class="campo"><strong>Primeira Eucaristia:</strong> ${c.fezPrimeiraEucaristia ? 'Sim' : 'Não'}</div>
+  <div class="campo"><strong>Estado civil/convivência conjugal:</strong> ${escapeHtml(ESTADO_CONJUGAL_LABELS[c.estadoConjugal] || c.estadoConjugal || '—')}</div>
+`;
+
+const buildFichaInscricaoHtml = (fichas) => {
+  if (!fichas.length) return '<h3>Ficha de inscrição</h3><p class="muted">Nenhuma ficha de inscrição registrada.</p>';
+  const ficha = fichas[0];
+  return `
+    <h3>Ficha de inscrição</h3>
+    <div class="campo"><strong>Data de inscrição:</strong> ${formatDateSimple(ficha.dataInscricao)}</div>
+    <div class="campo"><strong>Observações:</strong> ${escapeHtml(ficha.observacoes || '—')}</div>
+  `;
+};
+
+// Monta o bloco de documentos já com a prévia carregada: imagens embutidas,
+// PDFs em iframe, e qualquer outro tipo como link para abrir em nova aba.
+const buildDocumentosHtml = async (documentos) => {
+  let html = '<h3>Documentos entregues</h3>';
+  if (!documentos.length) {
+    html += '<p class="muted">Nenhum documento enviado.</p>';
+    return html;
+  }
+
+  for (const doc of documentos) {
+    const titulo = DOC_TYPE_LABELS[doc.tipoDocumento] || doc.tipoDocumento;
+    html += `<div class="doc-item"><span class="doc-titulo">${escapeHtml(titulo)} — enviado em ${formatDateSimple(doc.dataEnvio)}</span>`;
+    try {
+      const arquivo = await carregarArquivoDocumento(doc.idDocumento);
+      if (arquivo.contentType && arquivo.contentType.startsWith('image/')) {
+        html += `<img src="${arquivo.url}" alt="${escapeHtml(titulo)}" />`;
+      } else if (arquivo.contentType === 'application/pdf') {
+        html += `<iframe src="${arquivo.url}" title="${escapeHtml(titulo)}"></iframe>`;
+      } else {
+        html += `<a href="${arquivo.url}" target="_blank" rel="noopener">Abrir arquivo (${escapeHtml(arquivo.contentType || 'arquivo')})</a>`;
+      }
+    } catch (err) {
+      html += `<p class="status error">Não foi possível carregar o arquivo: ${escapeHtml(err.message)}</p>`;
+    }
+    html += '</div>';
+  }
+  return html;
+};
+
+const abrirFichaDetalhe = async (idCatequisando) => {
+  const painel = document.getElementById('ficha-detalhe');
+  const conteudo = document.getElementById('ficha-detalhe-conteudo');
+  revogarBlobsAtivos();
+  painel.hidden = false;
+  conteudo.innerHTML = '<p class="muted">Carregando ficha...</p>';
+  painel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const [catequisando, fichas, documentos] = await Promise.all([
+      fetchJson(`/api/catequisandos/${idCatequisando}`),
+      fetchJson(`/api/fichas/catequisando/${idCatequisando}`),
+      fetchJson(`/api/documentos/catequisando/${idCatequisando}`)
+    ]);
+
+    const cabecalho = buildDadosCadastraisHtml(catequisando) + buildFichaInscricaoHtml(fichas);
+    conteudo.innerHTML = `<div class="ficha-view">${cabecalho}<h3>Documentos entregues</h3><p class="muted">Carregando documentos...</p></div>`;
+
+    const documentosHtml = await buildDocumentosHtml(documentos);
+    conteudo.innerHTML = `<div class="ficha-view">${cabecalho}${documentosHtml}</div>`;
+  } catch (err) {
+    conteudo.innerHTML = `<p class="status error">Erro ao carregar ficha: ${escapeHtml(err.message)}</p>`;
+  }
+};
+
+document.getElementById('btn-imprimir-ficha').addEventListener('click', () => {
+  const conteudo = document.getElementById('ficha-detalhe-conteudo');
+  const fichaView = conteudo.querySelector('.ficha-view');
+  if (!fichaView) return;
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = `<h1 style="font-family: Arial, sans-serif;">Ficha do Catequisando</h1>${fichaView.innerHTML}`;
+  window.print();
+});
+
+// ---- Painel: catequistas, turmas e documentos faltantes ----
+const carregarDashboard = async () => {
+  const container = document.getElementById('dashboard-conteudo');
+  container.innerHTML = '<p class="muted">Carregando...</p>';
+  try {
+    const [catequistas, turmas, catequisandos, documentos] = await Promise.all([
+      fetchJson('/api/catequistas'),
+      fetchJson('/api/turmas'),
+      fetchJson('/api/catequisandos'),
+      fetchJson('/api/documentos')
+    ]);
+
+    const docsPorCatequisando = {};
+    documentos.forEach((doc) => {
+      const id = doc.catequisando?.idCatequisando;
+      if (!id) return;
+      if (!docsPorCatequisando[id]) docsPorCatequisando[id] = new Set();
+      docsPorCatequisando[id].add(doc.tipoDocumento);
+    });
+
+    const idsComCatequista = new Set();
+    let html = '';
+    catequistas.forEach((catequista) => {
+      const turmasDoCatequista = turmas.filter((t) => t.catequista?.idCatequista === catequista.idCatequista);
+      turmasDoCatequista.forEach((turma) => {
+        idsComCatequista.add(turma.idTurma);
+        html += renderTurmaCard(turma, catequista, catequisandos, docsPorCatequisando);
+      });
+    });
+    turmas.filter((t) => !idsComCatequista.has(t.idTurma)).forEach((turma) => {
+      html += renderTurmaCard(turma, null, catequisandos, docsPorCatequisando);
+    });
+
+    container.innerHTML = html || '<p class="muted">Nenhuma turma cadastrada.</p>';
+
+    container.querySelectorAll('[data-abrir-ficha]').forEach((el) => {
+      el.addEventListener('click', () => {
+        switchTab('consulta');
+        abrirFichaDetalhe(Number(el.dataset.abrirFicha));
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<p class="status error">Erro ao carregar painel: ${escapeHtml(err.message)}</p>`;
+  }
+};
+
+const renderTurmaCard = (turma, catequista, catequisandos, docsPorCatequisando) => {
+  const catequisandosDaTurma = catequisandos.filter((c) => c.turma?.idTurma === turma.idTurma);
+
+  let linhas = '';
+  if (!catequisandosDaTurma.length) {
+    linhas = '<p class="muted">Nenhum catequisando nesta turma.</p>';
+  } else {
+    catequisandosDaTurma.forEach((c) => {
+      const entregues = docsPorCatequisando[c.idCatequisando] || new Set();
+      const badges = DOC_TYPES_ESPERADOS.map((tipo) => {
+        const ok = entregues.has(tipo);
+        const label = DOC_TYPE_LABELS[tipo];
+        return `<span class="doc-status ${ok ? '' : 'faltando'}">${ok ? '✅' : '❌'} ${escapeHtml(label)}</span>`;
+      }).join('');
+      linhas += `
+        <div class="catequisando-row">
+          <span class="nome" style="cursor: pointer; color: var(--accent-2);" data-abrir-ficha="${c.idCatequisando}">${escapeHtml(c.nome)}</span>
+          <div class="docs">${badges}</div>
+        </div>
+      `;
+    });
+  }
+
+  return `
+    <div class="turma-card">
+      <h3>${escapeHtml(turma.nome)}${turma.ano ? ' (' + turma.ano + ')' : ''}</h3>
+      <div class="catequista-nome">Catequista: ${escapeHtml(catequista?.nome || 'Sem catequista responsável')}</div>
+      ${linhas}
+    </div>
+  `;
+};
+

@@ -44,6 +44,16 @@ class FichaInscricaoController(
         return ResponseEntity.ok(result)
     }
 
+    @GetMapping("/catequisando/{catequisandoId}")
+    fun getByCatequisando(@PathVariable catequisandoId: Long): ResponseEntity<List<FichaInscricao>> {
+        logger.info("🔍 GET /api/fichas/catequisando/$catequisandoId - Buscando fichas do catequisando")
+        val catequisando = cateqRepo.findById(catequisandoId)
+            .orElseThrow { ResourceNotFoundException("Catequisando id=$catequisandoId não encontrado") }
+        val result = repo.findByCatequisando(catequisando)
+        logger.info("✅ Encontradas ${result.size} ficha(s)")
+        return ResponseEntity.ok(result)
+    }
+
     @PostMapping
     fun create(@RequestBody dto: FichaInscricaoDTO): ResponseEntity<FichaInscricao> {
         logger.info("📝 POST /api/fichas - Criando nova ficha (DTO)")

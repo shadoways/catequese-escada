@@ -1,5 +1,6 @@
 package com.catequese.catequeseapi.service
 
+import com.catequese.catequeseapi.exception.ResourceNotFoundException
 import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
@@ -49,6 +50,12 @@ class FileStorageService(
         val publicUrl: String
     )
 
+    data class DownloadedFile(
+        val bytes: ByteArray,
+        val contentType: String,
+        val fileName: String
+    )
+
     fun store(file: MultipartFile): StoredFile {
         if (file.isEmpty) {
             logger.error("❌ Tentativa de upload de arquivo vazio")
@@ -83,5 +90,39 @@ class FileStorageService(
         logger.info("✅ Arquivo enviado ao GCS: $gcsPath")
 
         return StoredFile(unique, gcsPath, publicUrl)
+    }
+
+    /**
+     * Baixa o conteúdo de um arquivo já armazenado, a partir do valor salvo em
+     * Documento.caminhoArquivo (aceita "gs://bucket/objeto", a URL pública
+     * "https://storage.googleapis.com/bucket/objeto" ou apenas o nome do objeto).
+     */
+    fun download(caminhoArquivo: String): DownloadedFile {
+        val objectName = extractObjectName(caminhoArquivo)
+        logger.debug("📥 Baixando arquivo do GCS: bucket=$bucketName objeto=$objectName")
+
+        val blobId = BlobId.of(bucketName, objectName)
+        val blob = storage.get(blobId)
+            ?: throw ResourceNotFoundException("Arquivo não encontrado no bucket $bucketName: $objectName")
+
+        return DownloadedFile(
+            bytes = blob.getContent(),
+            contentType = blob.contentType ?: "application/octet-stream",
+            fileName = objectName.substringAfterLast('/')
+        )
+    }
+
+    private fun extractObjectName(caminhoArquivo: String): String {
+        val semPrefixo = when {
+            caminhoArquivo.startsWith("gs://") -> caminhoArquivo.removePrefix("gs://")
+            caminhoArquivo.startsWith("https://storage.googleapis.com/") ->
+                caminhoArquivo.removePrefix("https://storage.googleapis.com/")
+            caminhoArquivo.startsWith("http://storage.googleapis.com/") ->
+                caminhoArquivo.removePrefix("http://storage.googleapis.com/")
+            else -> return caminhoArquivo
+        }
+        // primeiro segmento é o nome do bucket; o restante é o nome do objeto
+        val barraIdx = semPrefixo.indexOf('/')
+        return if (barraIdx == -1) semPrefixo else semPrefixo.substring(barraIdx + 1)
     }
 }

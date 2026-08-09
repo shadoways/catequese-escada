@@ -934,6 +934,11 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
 
+// Cards da tela inicial levam para a mesma aba que o botão do menu superior.
+document.querySelectorAll('.menu-card').forEach((card) => {
+  card.addEventListener('click', () => switchTab(card.dataset.tab));
+});
+
 // ---- Consulta de catequisandos ----
 // Preenche um <select> de filtro preservando a opção que já estava marcada.
 const preencherFiltro = (selectId, textoPadrao, itens, getValor, getTexto) => {

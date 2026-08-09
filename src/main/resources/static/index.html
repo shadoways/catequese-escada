@@ -15,14 +15,57 @@
     </header>
 
     <nav class="tabs" id="main-tabs">
-      <button type="button" class="tab-btn active" data-tab="cadastro">Cadastro</button>
+      <button type="button" class="tab-btn active" data-tab="menu">Início</button>
+      <button type="button" class="tab-btn" data-tab="cadastro">Cadastro</button>
       <button type="button" class="tab-btn" data-tab="consulta">Consultar catequisandos</button>
       <button type="button" class="tab-btn" data-tab="dashboard">Turmas e documentos</button>
     </nav>
 
     <div id="lote-progresso" class="summary" hidden></div>
 
-    <div class="layout tab-content" id="tab-cadastro" data-tab-content="cadastro">
+    <div class="tab-content" id="tab-menu" data-tab-content="menu">
+      <section class="menu-hero">
+        <h2>O que você deseja fazer?</h2>
+        <p class="muted">Escolha uma opção para continuar.</p>
+      </section>
+      <div class="menu-grid">
+        <button type="button" class="menu-card" data-tab="cadastro">
+          <span class="menu-card-icon menu-card-icon--cadastro" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
+              <path d="M14 3v5h5" />
+              <path d="M12 12v6M9 15h6" />
+            </svg>
+          </span>
+          <h3>Novo cadastro</h3>
+          <p>Cadastrar um catequisando com dados, documentos e assinatura.</p>
+          <span class="menu-card-cta">Iniciar cadastro →</span>
+        </button>
+        <button type="button" class="menu-card" data-tab="consulta">
+          <span class="menu-card-icon menu-card-icon--consulta" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="M20 20l-4.35-4.35" />
+            </svg>
+          </span>
+          <h3>Consultar catequisandos</h3>
+          <p>Buscar catequisandos já cadastrados e abrir a ficha completa.</p>
+          <span class="menu-card-cta">Consultar →</span>
+        </button>
+        <button type="button" class="menu-card" data-tab="dashboard">
+          <span class="menu-card-icon menu-card-icon--dashboard" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21V10M9 21V6M15 21V13M21 21V3" />
+            </svg>
+          </span>
+          <h3>Turmas e documentos</h3>
+          <p>Ver catequistas, turmas e quais documentos ainda faltam.</p>
+          <span class="menu-card-cta">Ver painel →</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="layout tab-content" id="tab-cadastro" data-tab-content="cadastro" hidden>
       <section class="panel" id="section-catequisando">
         <div class="row" style="justify-content: space-between;">
           <h2>Dados do catequisando</h2>

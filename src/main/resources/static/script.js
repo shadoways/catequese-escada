@@ -1064,65 +1064,130 @@ const carregarArquivoDocumento = async (idDocumento, coletor) => {
   return { url, contentType: blob.type };
 };
 
+// Campo rotulado, no mesmo padrão visual dos inputs do formulário de cadastro.
+const campo = (rotulo, valor, largo = false) => {
+  const vazio = valor === null || valor === undefined || valor === '';
+  return `
+    <div class="ficha-campo${largo ? ' largo' : ''}">
+      <span class="rotulo">${escapeHtml(rotulo)}</span>
+      <span class="valor">${vazio ? '—' : escapeHtml(valor)}</span>
+    </div>`;
+};
+
+// Reproduz os checkboxes do formulário, marcados conforme o cadastro.
+const marca = (ativo, texto) =>
+  `<span class="ficha-marca${ativo ? ' ativa' : ''}">${ativo ? '☑' : '☐'} ${escapeHtml(texto)}</span>`;
+
+const buildCabecalhoFicha = (c) => `
+  <header class="ficha-cabecalho">
+    <div>
+      <h1>FICHA DE CATEQUESE</h1>
+      <p class="ficha-sub">${escapeHtml(c.nome)} · ${escapeHtml(c.turma?.nome || 'Sem turma')} · ${escapeHtml(c.comunidade?.nome || 'Sem comunidade')}</p>
+    </div>
+    <img src="logo.png" alt="Logo Catequese" />
+  </header>
+`;
+
 const buildDadosCadastraisHtml = (c) => `
-  <h3>Dados cadastrais</h3>
-  <div class="campo"><strong>Nome:</strong> ${escapeHtml(c.nome)}</div>
-  <div class="campo"><strong>Telefone:</strong> ${escapeHtml(c.telefone || '—')}</div>
-  <div class="campo"><strong>Email:</strong> ${escapeHtml(c.email || '—')}</div>
-  <div class="campo"><strong>Data de nascimento:</strong> ${formatDateSimple(c.dataNascimento)}</div>
-  <div class="campo"><strong>Nome do responsável:</strong> ${escapeHtml(c.nomeResponsavel || '—')}</div>
-  <div class="campo"><strong>Telefone do responsável:</strong> ${escapeHtml(c.telefoneResponsavel || '—')}</div>
-  <div class="campo"><strong>Endereço:</strong> ${escapeHtml(c.endereco || '—')}</div>
-  <div class="campo"><strong>Documento:</strong> ${escapeHtml(c.tipoDocumento || '—')} ${escapeHtml(c.numeroDocumento || '')}</div>
-  <div class="campo"><strong>Turma:</strong> ${escapeHtml(c.turma?.nome || '—')}</div>
-  <div class="campo"><strong>Comunidade:</strong> ${escapeHtml(c.comunidade?.nome || '—')}</div>
-  <div class="campo"><strong>Intolerante a glúten:</strong> ${c.intoleranteGluten ? 'Sim' : 'Não'}</div>
-  <div class="campo"><strong>Batizado:</strong> ${c.foiBatizado ? 'Sim' : 'Não'}</div>
-  <div class="campo"><strong>Primeira Eucaristia:</strong> ${c.fezPrimeiraEucaristia ? 'Sim' : 'Não'}</div>
-  <div class="campo"><strong>Estado civil/convivência conjugal:</strong> ${escapeHtml(ESTADO_CONJUGAL_LABELS[c.estadoConjugal] || c.estadoConjugal || '—')}</div>
+  <section class="ficha-bloco">
+    <h2>Dados do catequisando</h2>
+    <div class="ficha-grid">
+      ${campo('Nome completo', c.nome, true)}
+      ${campo('Telefone', c.telefone)}
+      ${campo('Email', c.email)}
+      ${campo('Data de nascimento', formatDateSimple(c.dataNascimento))}
+      ${campo('Nome do responsável', c.nomeResponsavel)}
+      ${campo('Telefone do responsável', c.telefoneResponsavel)}
+      ${campo('Endereço', c.endereco, true)}
+      ${campo('Tipo de documento', c.tipoDocumento)}
+      ${campo('Número do documento', c.numeroDocumento)}
+      ${campo('Turma', c.turma?.nome)}
+      ${campo('Comunidade', c.comunidade?.nome)}
+      ${campo('Estado civil / convivência conjugal', ESTADO_CONJUGAL_LABELS[c.estadoConjugal] || c.estadoConjugal, true)}
+    </div>
+    <div class="ficha-marcas">
+      <span class="rotulo">Sacramentos e observações de saúde</span>
+      <div class="marcas-linha">
+        ${marca(c.foiBatizado, 'Batismo')}
+        ${marca(c.fezPrimeiraEucaristia, 'Primeira Eucaristia')}
+        ${marca(c.intoleranteGluten, 'Intolerante a glúten')}
+      </div>
+    </div>
+  </section>
 `;
 
 const buildFichaInscricaoHtml = (fichas) => {
-  if (!fichas.length) return '<h3>Ficha de inscrição</h3><p class="muted">Nenhuma ficha de inscrição registrada.</p>';
   const ficha = fichas[0];
   return `
-    <h3>Ficha de inscrição</h3>
-    <div class="campo"><strong>Data de inscrição:</strong> ${formatDateSimple(ficha.dataInscricao)}</div>
-    <div class="campo"><strong>Observações:</strong> ${escapeHtml(ficha.observacoes || '—')}</div>
+    <section class="ficha-bloco">
+      <h2>Ficha de inscrição</h2>
+      <div class="ficha-grid">
+        ${campo('Data de inscrição', ficha ? formatDateSimple(ficha.dataInscricao) : null)}
+        ${campo('Nº da ficha', ficha ? ficha.idFicha : null)}
+        ${campo('Observações', ficha ? ficha.observacoes : null, true)}
+      </div>
+    </section>
   `;
 };
 
 // Monta o bloco de documentos já com a prévia carregada: imagens embutidas,
 // PDFs em iframe, e qualquer outro tipo como link para abrir em nova aba.
 const buildDocumentosHtml = async (documentos, coletor) => {
-  let html = '<h3>Documentos entregues</h3>';
   if (!documentos.length) {
-    html += '<p class="muted">Nenhum documento enviado.</p>';
-    return html;
+    return `
+      <section class="ficha-bloco">
+        <h2>Documentos e anexos</h2>
+        <p class="muted">Nenhum documento enviado.</p>
+      </section>`;
   }
+
+  let html = '<section class="ficha-bloco"><h2>Documentos e anexos</h2><div class="ficha-docs">';
 
   for (const doc of documentos) {
     const titulo = DOC_TYPE_LABELS[doc.tipoDocumento] || doc.tipoDocumento;
-    html += `<div class="doc-item"><span class="doc-titulo">${escapeHtml(titulo)} — enviado em ${formatDateSimple(doc.dataEnvio)}</span>`;
+    html += `
+      <div class="doc-item">
+        <div class="doc-cabecalho">
+          <span class="doc-titulo">${escapeHtml(titulo)}</span>
+          <span class="doc-data">Enviado em ${formatDateSimple(doc.dataEnvio)}</span>
+        </div>`;
     try {
       const arquivo = await carregarArquivoDocumento(doc.idDocumento, coletor);
       if (arquivo.contentType && arquivo.contentType.startsWith('image/')) {
-        html += `<img src="${arquivo.url}" alt="${escapeHtml(titulo)}" />`;
+        html += `<div class="doc-preview"><img src="${arquivo.url}" alt="${escapeHtml(titulo)}" /></div>`;
       } else if (arquivo.contentType === 'application/pdf') {
         // Alguns navegadores nao renderizam PDF em iframe na impressao; por isso
         // o link direto, que abre o visualizador nativo e imprime de forma confiavel.
-        html += `<iframe src="${arquivo.url}" title="${escapeHtml(titulo)}"></iframe>`;
+        html += `<div class="doc-preview"><iframe src="${arquivo.url}" title="${escapeHtml(titulo)}"></iframe></div>`;
         html += `<div class="doc-aviso">PDF — se não sair na folha impressa, <a href="${arquivo.url}" target="_blank" rel="noopener">abra em nova aba</a> e imprima por lá.</div>`;
       } else {
-        html += `<a href="${arquivo.url}" target="_blank" rel="noopener">Abrir arquivo (${escapeHtml(arquivo.contentType || 'arquivo')})</a>`;
+        html += `<div class="doc-aviso"><a href="${arquivo.url}" target="_blank" rel="noopener">Abrir arquivo (${escapeHtml(arquivo.contentType || 'arquivo')})</a></div>`;
       }
     } catch (err) {
-      html += `<p class="status error">Não foi possível carregar o arquivo: ${escapeHtml(err.message)}</p>`;
+      html += `<div class="doc-aviso status error">Não foi possível carregar o arquivo: ${escapeHtml(err.message)}</div>`;
     }
     html += '</div>';
   }
+
+  html += '</div></section>';
   return html;
 };
+
+// Documento completo da ficha — mesma marcação na tela e na impressão.
+const montarFichaDocumento = (c, fichas, documentosHtml) => `
+  <article class="ficha-doc">
+    ${buildCabecalhoFicha(c)}
+    ${buildDadosCadastraisHtml(c)}
+    ${buildFichaInscricaoHtml(fichas)}
+    ${documentosHtml}
+  </article>
+`;
+
+const PLACEHOLDER_DOCS = `
+  <section class="ficha-bloco">
+    <h2>Documentos e anexos</h2>
+    <p class="muted">Carregando anexos...</p>
+  </section>`;
 
 const abrirFichaDetalhe = async (idCatequisando) => {
   const painel = document.getElementById('ficha-detalhe');
@@ -1139,11 +1204,10 @@ const abrirFichaDetalhe = async (idCatequisando) => {
       fetchJson(`/api/documentos/catequisando/${idCatequisando}`)
     ]);
 
-    const cabecalho = buildDadosCadastraisHtml(catequisando) + buildFichaInscricaoHtml(fichas);
-    conteudo.innerHTML = `<div class="ficha-view">${cabecalho}<h3>Documentos entregues</h3><p class="muted">Carregando documentos...</p></div>`;
+    conteudo.innerHTML = montarFichaDocumento(catequisando, fichas, PLACEHOLDER_DOCS);
 
     const documentosHtml = await buildDocumentosHtml(documentos);
-    conteudo.innerHTML = `<div class="ficha-view">${cabecalho}${documentosHtml}</div>`;
+    conteudo.innerHTML = montarFichaDocumento(catequisando, fichas, documentosHtml);
   } catch (err) {
     conteudo.innerHTML = `<p class="status error">Erro ao carregar ficha: ${escapeHtml(err.message)}</p>`;
   }
@@ -1151,11 +1215,11 @@ const abrirFichaDetalhe = async (idCatequisando) => {
 
 document.getElementById('btn-imprimir-ficha').addEventListener('click', async () => {
   const conteudo = document.getElementById('ficha-detalhe-conteudo');
-  const fichaView = conteudo.querySelector('.ficha-view');
-  if (!fichaView) return;
+  const fichaDoc = conteudo.querySelector('.ficha-doc');
+  if (!fichaDoc) return;
   const botao = document.getElementById('btn-imprimir-ficha');
   const printArea = document.getElementById('print-area');
-  printArea.innerHTML = `<h1 style="font-family: Arial, sans-serif;">Ficha do Catequisando</h1>${fichaView.innerHTML}`;
+  printArea.innerHTML = `<div class="ficha-print">${fichaDoc.outerHTML}</div>`;
 
   botao.disabled = true;
   try {
@@ -1190,17 +1254,8 @@ const montarFichaParaLote = async (catequisandoResumo, coletor) => {
     fetchJson(`/api/documentos/catequisando/${id}`)
   ]);
 
-  const corpo = buildDadosCadastraisHtml(catequisando)
-    + buildFichaInscricaoHtml(fichas)
-    + await buildDocumentosHtml(documentos, coletor);
-
-  return `
-    <div class="ficha-print">
-      <h1 class="print-nome">Ficha do Catequisando</h1>
-      <div class="print-sub">${escapeHtml(catequisando.nome)} · ${escapeHtml(catequisando.turma?.nome || 'Sem turma')} · ${escapeHtml(catequisando.comunidade?.nome || 'Sem comunidade')}</div>
-      <div class="ficha-view">${corpo}</div>
-    </div>
-  `;
+  const documentosHtml = await buildDocumentosHtml(documentos, coletor);
+  return `<div class="ficha-print">${montarFichaDocumento(catequisando, fichas, documentosHtml)}</div>`;
 };
 
 const imprimirLote = async (lista, descricao) => {
@@ -1235,9 +1290,18 @@ const imprimirLote = async (lista, descricao) => {
       falhas.push(`${item.nome}: ${err.message}`);
       html += `
         <div class="ficha-print">
-          <h1 class="print-nome">Ficha do Catequisando</h1>
-          <div class="print-sub">${escapeHtml(item.nome)}</div>
-          <p class="status error">Não foi possível carregar esta ficha: ${escapeHtml(err.message)}</p>
+          <article class="ficha-doc">
+            <header class="ficha-cabecalho">
+              <div>
+                <h1>FICHA DE CATEQUESE</h1>
+                <p class="ficha-sub">${escapeHtml(item.nome)}</p>
+              </div>
+              <img src="logo.png" alt="Logo Catequese" />
+            </header>
+            <section class="ficha-bloco">
+              <p class="status error">Não foi possível carregar esta ficha: ${escapeHtml(err.message)}</p>
+            </section>
+          </article>
         </div>
       `;
     }

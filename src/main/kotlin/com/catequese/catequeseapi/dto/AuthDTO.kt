@@ -8,17 +8,26 @@ data class LoginRequestDTO(
     val password: String = ""
 )
 
+/** Corpo do POST /api/auth/trocar-senha. */
+data class TrocarSenhaDTO(
+    val senhaAtual: String = "",
+    val novaSenha: String = ""
+)
+
 /**
- * Resposta do login e do /api/auth/me.
- * O front usa `tipo`, `podeEditar` e `admin` para decidir o que mostrar --
- * mas quem realmente bloqueia a acao e o backend, nao a tela.
+ * Resposta do login, do /api/auth/me e da troca de senha.
+ *
+ * O front usa `tipo`, `podeEditar`, `admin` e `senhaProvisoria` para decidir o
+ * que mostrar -- mas quem realmente bloqueia a acao e o backend, nao a tela.
  */
 data class UsuarioLogadoDTO(
     val idUsuario: Long,
     val nome: String,
     val username: String,
+    val email: String?,
     val tipo: TipoUsuario,
     val podeEditar: Boolean,
     val admin: Boolean,
+    val senhaProvisoria: Boolean,
     val token: String? = null
 )

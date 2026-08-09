@@ -9,6 +9,7 @@ import io.jsonwebtoken.security.Keys
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.time.ZoneOffset
 import java.util.Date
 
 /**
@@ -24,7 +25,14 @@ class JwtService(
 ) {
     private val log = LoggerFactory.getLogger(JwtService::class.java)
 
-    private val key by lazy { Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8)) }
+    private val key by lazy {
+        // Falhar na subida e melhor do que rodar com um segredo fraco ou vazio.
+        check(secret.length >= TAMANHO_MINIMO_SEGREDO) {
+            "jwt.secret ausente ou muito curto (minimo $TAMANHO_MINIMO_SEGREDO caracteres). " +
+                "Defina a variavel de ambiente JWT_SECRET com um valor aleatorio forte."
+        }
+        Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
+    }
 
     fun gerarToken(usuario: Usuario): String {
         val agora = Date()
@@ -33,11 +41,22 @@ class JwtService(
             .claim("idUsuario", usuario.idUsuario)
             .claim("nome", usuario.nome)
             .claim("tipo", usuario.tipo.name)
+            // Marca da ultima troca de senha: o filtro compara com o banco e
+            // derruba tokens emitidos antes da troca.
+            .claim(CLAIM_SENHA_EM, marcaDeSenha(usuario))
             .setIssuedAt(agora)
             .setExpiration(Date(agora.time + expirationMs))
             .signWith(key, SignatureAlgorithm.HS256)
             .compact()
     }
+
+    /** Segundos da ultima troca de senha (0 se nunca trocou). */
+    fun marcaDeSenha(usuario: Usuario): Long =
+        usuario.dataTrocaSenha?.toEpochSecond(ZoneOffset.UTC) ?: 0L
+
+    /** Le a marca gravada no token; -1 se o token for antigo e nao tiver o claim. */
+    fun marcaDeSenhaDoToken(claims: Claims): Long =
+        (claims[CLAIM_SENHA_EM] as? Number)?.toLong() ?: -1L
 
     /** Devolve os claims do token, ou null se estiver invalido/expirado. */
     fun lerToken(token: String): Claims? = try {
@@ -54,4 +73,11 @@ class JwtService(
 
     fun tipoDoToken(claims: Claims): TipoUsuario? =
         runCatching { TipoUsuario.valueOf(claims["tipo"] as String) }.getOrNull()
+
+    companion object {
+        private const val CLAIM_SENHA_EM = "senhaEm"
+
+        /** HS256 exige chave de 256 bits. */
+        private const val TAMANHO_MINIMO_SEGREDO = 32
+    }
 }

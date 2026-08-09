@@ -1,5 +1,6 @@
 package com.catequese.catequeseapi.config
 
+import com.catequese.catequeseapi.repository.UsuarioRepository
 import com.catequese.catequeseapi.security.JwtAuthFilter
 import com.catequese.catequeseapi.security.JwtService
 import jakarta.servlet.http.HttpServletResponse
@@ -30,6 +31,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 class SecurityConfig(
     private val jwtService: JwtService,
+    private val usuarioRepository: UsuarioRepository,
     @Value("\${app.security.enabled:false}") private val securityEnabled: Boolean
 ) {
     private val log = LoggerFactory.getLogger(SecurityConfig::class.java)
@@ -45,7 +47,10 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .httpBasic { it.disable() }
             .formLogin { it.disable() }
-            .addFilterBefore(JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(
+                JwtAuthFilter(jwtService, usuarioRepository, securityEnabled),
+                UsernamePasswordAuthenticationFilter::class.java
+            )
             // Sem isso o Spring devolveria 403 tambem para quem nao mandou token.
             // O front precisa distinguir: 401 = faca login, 403 = logado mas sem permissao.
             .exceptionHandling { ex ->
@@ -81,8 +86,18 @@ class SecurityConfig(
                     "/error"
                 ).permitAll()
 
-                // ---- Publico: login ----
-                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                // ---- Publico: login e recuperacao de senha ----
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/auth/login",
+                    "/api/auth/esqueci-senha",
+                    "/api/auth/redefinir-senha"
+                ).permitAll()
+
+                // Trocar a propria senha vale para QUALQUER tipo logado.
+                // Sem esta linha o catequista cairia na regra de escrita mais
+                // abaixo e nao conseguiria trocar a propria senha.
+                .requestMatchers(HttpMethod.POST, "/api/auth/trocar-senha").authenticated()
 
                 // ---- Publico: status do cadastro (Etapa 4) ----
                 .requestMatchers(HttpMethod.GET, "/api/config/cadastro").permitAll()

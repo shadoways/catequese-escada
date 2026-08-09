@@ -3,6 +3,7 @@ package com.catequese.catequeseapi.config
 import com.catequese.catequeseapi.model.TipoUsuario
 import com.catequese.catequeseapi.model.Usuario
 import com.catequese.catequeseapi.repository.UsuarioRepository
+import com.catequese.catequeseapi.security.PoliticaSenha
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.CommandLineRunner
@@ -11,27 +12,28 @@ import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
 /**
- * Cria o primeiro usuario administrador (coordenador paroquial) na subida do app.
+ * Cria o primeiro administrador (coordenador paroquial) na subida do app,
+ * e SOMENTE quando a tabela tb_usuario esta vazia.
  *
- * Existe porque a senha precisa ser gravada como hash BCrypt, e nao da para
- * escrever um hash direto no SQL sem gerar por fora. Aqui o proprio Spring gera.
+ * A senha e sempre marcada como provisoria: no primeiro login o sistema exige a
+ * troca antes de liberar qualquer outra tela.
  *
- * So roda quando a tabela tb_usuario esta VAZIA e as duas variaveis de ambiente
- * abaixo estao preenchidas -- depois disso nunca mais mexe em nada:
+ * Se ADMIN_INICIAL_PASSWORD nao for informada, o proprio sistema gera uma senha
+ * aleatoria e imprime no log da subida -- e a unica vez que ela aparece.
  *
- *   export ADMIN_INICIAL_USERNAME=coordenador
- *   export ADMIN_INICIAL_PASSWORD='uma senha forte aqui'
- *   export ADMIN_INICIAL_NOME='Nome do Coordenador Paroquial'   # opcional
- *
- * Depois de criado, remova as variaveis do ambiente.
+ *   export ADMIN_INICIAL_USERNAME=coordenador          # opcional (padrao: admin)
+ *   export ADMIN_INICIAL_PASSWORD='senha forte'        # opcional (padrao: gerada)
+ *   export ADMIN_INICIAL_NOME='Nome do Coordenador'    # opcional
+ *   export ADMIN_INICIAL_EMAIL=coordenador@paroquia.org # opcional, para recuperar senha
  */
 @Component
 class AdminBootstrap(
     private val usuarioRepository: UsuarioRepository,
     private val passwordEncoder: PasswordEncoder,
-    @Value("\${admin.inicial.username:}") private val username: String,
+    @Value("\${admin.inicial.username:admin}") private val username: String,
     @Value("\${admin.inicial.password:}") private val password: String,
-    @Value("\${admin.inicial.nome:Coordenador Paroquial}") private val nome: String
+    @Value("\${admin.inicial.nome:Coordenador Paroquial}") private val nome: String,
+    @Value("\${admin.inicial.email:}") private val email: String
 ) : CommandLineRunner {
 
     private val log = LoggerFactory.getLogger(AdminBootstrap::class.java)
@@ -39,29 +41,42 @@ class AdminBootstrap(
     override fun run(vararg args: String?) {
         if (usuarioRepository.count() > 0L) return
 
-        if (username.isBlank() || password.isBlank()) {
-            log.warn(
-                "Nenhum usuario cadastrado em tb_usuario e ADMIN_INICIAL_USERNAME/" +
-                    "ADMIN_INICIAL_PASSWORD nao foram definidos. Ninguem conseguira entrar " +
-                    "quando app.security.enabled=true."
+        val usuarioFinal = username.trim().ifBlank { "admin" }
+        val senhaGerada = password.isBlank()
+        val senhaFinal = if (senhaGerada) PoliticaSenha.gerarSenhaProvisoria() else password
+
+        usuarioRepository.save(
+            Usuario(
+                nome = nome,
+                username = usuarioFinal,
+                passwordHash = passwordEncoder.encode(senhaFinal),
+                email = email.trim().ifBlank { null },
+                tipo = TipoUsuario.COORDENADOR_PAROQUIAL,
+                senhaProvisoria = true,
+                ativo = true,
+                dataCriacao = LocalDateTime.now()
             )
-            return
+        )
+
+        if (senhaGerada) {
+            log.warn(
+                "\n" +
+                    "=========================================================\n" +
+                    " ADMINISTRADOR INICIAL CRIADO\n" +
+                    " usuario: {}\n" +
+                    " senha provisoria: {}\n" +
+                    " Anote agora: esta senha nao sera mostrada de novo.\n" +
+                    " O sistema exigira a troca no primeiro login.\n" +
+                    "=========================================================",
+                usuarioFinal, senhaFinal
+            )
+        } else {
+            log.warn(
+                "Administrador inicial '{}' criado com a senha informada em " +
+                    "ADMIN_INICIAL_PASSWORD. A troca sera exigida no primeiro login. " +
+                    "Remova a variavel do ambiente.",
+                usuarioFinal
+            )
         }
-
-        val admin = Usuario(
-            nome = nome,
-            username = username.trim(),
-            passwordHash = passwordEncoder.encode(password),
-            tipo = TipoUsuario.COORDENADOR_PAROQUIAL,
-            ativo = true,
-            dataCriacao = LocalDateTime.now()
-        )
-        usuarioRepository.save(admin)
-
-        log.info(
-            "Usuario administrador inicial '{}' criado como COORDENADOR_PAROQUIAL. " +
-                "Remova ADMIN_INICIAL_USERNAME/ADMIN_INICIAL_PASSWORD do ambiente.",
-            admin.username
-        )
     }
 }

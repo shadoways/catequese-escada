@@ -39,6 +39,37 @@ data class Usuario(
     @Enumerated(EnumType.STRING)
     val tipo: TipoUsuario,
 
+    /** Usado para recuperacao de senha. */
+    val email: String? = null,
+
+    /** Reservado para um futuro envio por SMS. Nao usado hoje. */
+    val telefone: String? = null,
+
+    /**
+     * Senha gerada pelo sistema (criacao do usuario ou reset pelo admin).
+     * Enquanto for true o usuario so consegue trocar a propria senha --
+     * qualquer outra chamada e barrada no JwtAuthFilter.
+     */
+    @Column(name = "senha_provisoria")
+    val senhaProvisoria: Boolean = false,
+
+    /**
+     * Momento da ultima troca de senha. Vai dentro do JWT: se nao bater com o
+     * banco, o token e de antes da troca e nao vale mais.
+     */
+    @Column(name = "data_troca_senha")
+    val dataTrocaSenha: LocalDateTime? = null,
+
+    @Column(name = "ultimo_login")
+    val ultimoLogin: LocalDateTime? = null,
+
+    /** Zera a cada login correto. Alimenta o bloqueio anti forca-bruta. */
+    @Column(name = "tentativas_falhas")
+    val tentativasFalhas: Int = 0,
+
+    @Column(name = "bloqueado_ate")
+    val bloqueadoAte: LocalDateTime? = null,
+
     @Column(name = "id_catequista")
     val idCatequista: Long? = null,
 
@@ -49,4 +80,8 @@ data class Usuario(
 
     @Column(name = "data_criacao")
     val dataCriacao: LocalDateTime? = null
-)
+) {
+    /** True enquanto o bloqueio temporario por tentativas erradas estiver valendo. */
+    fun estaBloqueado(agora: LocalDateTime = LocalDateTime.now()): Boolean =
+        bloqueadoAte?.isAfter(agora) == true
+}

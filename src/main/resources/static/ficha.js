@@ -18,9 +18,9 @@ const DOC_TYPE_LABELS = {
   FOTO: 'Foto do Catequisando'
 };
 
-// A assinatura vem primeiro: logo após os dados, dando a leitura de que a
-// ficha foi assinada pelo catequisando.
-const ORDEM_DOCUMENTOS = { ASSINATURA: 0, DOCUMENTO: 1, CERTIDAO: 2, FOTO: 3 };
+// A assinatura NÃO entra na lista de anexos: ela é parte integrante da ficha
+// e é exibida logo após os dados, indicando a ciência do catequisando.
+const ORDEM_DOCUMENTOS = { DOCUMENTO: 0, CERTIDAO: 1, FOTO: 2 };
 
 const ESTADO_CONJUGAL_LABELS = {
   SOLTEIRO: 'Solteiro(a)',
@@ -143,6 +143,37 @@ const carregarArquivoDocumento = async (idDocumento) => {
   return { url: URL.createObjectURL(blob), contentType: blob.type };
 };
 
+/*
+ * Assinatura: fica na mesma página dos dados, em tamanho reduzido, porque
+ * vale como o "de acordo" do catequisando sobre o que foi declarado — e não
+ * como um documento anexo (esses continuam ocupando a folha inteira).
+ */
+const buildAssinaturaHtml = async (docAssinatura, catequisando) => {
+  let conteudo = '<span class="muted">Sem assinatura registrada.</span>';
+
+  if (docAssinatura) {
+    try {
+      const arquivo = await carregarArquivoDocumento(docAssinatura.idDocumento);
+      conteudo = arquivo.contentType && arquivo.contentType.startsWith('image/')
+        ? `<img src="${arquivo.url}" alt="Assinatura de ${escapeHtml(catequisando.nome)}" />`
+        : `<span class="muted">Assinatura em formato ${escapeHtml(arquivo.contentType || 'desconhecido')} — <a href="${arquivo.url}" target="_blank" rel="noopener">abrir em nova aba</a>.</span>`;
+    } catch (err) {
+      conteudo = `<span class="status error">Não foi possível carregar a assinatura: ${escapeHtml(err.message)}</span>`;
+    }
+  }
+
+  const data = docAssinatura ? formatDateSimple(docAssinatura.dataEnvio) : null;
+
+  return `
+    <section class="ficha-bloco ficha-assinatura">
+      <h2>Assinatura do catequisando</h2>
+      <div class="assinatura-box">
+        <div class="assinatura-traco">${conteudo}</div>
+        <span class="assinatura-legenda">${escapeHtml(catequisando.nome)}${data ? ' · assinado em ' + data : ''}</span>
+      </div>
+    </section>`;
+};
+
 const buildDocumentosHtml = async (documentos) => {
   if (!documentos.length) {
     return `
@@ -159,10 +190,9 @@ const buildDocumentosHtml = async (documentos) => {
 
   for (const doc of ordenados) {
     const titulo = DOC_TYPE_LABELS[doc.tipoDocumento] || doc.tipoDocumento;
-    const ehAssinatura = doc.tipoDocumento === 'ASSINATURA';
 
     html += `
-      <div class="doc-item${ehAssinatura ? ' doc-assinatura' : ''}">
+      <div class="doc-item">
         <div class="doc-cabecalho">
           <span class="doc-titulo">${escapeHtml(titulo)}</span>
           <span class="doc-data">Enviado em ${formatDateSimple(doc.dataEnvio)}</span>
@@ -198,7 +228,12 @@ const montarFicha = async (idCatequisando) => {
     fetchJson(`/api/documentos/catequisando/${idCatequisando}`)
   ]);
 
-  const documentosHtml = await buildDocumentosHtml(documentos);
+  // A assinatura sai da lista de anexos e vai para o corpo da ficha.
+  const assinatura = documentos.find((d) => d.tipoDocumento === 'ASSINATURA');
+  const anexos = documentos.filter((d) => d.tipoDocumento !== 'ASSINATURA');
+
+  const assinaturaHtml = await buildAssinaturaHtml(assinatura, catequisando);
+  const documentosHtml = await buildDocumentosHtml(anexos);
 
   return `
     <div class="ficha-print">
@@ -206,6 +241,7 @@ const montarFicha = async (idCatequisando) => {
         ${buildCabecalhoFicha(catequisando)}
         ${buildDadosCadastraisHtml(catequisando)}
         ${buildFichaInscricaoHtml(fichas)}
+        ${assinaturaHtml}
         ${documentosHtml}
       </article>
     </div>`;

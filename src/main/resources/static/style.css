@@ -641,6 +641,38 @@ canvas {
   font-weight: 600;
 }
 
+/* Assinatura: parte da ficha, não anexo. Compacta, para caber junto dos dados. */
+.assinatura-box {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.assinatura-traco {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 4px;
+}
+
+.assinatura-traco img {
+  display: block;
+  max-width: 100%;
+  max-height: 90px;
+  width: auto;
+  height: auto;
+}
+
+.assinatura-legenda {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .ficha-docs {
   display: grid;
   gap: 16px;
@@ -778,12 +810,24 @@ canvas {
   }
 
   /* Anexos e campos nao podem ser cortados no meio da pagina. O bloco de
-     documentos pode fluir entre paginas, senao sobra folha em branco. */
+     documentos pode fluir entre paginas, senao sobra folha em branco.
+     A assinatura tambem fica inteira, na mesma folha dos dados. */
   .doc-item,
-  .ficha-campo {
+  .ficha-campo,
+  .ficha-assinatura {
     page-break-inside: avoid;
     break-inside: avoid;
   }
+
+  /* Assinatura reduzida: e uma marca de ciencia, nao um documento */
+  .assinatura-box { max-width: 90mm; }
+
+  .assinatura-traco {
+    min-height: 18mm;
+    padding-bottom: 2px;
+  }
+
+  .assinatura-traco img { max-height: 22mm; }
 
   /* Evita titulo de secao orfao no rodape da pagina */
   .ficha-bloco > h2,

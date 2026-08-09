@@ -276,7 +276,15 @@
               <option value="">Todas as comunidades</option>
             </select>
           </label>
-          <button type="button" id="btn-painel-consultar">Consultar</button>
+          <label style="min-width: 220px;">
+            Documentos
+            <select id="painel-status-filtro">
+              <option value="">Todos (completos e pendentes)</option>
+              <option value="completos">Somente completos</option>
+              <option value="pendentes">Somente com documento faltando</option>
+            </select>
+          </label>
+          <button type="button" id="btn-painel-consultar" style="align-self: flex-end;">Consultar</button>
         </div>
         <div id="painel-status" class="summary"></div>
         <div id="dashboard-conteudo"></div>

@@ -1085,9 +1085,16 @@ const carregarDashboard = async () => {
   }
 };
 
+// Um catequisando está completo quando entregou todos os tipos de documento esperados.
+const catequisandoCompleto = (idCatequisando, docsPorCatequisando) => {
+  const entregues = docsPorCatequisando[idCatequisando] || new Set();
+  return DOC_TYPES_ESPERADOS.every((tipo) => entregues.has(tipo));
+};
+
 const consultarPainel = async () => {
   const idTurma = document.getElementById('painel-turma-filtro').value;
   const idComunidade = document.getElementById('painel-comunidade-filtro').value;
+  const statusDocumentos = document.getElementById('painel-status-filtro').value;
   const container = document.getElementById('dashboard-conteudo');
   const botao = document.getElementById('btn-painel-consultar');
 
@@ -1133,21 +1140,34 @@ const consultarPainel = async () => {
       setStatusPainel(`Consultando documentos... ${processados} de ${selecionados.length}`);
     });
 
-    // Mostra apenas as turmas que têm alguém na seleção.
-    const idsTurmas = new Set(selecionados.map((c) => c.turma?.idTurma).filter(Boolean));
+    // Filtro de status só pode ser aplicado depois de saber quem entregou o quê.
+    let visiveis = selecionados;
+    if (statusDocumentos === 'completos') {
+      visiveis = selecionados.filter((c) => catequisandoCompleto(c.idCatequisando, docsPorCatequisando));
+    } else if (statusDocumentos === 'pendentes') {
+      visiveis = selecionados.filter((c) => !catequisandoCompleto(c.idCatequisando, docsPorCatequisando));
+    }
+
+    if (!visiveis.length) {
+      setStatusPainel('Nenhum catequisando encontrado para esse filtro.', 'warning');
+      return;
+    }
+
+    // Mostra apenas as turmas que têm alguém na seleção (já com o filtro de documentos aplicado).
+    const idsTurmas = new Set(visiveis.map((c) => c.turma?.idTurma).filter(Boolean));
     const turmasVisiveis = dashboardCache.turmas.filter((t) => idsTurmas.has(t.idTurma));
 
     let html = turmasVisiveis
       .map((t) => renderTurmaCard(
         t,
         dashboardCache.catequistas.find((k) => k.idCatequista === t.catequista?.idCatequista) || t.catequista,
-        selecionados,
+        visiveis,
         docsPorCatequisando
       ))
       .join('');
 
     // Quem está sem turma não pode sumir do controle de documentos.
-    const semTurma = selecionados.filter((c) => !c.turma?.idTurma);
+    const semTurma = visiveis.filter((c) => !c.turma?.idTurma);
     if (semTurma.length) {
       html += renderTurmaCard({ idTurma: null, nome: 'Sem turma definida' }, null,
         semTurma, docsPorCatequisando);
@@ -1155,20 +1175,15 @@ const consultarPainel = async () => {
 
     container.innerHTML = html || '<p class="muted">Nenhuma turma encontrada.</p>';
 
-    container.querySelectorAll('[data-imprimir-turma]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const extra = idComunidade ? `&comunidade=${idComunidade}` : '';
-        abrirFichaEmNovaAba(`turma=${btn.dataset.imprimirTurma}${extra}&print=1`);
-      });
-    });
-
+    // A impressão sempre usa os ids exibidos na tela, para bater exatamente com o
+    // que o filtro de documentos (completos/pendentes) está mostrando no momento.
     container.querySelectorAll('[data-imprimir-ids]').forEach((btn) => {
       btn.addEventListener('click', () => {
         abrirFichaEmNovaAba(`ids=${btn.dataset.imprimirIds}&print=1`);
       });
     });
 
-    setStatusPainel(`${selecionados.length} catequisando(s) em ${turmasVisiveis.length + (semTurma.length ? 1 : 0)} turma(s).`, 'ok');
+    setStatusPainel(`${visiveis.length} catequisando(s) em ${turmasVisiveis.length + (semTurma.length ? 1 : 0)} turma(s).`, 'ok');
   } catch (err) {
     setStatusPainel(`Erro ao consultar: ${err.message}`, 'error');
   } finally {
@@ -1204,13 +1219,13 @@ const renderTurmaCard = (turma, catequista, catequisandos, docsPorCatequisando) 
     });
   }
 
-  // Sem turma, não dá para imprimir por turma: usa a lista de ids.
+  // Sempre imprime pelos ids exibidos no cartão, para respeitar também o
+  // filtro de status de documentos (completos/pendentes), e não só turma/comunidade.
   let botaoImprimir = '';
   if (catequisandosDaTurma.length) {
-    const rotulo = `Imprimir ${catequisandosDaTurma.length} ficha(s)`;
-    botaoImprimir = turma.idTurma
-      ? `<button type="button" class="secondary" data-imprimir-turma="${turma.idTurma}">${rotulo} desta turma</button>`
-      : `<button type="button" class="secondary" data-imprimir-ids="${catequisandosDaTurma.map((c) => c.idCatequisando).join(',')}">${rotulo}</button>`;
+    const rotulo = `Imprimir ${catequisandosDaTurma.length} ficha(s)${turma.idTurma ? ' desta turma' : ''}`;
+    const ids = catequisandosDaTurma.map((c) => c.idCatequisando).join(',');
+    botaoImprimir = `<button type="button" class="secondary" data-imprimir-ids="${ids}">${rotulo}</button>`;
   }
 
   return `

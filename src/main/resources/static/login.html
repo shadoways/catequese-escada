@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entrar - Catequese Admin</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="logo.png" />
+</head>
+<body>
+  <div class="shell">
+    <header id="header">
+      <h1>Catequese Admin</h1>
+      <img src="logo.png" alt="Logo Catequese" />
+    </header>
+
+    <div class="auth-layout">
+      <section class="panel" id="painel-login">
+        <h2>Entrar</h2>
+        <div id="login-aviso"></div>
+        <form id="form-login" autocomplete="on">
+          <label>
+            Usuário
+            <input id="login-username" type="text" name="username" autocomplete="username"
+                   required autofocus />
+          </label>
+          <label>
+            Senha
+            <input id="login-senha" type="password" name="password"
+                   autocomplete="current-password" required />
+          </label>
+          <button type="submit" id="btn-entrar">Entrar</button>
+        </form>
+        <div class="auth-rodape">
+          <button type="button" class="link-botao" id="link-esqueci">Esqueci minha senha</button>
+          <a class="link-botao" href="index.html">Voltar ao início</a>
+        </div>
+      </section>
+
+      <section class="panel" id="painel-esqueci" hidden>
+        <h2>Recuperar senha</h2>
+        <p class="muted">
+          Informe o e-mail cadastrado. Se houver uma conta com esse endereço,
+          enviaremos um link para você criar uma nova senha.
+        </p>
+        <div id="esqueci-aviso"></div>
+        <form id="form-esqueci">
+          <label>
+            E-mail
+            <input id="esqueci-email" type="email" autocomplete="email" required />
+          </label>
+          <button type="submit" id="btn-enviar-link">Enviar link de recuperação</button>
+        </form>
+        <div class="auth-rodape">
+          <button type="button" class="link-botao" id="link-voltar-login">Voltar ao login</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="login.js"></script>
+</body>
+</html>

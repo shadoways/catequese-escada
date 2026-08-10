@@ -420,6 +420,83 @@ canvas {
 .tabs[hidden] { display: none; }
 
 /* ==========================================================================
+   Sessão: barra de usuário e telas de login / senha.
+   Reaproveita painel, botões e variáveis já definidos acima.
+   ========================================================================== */
+
+.barra-usuario {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.barra-usuario:empty { display: none; }
+
+.usuario-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  margin-right: 4px;
+}
+
+.usuario-tipo {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.auth-layout {
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+/* O .panel é grid, mas o <form> é um item só: precisa do próprio espaçamento. */
+.auth-layout form {
+  display: grid;
+  gap: 14px;
+}
+
+/* Sem isto o display:grid acima vence o atributo hidden do navegador e o
+   formulário continua aparecendo quando o link de recuperação é inválido. */
+.auth-layout form[hidden],
+.panel[hidden] {
+  display: none;
+}
+
+.auth-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.auth-rodape[hidden] { display: none; }
+
+/* Botão com aparência de link, para ações secundárias */
+.link-botao {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: var(--accent-2);
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  width: auto;
+}
+
+.link-botao:hover {
+  text-decoration: underline;
+  transform: none;
+}
+
+/* ==========================================================================
    Menu inicial — tela de entrada com os atalhos para cadastro e consultas.
    Reaproveita as variáveis, sombra e raio já definidos acima.
    ========================================================================== */
@@ -556,6 +633,7 @@ canvas {
   border: 1px solid var(--accent);
   font-size: 0.9rem;
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .nome-link {
@@ -862,6 +940,7 @@ canvas {
   #main-tabs,
   .tabs,
   .tab-content,
+  .barra-usuario,
   #header {
     display: none !important;
   }

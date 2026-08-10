@@ -919,7 +919,16 @@ const escapeHtml = (value) => {
 const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blank', 'noopener');
 
 // ---- Navegação por abas ----
+// Cadastro e a tela publica; consulta e painel sao de uso interno.
+const TABS_PROTEGIDAS = ['consulta', 'dashboard'];
+
 const switchTab = (tabName) => {
+  // Manda para o login guardando o destino, para voltar direto na aba pedida.
+  if (TABS_PROTEGIDAS.includes(tabName) && !Auth.estaLogado()) {
+    Auth.irParaLogin(tabName);
+    return;
+  }
+
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
@@ -942,6 +951,11 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 document.querySelectorAll('.menu-card').forEach((card) => {
   card.addEventListener('click', () => switchTab(card.dataset.tab));
 });
+
+// Depois do login o usuário volta direto para a aba que tentou abrir
+// (login.js redireciona para index.html?tab=consulta, por exemplo).
+const tabInicial = new URLSearchParams(window.location.search).get('tab');
+if (tabInicial) switchTab(tabInicial);
 
 // ---- Consulta de catequisandos ----
 // Preenche um <select> de filtro preservando a opção que já estava marcada.

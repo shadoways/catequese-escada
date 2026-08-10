@@ -71,7 +71,13 @@ class SecurityConfig(
                 "app.security.enabled=false -- a API esta ABERTA. O login funciona e emite " +
                     "token, mas nenhuma rota exige autenticacao ainda."
             )
-            http.authorizeHttpRequests { it.anyRequest().permitAll() }
+            // A flag existe para nao quebrar o frontend que ainda nao manda token.
+            // Isso nao vale para a gestao de usuarios, que e endpoint novo: deixar
+            // aberto permitiria a qualquer um criar um administrador.
+            http.authorizeHttpRequests {
+                it.requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                    .anyRequest().permitAll()
+            }
             return http.build()
         }
 

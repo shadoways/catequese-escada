@@ -228,6 +228,40 @@ DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
 --   export APP_URL_BASE=https://endereco-real-da-aplicacao
 -- =====================================================
 
+-- =====================================================
+-- DIAGNOSTICO: lista de uma vez TODAS as colunas que a aplicacao espera em
+-- tb_usuario e que ainda nao existem no banco.
+--
+-- Util porque o Hibernate (ddl-auto=validate) reclama de uma coluna por vez:
+-- sem isso, cada tentativa de subir revela apenas o proximo campo faltante.
+-- Se o resultado vier vazio, a tabela esta completa.
+-- =====================================================
+
+SELECT esperada.coluna AS coluna_faltando
+  FROM (
+        SELECT 'id_usuario'        AS coluna
+  UNION SELECT 'nome'
+  UNION SELECT 'username'
+  UNION SELECT 'password_hash'
+  UNION SELECT 'tipo'
+  UNION SELECT 'email'
+  UNION SELECT 'telefone'
+  UNION SELECT 'senha_provisoria'
+  UNION SELECT 'data_troca_senha'
+  UNION SELECT 'ultimo_login'
+  UNION SELECT 'tentativas_falhas'
+  UNION SELECT 'bloqueado_ate'
+  UNION SELECT 'id_catequista'
+  UNION SELECT 'id_coordenador'
+  UNION SELECT 'ativo'
+  UNION SELECT 'data_criacao'
+       ) esperada
+  LEFT JOIN information_schema.COLUMNS c
+         ON c.TABLE_SCHEMA = DATABASE()
+        AND c.TABLE_NAME   = 'tb_usuario'
+        AND c.COLUMN_NAME  = esperada.coluna
+ WHERE c.COLUMN_NAME IS NULL;
+
 -- Conferencia
 DESC tb_usuario;
 DESC tb_token_recuperacao;

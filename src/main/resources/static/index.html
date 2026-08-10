@@ -21,6 +21,7 @@
       <button type="button" class="tab-btn" data-tab="cadastro">Cadastro</button>
       <button type="button" class="tab-btn" data-tab="consulta">Consultar catequisandos</button>
       <button type="button" class="tab-btn" data-tab="dashboard">Turmas e documentos</button>
+      <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>Usuários</button>
     </nav>
 
     <div id="lote-progresso" class="summary" hidden></div>
@@ -63,6 +64,18 @@
           <h3>Turmas e documentos</h3>
           <p>Ver catequistas, turmas e quais documentos ainda faltam.</p>
           <span class="menu-card-cta">Ver painel →</span>
+        </button>
+        <button type="button" class="menu-card somente-admin" data-tab="usuarios" hidden>
+          <span class="menu-card-icon menu-card-icon--usuarios" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </span>
+          <h3>Usuários</h3>
+          <p>Criar contas, definir permissões e redefinir senhas de acesso.</p>
+          <span class="menu-card-cta">Gerenciar →</span>
         </button>
       </div>
     </div>
@@ -292,9 +305,91 @@
         <div id="dashboard-conteudo"></div>
       </section>
     </div>
+
+    <div class="tab-content" id="tab-usuarios" data-tab-content="usuarios" hidden>
+      <section class="panel" id="painel-senha-gerada" hidden>
+        <h2>Senha provisória</h2>
+        <div class="status warning" id="senha-gerada-aviso"></div>
+        <div class="senha-destaque" id="senha-gerada-valor"></div>
+        <div class="row">
+          <button type="button" id="btn-copiar-senha">Copiar senha</button>
+          <button type="button" class="secondary" id="btn-fechar-senha">Fechar</button>
+        </div>
+      </section>
+
+      <section class="panel" id="painel-form-usuario" hidden>
+        <h2 id="titulo-form-usuario">Novo usuário</h2>
+        <div id="form-usuario-aviso"></div>
+        <div class="grid">
+          <label>
+            Nome completo
+            <input id="usuario-nome" type="text" required />
+          </label>
+          <label>
+            Usuário (login)
+            <input id="usuario-username" type="text" autocomplete="off" />
+          </label>
+          <label>
+            E-mail
+            <input id="usuario-email" type="email" placeholder="usado para recuperar a senha" />
+          </label>
+          <label>
+            Telefone
+            <input id="usuario-telefone" type="tel" />
+          </label>
+          <label>
+            Permissão
+            <select id="usuario-tipo">
+              <option value="CATEQUISTA">Catequista — apenas consulta</option>
+              <option value="COORDENADOR">Coordenador — consulta e alteração</option>
+              <option value="COORDENADOR_PAROQUIAL">Coordenador paroquial — administrador</option>
+            </select>
+          </label>
+          <label id="campo-usuario-ativo">
+            Situação
+            <select id="usuario-ativo">
+              <option value="true">Ativo</option>
+              <option value="false">Inativo</option>
+            </select>
+          </label>
+        </div>
+        <p class="muted" id="dica-senha-nova">
+          A senha é gerada pelo sistema e aparece uma única vez após salvar.
+          O usuário deverá trocá-la no primeiro acesso.
+        </p>
+        <div class="row">
+          <button type="button" id="btn-salvar-usuario">Salvar</button>
+          <button type="button" class="secondary" id="btn-cancelar-usuario">Cancelar</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Usuários do sistema</h2>
+          <button type="button" id="btn-novo-usuario">Novo usuário</button>
+        </div>
+        <div class="row">
+          <label style="flex: 1; min-width: 220px;">
+            Buscar
+            <input id="usuario-busca" type="text" placeholder="Nome ou login..." />
+          </label>
+          <label style="min-width: 190px;">
+            Situação
+            <select id="usuario-filtro-situacao">
+              <option value="ativos">Somente ativos</option>
+              <option value="todos">Todos</option>
+              <option value="inativos">Somente inativos</option>
+            </select>
+          </label>
+        </div>
+        <div id="usuarios-status" class="summary"></div>
+        <div id="usuarios-lista" class="result-list"></div>
+      </section>
+    </div>
   </div>
 
   <script src="auth.js"></script>
   <script src="script.js"></script>
+  <script src="usuarios.js"></script>
 </body>
 </html>

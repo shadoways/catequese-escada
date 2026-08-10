@@ -920,12 +920,28 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 
 // ---- Navegação por abas ----
 // Cadastro e a tela publica; consulta e painel sao de uso interno.
-const TABS_PROTEGIDAS = ['consulta', 'dashboard'];
+const TABS_PROTEGIDAS = ['consulta', 'dashboard', 'usuarios'];
+const TABS_SO_ADMIN = ['usuarios'];
+
+// Mostra ou esconde o que depende do papel de quem esta logado.
+// Isto e conforto visual: quem bloqueia de verdade e o backend.
+const aplicarPermissoesNaTela = () => {
+  const admin = Auth.ehAdmin();
+  document.querySelectorAll('.somente-admin').forEach((el) => {
+    el.hidden = !admin;
+  });
+};
 
 const switchTab = (tabName) => {
   // Manda para o login guardando o destino, para voltar direto na aba pedida.
   if (TABS_PROTEGIDAS.includes(tabName) && !Auth.estaLogado()) {
     Auth.irParaLogin(tabName);
+    return;
+  }
+
+  // Alguem sem permissao chegou pela URL (index.html?tab=usuarios).
+  if (TABS_SO_ADMIN.includes(tabName) && !Auth.ehAdmin()) {
+    switchTab('menu');
     return;
   }
 
@@ -941,6 +957,8 @@ const switchTab = (tabName) => {
   document.getElementById('main-tabs').hidden = tabName === 'menu';
   if (tabName === 'consulta') carregarConsulta();
   if (tabName === 'dashboard') carregarDashboard();
+  // usuarios.js registra esta função; só existe para quem carrega aquela tela.
+  if (tabName === 'usuarios' && window.carregarUsuarios) window.carregarUsuarios();
 };
 
 document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -951,6 +969,8 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 document.querySelectorAll('.menu-card').forEach((card) => {
   card.addEventListener('click', () => switchTab(card.dataset.tab));
 });
+
+aplicarPermissoesNaTela();
 
 // Depois do login o usuário volta direto para a aba que tentou abrir
 // (login.js redireciona para index.html?tab=consulta, por exemplo).

@@ -9,6 +9,12 @@
  *   &print=1             abre a janela de impressão automaticamente
  */
 
+// A ficha mostra dados pessoais e documentos: nunca é tela pública.
+// Sem sessão, vai para o login e volta para cá depois de entrar.
+if (!Auth.estaLogado()) {
+  Auth.irParaLogin();
+}
+
 const params = new URLSearchParams(window.location.search);
 
 const DOC_TYPE_LABELS = {

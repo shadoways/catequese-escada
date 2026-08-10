@@ -1,8 +1,10 @@
 package com.catequese.catequeseapi.config
 
 import com.catequese.catequeseapi.repository.UsuarioRepository
+import com.catequese.catequeseapi.security.CadastroPublicoFilter
 import com.catequese.catequeseapi.security.JwtAuthFilter
 import com.catequese.catequeseapi.security.JwtService
+import com.catequese.catequeseapi.service.ConfiguracaoService
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -32,6 +34,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 class SecurityConfig(
     private val jwtService: JwtService,
     private val usuarioRepository: UsuarioRepository,
+    private val configuracaoService: ConfiguracaoService,
     @Value("\${app.security.enabled:false}") private val securityEnabled: Boolean
 ) {
     private val log = LoggerFactory.getLogger(SecurityConfig::class.java)
@@ -50,6 +53,12 @@ class SecurityConfig(
             .addFilterBefore(
                 JwtAuthFilter(jwtService, usuarioRepository, securityEnabled),
                 UsernamePasswordAuthenticationFilter::class.java
+            )
+            // Depois do JwtAuthFilter, para ja saber quem esta chamando: quem
+            // pode editar continua cadastrando com as inscricoes encerradas.
+            .addFilterAfter(
+                CadastroPublicoFilter(configuracaoService),
+                JwtAuthFilter::class.java
             )
             // Sem isso o Spring devolveria 403 tambem para quem nao mandou token.
             // O front precisa distinguir: 401 = faca login, 403 = logado mas sem permissao.
@@ -76,6 +85,8 @@ class SecurityConfig(
             // aberto permitiria a qualquer um criar um administrador.
             http.authorizeHttpRequests {
                 it.requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                    .requestMatchers(HttpMethod.PUT, "/api/config/**")
+                    .hasRole("COORDENADOR_PAROQUIAL")
                     .anyRequest().permitAll()
             }
             return http.build()

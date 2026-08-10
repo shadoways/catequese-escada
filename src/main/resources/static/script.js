@@ -920,8 +920,43 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 
 // ---- Navegação por abas ----
 // Cadastro e a tela publica; consulta e painel sao de uso interno.
-const TABS_PROTEGIDAS = ['consulta', 'dashboard', 'usuarios'];
-const TABS_SO_ADMIN = ['usuarios'];
+const TABS_PROTEGIDAS = ['consulta', 'dashboard', 'usuarios', 'configuracoes'];
+const TABS_SO_ADMIN = ['usuarios', 'configuracoes'];
+
+// ---- Estado do cadastro público ----
+// Enquanto não sabemos, assumimos aberto: é o comportamento de sempre, e não
+// faz sentido mostrar "encerradas" por causa de uma consulta que ainda não voltou.
+let cadastroAberto = true;
+
+const aplicarEstadoCadastro = () => {
+  // Coordenador continua cadastrando com as inscrições encerradas.
+  const bloqueado = !cadastroAberto && !Auth.podeEditar();
+  const aviso = document.getElementById('aviso-cadastro-fechado');
+  if (aviso) aviso.hidden = !bloqueado;
+  ['section-catequisando', 'section-anexos-assinatura', 'section-envio'].forEach((id) => {
+    const secao = document.getElementById(id);
+    if (secao) secao.hidden = bloqueado;
+  });
+};
+
+// configuracoes.js chama isto ao salvar, para a tela não ficar desatualizada.
+window.definirCadastroAberto = (valor) => {
+  cadastroAberto = valor;
+  aplicarEstadoCadastro();
+};
+
+const verificarCadastroAberto = async () => {
+  try {
+    const resposta = await fetch('/api/config/cadastro');
+    if (!resposta.ok) return;
+    const dados = await resposta.json();
+    cadastroAberto = Boolean(dados.cadastroAberto);
+    aplicarEstadoCadastro();
+  } catch (err) {
+    // Sem resposta, mantém o cadastro visível: o backend barra de qualquer forma.
+    console.warn('Não foi possível consultar o estado do cadastro:', err.message);
+  }
+};
 
 // Mostra ou esconde o que depende do papel de quem esta logado.
 // Isto e conforto visual: quem bloqueia de verdade e o backend.
@@ -959,6 +994,8 @@ const switchTab = (tabName) => {
   if (tabName === 'dashboard') carregarDashboard();
   // usuarios.js registra esta função; só existe para quem carrega aquela tela.
   if (tabName === 'usuarios' && window.carregarUsuarios) window.carregarUsuarios();
+  if (tabName === 'configuracoes' && window.carregarConfiguracoes) window.carregarConfiguracoes();
+  if (tabName === 'cadastro') aplicarEstadoCadastro();
 };
 
 document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -971,6 +1008,7 @@ document.querySelectorAll('.menu-card').forEach((card) => {
 });
 
 aplicarPermissoesNaTela();
+verificarCadastroAberto();
 
 // Depois do login o usuário volta direto para a aba que tentou abrir
 // (login.js redireciona para index.html?tab=consulta, por exemplo).

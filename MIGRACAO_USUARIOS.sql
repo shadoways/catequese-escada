@@ -75,6 +75,22 @@ CREATE TABLE IF NOT EXISTS tb_token_recuperacao (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Configuracoes do sistema, no formato chave/valor.
+-- Hoje guarda so o interruptor do cadastro publico. Chave/valor evita uma
+-- migracao de banco a cada opcao nova que aparecer.
+CREATE TABLE IF NOT EXISTS tb_configuracao (
+    chave VARCHAR(80) PRIMARY KEY,
+    valor VARCHAR(255) NOT NULL,
+    descricao VARCHAR(255) NULL,
+    atualizado_em DATETIME NULL,
+    -- Username de quem mexeu por ultimo, para saber a quem perguntar.
+    atualizado_por VARCHAR(255) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- NAO e preciso inserir nada: sem a linha, o sistema considera o cadastro
+-- ABERTO, que e exatamente como ele sempre funcionou. A linha aparece sozinha
+-- na primeira vez que o coordenador paroquial usar o interruptor.
+
 -- =====================================================
 -- CASO B) Voce JA rodou a versao anterior deste arquivo (tabela sem as colunas
 -- novas). Rode SOMENTE os ALTERs abaixo, um a um.
@@ -124,4 +140,5 @@ CREATE TABLE IF NOT EXISTS tb_token_recuperacao (
 -- Conferencia
 DESC tb_usuario;
 DESC tb_token_recuperacao;
+DESC tb_configuracao;
 SELECT id_usuario, nome, username, tipo, email, senha_provisoria, ativo FROM tb_usuario;

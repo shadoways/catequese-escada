@@ -15,6 +15,13 @@
 USE catequese;
 
 -- =====================================================
+-- COMO USAR: rode o arquivo INTEIRO, sempre.
+-- Ele e idempotente: cria o que falta e ignora o que ja existe, tanto em banco
+-- novo quanto em banco que ja recebeu uma versao anterior deste script.
+--   mysql -u <user> -p -h <host> -P <porta> catequese < MIGRACAO_USUARIOS.sql
+-- =====================================================
+
+-- =====================================================
 -- CASO A) Banco ainda NAO tem tb_usuario -> este bloco resolve tudo.
 -- =====================================================
 
@@ -93,12 +100,93 @@ CREATE TABLE IF NOT EXISTS tb_configuracao (
 
 -- =====================================================
 -- CASO B) Voce JA rodou a versao anterior deste arquivo (tabela sem as colunas
--- novas). Rode SOMENTE os ALTERs abaixo, um a um.
--- O MySQL nao aceita "ADD COLUMN IF NOT EXISTS", entao se a coluna ja existir
--- ele acusa erro -- e so ignorar esse erro especifico e seguir.
--- Confira antes com:  DESC tb_usuario;
+-- novas). O bloco abaixo resolve isso sozinho: ele confere no catalogo do
+-- banco e so cria o que estiver faltando.
+--
+-- Pode rodar quantas vezes quiser, em banco novo ou antigo, sem dar erro.
+-- O MySQL nao aceita "ADD COLUMN IF NOT EXISTS" (o MariaDB aceita), por isso a
+-- checagem e feita via information_schema, que funciona nos dois.
 -- =====================================================
 
+DROP PROCEDURE IF EXISTS cria_coluna_se_faltar;
+DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
+
+DELIMITER $$
+
+CREATE PROCEDURE cria_coluna_se_faltar(
+    IN p_tabela VARCHAR(64),
+    IN p_coluna VARCHAR(64),
+    IN p_definicao TEXT
+)
+BEGIN
+    DECLARE v_quantas INT DEFAULT 0;
+
+    SELECT COUNT(*) INTO v_quantas
+      FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = p_tabela
+       AND COLUMN_NAME = p_coluna;
+
+    IF v_quantas = 0 THEN
+        SET @ddl = CONCAT('ALTER TABLE ', p_tabela, ' ADD COLUMN ', p_coluna, ' ', p_definicao);
+        PREPARE st FROM @ddl;
+        EXECUTE st;
+        DEALLOCATE PREPARE st;
+    END IF;
+END$$
+
+CREATE PROCEDURE cria_indice_se_faltar(
+    IN p_tabela VARCHAR(64),
+    IN p_indice VARCHAR(64),
+    IN p_colunas TEXT
+)
+BEGIN
+    DECLARE v_quantas INT DEFAULT 0;
+
+    SELECT COUNT(*) INTO v_quantas
+      FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = p_tabela
+       AND INDEX_NAME = p_indice;
+
+    IF v_quantas = 0 THEN
+        SET @ddl = CONCAT('ALTER TABLE ', p_tabela, ' ADD INDEX ', p_indice, ' (', p_colunas, ')');
+        PREPARE st FROM @ddl;
+        EXECUTE st;
+        DEALLOCATE PREPARE st;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- Colunas que entraram depois da primeira versao da tb_usuario.
+CALL cria_coluna_se_faltar('tb_usuario', 'email',             'VARCHAR(255) NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'telefone',          'VARCHAR(40) NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'senha_provisoria',  'BOOLEAN NOT NULL DEFAULT FALSE');
+CALL cria_coluna_se_faltar('tb_usuario', 'data_troca_senha',  'DATETIME NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'ultimo_login',      'DATETIME NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'tentativas_falhas', 'INT NOT NULL DEFAULT 0');
+CALL cria_coluna_se_faltar('tb_usuario', 'bloqueado_ate',     'DATETIME NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'id_catequista',     'BIGINT NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'id_coordenador',    'BIGINT NULL');
+CALL cria_coluna_se_faltar('tb_usuario', 'data_criacao',      'DATETIME NULL');
+
+CALL cria_indice_se_faltar('tb_usuario', 'idx_usuario_email', 'email');
+CALL cria_indice_se_faltar('tb_usuario', 'idx_usuario_tipo',  'tipo');
+
+DROP PROCEDURE IF EXISTS cria_coluna_se_faltar;
+DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
+
+-- ---------------------------------------------------------------------------
+-- PLANO B, se o bloco acima nao rodar no seu ambiente.
+--
+-- Dois motivos possiveis: o cliente usado nao entende a instrucao DELIMITER
+-- (comum em interfaces graficas), ou o usuario do banco nao tem permissao para
+-- criar procedure (pode acontecer em banco gerenciado).
+--
+-- Nesse caso rode os ALTERs abaixo um a um. Se a coluna ja existir, o banco
+-- responde "Duplicate column name" -- e so ignorar ESSE erro e seguir.
+--
 -- ALTER TABLE tb_usuario ADD COLUMN email VARCHAR(255) NULL;
 -- ALTER TABLE tb_usuario ADD COLUMN telefone VARCHAR(40) NULL;
 -- ALTER TABLE tb_usuario ADD COLUMN senha_provisoria BOOLEAN NOT NULL DEFAULT FALSE;
@@ -106,7 +194,10 @@ CREATE TABLE IF NOT EXISTS tb_configuracao (
 -- ALTER TABLE tb_usuario ADD COLUMN ultimo_login DATETIME NULL;
 -- ALTER TABLE tb_usuario ADD COLUMN tentativas_falhas INT NOT NULL DEFAULT 0;
 -- ALTER TABLE tb_usuario ADD COLUMN bloqueado_ate DATETIME NULL;
--- ALTER TABLE tb_usuario ADD INDEX idx_usuario_email (email);
+-- ALTER TABLE tb_usuario ADD COLUMN id_catequista BIGINT NULL;
+-- ALTER TABLE tb_usuario ADD COLUMN id_coordenador BIGINT NULL;
+-- ALTER TABLE tb_usuario ADD COLUMN data_criacao DATETIME NULL;
+-- ---------------------------------------------------------------------------
 
 -- =====================================================
 -- O primeiro administrador NAO e criado por SQL, porque a senha precisa ser

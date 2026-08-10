@@ -10,4 +10,7 @@ interface UsuarioRepository : JpaRepository<Usuario, Long> {
     fun findByUsername(username: String): Usuario?
 
     fun existsByUsername(username: String): Boolean
+
+    /** Usado na recuperacao de senha. Ignora maiusculas/minusculas. */
+    fun findFirstByEmailIgnoreCaseAndAtivoTrue(email: String): Usuario?
 }

@@ -54,6 +54,27 @@ CREATE TABLE IF NOT EXISTS tb_usuario (
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tokens de "esqueci minha senha".
+-- O banco guarda apenas o SHA-256 do token, nunca o valor enviado por e-mail:
+-- quem ler esta tabela nao consegue redefinir a senha de ninguem.
+CREATE TABLE IF NOT EXISTS tb_token_recuperacao (
+    id_token BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario BIGINT NOT NULL,
+    -- SHA-256 em hexadecimal = 64 caracteres.
+    token_hash VARCHAR(64) NOT NULL,
+    expira_em DATETIME NOT NULL,
+    -- Preenchido no momento do uso: o token e de uso unico.
+    usado_em DATETIME NULL,
+    criado_em DATETIME NOT NULL,
+    -- Apenas para investigar abuso.
+    ip_solicitante VARCHAR(45) NULL,
+    INDEX idx_token_hash (token_hash),
+    INDEX idx_token_usuario (id_usuario),
+    CONSTRAINT fk_token_usuario
+        FOREIGN KEY (id_usuario) REFERENCES tb_usuario(id_usuario)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =====================================================
 -- CASO B) Voce JA rodou a versao anterior deste arquivo (tabela sem as colunas
 -- novas). Rode SOMENTE os ALTERs abaixo, um a um.
@@ -87,6 +108,20 @@ CREATE TABLE IF NOT EXISTS tb_usuario (
 --   export ADMIN_INICIAL_PASSWORD='sua senha'    # opcional; sem isso o sistema gera
 -- =====================================================
 
+-- =====================================================
+-- Configuracao do envio de e-mail (recuperacao de senha).
+-- Nao e obrigatorio: sem SMTP o app sobe igual e o administrador ainda
+-- consegue gerar senha provisoria para qualquer usuario.
+--
+--   export SPRING_MAIL_HOST=smtp.seuprovedor.com
+--   export SPRING_MAIL_PORT=587
+--   export SPRING_MAIL_USERNAME=usuario
+--   export SPRING_MAIL_PASSWORD='senha do smtp'
+--   export APP_EMAIL_REMETENTE='Catequese Admin <nao-responda@paroquia.org>'
+--   export APP_URL_BASE=https://endereco-real-da-aplicacao
+-- =====================================================
+
 -- Conferencia
 DESC tb_usuario;
+DESC tb_token_recuperacao;
 SELECT id_usuario, nome, username, tipo, email, senha_provisoria, ativo FROM tb_usuario;

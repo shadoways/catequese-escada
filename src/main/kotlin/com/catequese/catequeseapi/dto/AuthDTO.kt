@@ -14,6 +14,17 @@ data class TrocarSenhaDTO(
     val novaSenha: String = ""
 )
 
+/** Corpo do POST /api/auth/esqueci-senha. */
+data class EsqueciSenhaDTO(
+    val email: String = ""
+)
+
+/** Corpo do POST /api/auth/redefinir-senha (token vem do link do e-mail). */
+data class RedefinirSenhaDTO(
+    val token: String = "",
+    val novaSenha: String = ""
+)
+
 /**
  * Resposta do login, do /api/auth/me e da troca de senha.
  *

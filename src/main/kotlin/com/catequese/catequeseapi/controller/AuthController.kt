@@ -1,12 +1,16 @@
 package com.catequese.catequeseapi.controller
 
+import com.catequese.catequeseapi.dto.EsqueciSenhaDTO
 import com.catequese.catequeseapi.dto.LoginRequestDTO
+import com.catequese.catequeseapi.dto.RedefinirSenhaDTO
 import com.catequese.catequeseapi.dto.TrocarSenhaDTO
 import com.catequese.catequeseapi.dto.UsuarioLogadoDTO
 import com.catequese.catequeseapi.model.Usuario
 import com.catequese.catequeseapi.repository.UsuarioRepository
 import com.catequese.catequeseapi.security.JwtService
 import com.catequese.catequeseapi.security.PoliticaSenha
+import com.catequese.catequeseapi.service.RecuperacaoSenhaService
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,7 +29,8 @@ import java.time.LocalDateTime
 class AuthController(
     private val usuarioRepository: UsuarioRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    private val recuperacaoSenhaService: RecuperacaoSenhaService
 ) {
     private val log = LoggerFactory.getLogger(AuthController::class.java)
 
@@ -115,6 +120,53 @@ class AuthController(
         // Token novo: a troca de senha invalida os tokens emitidos antes dela,
         // inclusive o que o usuario esta usando agora.
         return ResponseEntity.ok(paraDTO(atualizado, jwtService.gerarToken(atualizado)))
+    }
+
+    /**
+     * "Esqueci minha senha". Responde SEMPRE a mesma coisa, exista ou nao o
+     * e-mail: caso contrario o endpoint viraria um verificador de quais e-mails
+     * tem conta no sistema.
+     */
+    @PostMapping("/esqueci-senha")
+    fun esqueciSenha(
+        @RequestBody body: EsqueciSenhaDTO,
+        request: HttpServletRequest
+    ): ResponseEntity<Any> {
+        if (body.email.isNotBlank()) {
+            recuperacaoSenhaService.solicitar(body.email, request.remoteAddr)
+        }
+        return ResponseEntity.ok(
+            mapOf(
+                "mensagem" to "Se houver uma conta com esse e-mail, enviaremos as " +
+                    "instrucoes para redefinir a senha."
+            )
+        )
+    }
+
+    /** Redefinicao usando o token que chegou por e-mail. */
+    @PostMapping("/redefinir-senha")
+    fun redefinirSenha(@RequestBody body: RedefinirSenhaDTO): ResponseEntity<Any> {
+        if (body.token.isBlank()) {
+            return ResponseEntity.badRequest().body(mapOf("erro" to "Link invalido."))
+        }
+
+        return when (val resultado = recuperacaoSenhaService.redefinir(body.token, body.novaSenha)) {
+            is RecuperacaoSenhaService.ResultadoRedefinicao.Sucesso ->
+                ResponseEntity.ok(
+                    mapOf("mensagem" to "Senha redefinida. Voce ja pode entrar com a nova senha.")
+                )
+
+            is RecuperacaoSenhaService.ResultadoRedefinicao.SenhaFraca ->
+                ResponseEntity.badRequest().body(mapOf("erro" to resultado.motivo))
+
+            is RecuperacaoSenhaService.ResultadoRedefinicao.TokenInvalido ->
+                ResponseEntity.badRequest().body(
+                    mapOf(
+                        "erro" to "Este link expirou ou ja foi usado. Peca a redefinicao de novo.",
+                        "codigo" to "TOKEN_INVALIDO"
+                    )
+                )
+        }
     }
 
     private fun registrarFalha(usuario: Usuario, agora: LocalDateTime) {

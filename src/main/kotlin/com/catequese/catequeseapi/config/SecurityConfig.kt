@@ -80,9 +80,11 @@ class SecurityConfig(
         http.authorizeHttpRequests { auth ->
             auth
                 // ---- Publico: paginas e arquivos estaticos ----
+                // As telas em si sao publicas; o que protege os dados e a API.
+                // Sem token, index.html abre mas nao consegue carregar nada.
                 .requestMatchers(
-                    "/", "/index.html", "/ficha.html", "/login.html",
-                    "/*.css", "/*.js", "/*.png", "/*.ico",
+                    "/", "/*.html", "/*.css", "/*.js",
+                    "/*.png", "/*.jpg", "/*.svg", "/*.ico",
                     "/error"
                 ).permitAll()
 

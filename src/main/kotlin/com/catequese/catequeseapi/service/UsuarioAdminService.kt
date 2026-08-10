@@ -35,7 +35,8 @@ class UsuarioAdminService(
 ) {
     private val log = LoggerFactory.getLogger(UsuarioAdminService::class.java)
 
-    fun listar(): List<UsuarioDTO> = usuarioRepository.findAllByOrderByNomeAsc().map(UsuarioDTO::de)
+    fun listar(): List<UsuarioDTO> =
+        usuarioRepository.findAllByOrderByNomeAsc().map { UsuarioDTO.de(it) }
 
     fun buscar(id: Long): UsuarioDTO = UsuarioDTO.de(exigir(id))
 

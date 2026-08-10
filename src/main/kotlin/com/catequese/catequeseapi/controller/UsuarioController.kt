@@ -19,8 +19,11 @@ import java.net.URI
 /**
  * Administracao de usuarios.
  *
- * Todo este controller e restrito ao COORDENADOR_PAROQUIAL pela regra
- * "/api/usuarios/**" na SecurityConfig -- por isso nao ha checagem de papel aqui.
+ * Todo este controller e restrito ao COORDENADOR_PAROQUIAL pela regra de
+ * "/api/usuarios" na SecurityConfig -- por isso nao ha checagem de papel aqui.
+ * (Cuidado ao editar este comentario: em Kotlin comentarios de bloco sao
+ * aninhados, entao escrever a barra seguida de dois asteriscos abriria um
+ * comentario dentro deste e o arquivo inteiro deixaria de compilar.)
  *
  * Nao existe exclusao: usuario sai de circulacao sendo desativado (ativo=false),
  * senao o historico de quem fez o que se perderia.

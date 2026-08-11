@@ -958,12 +958,20 @@ const verificarCadastroAberto = async () => {
   }
 };
 
+// O cadastro é a porta de entrada pública: quem não está logado precisa dele
+// para se inscrever. Já entre os usuários do sistema, só o coordenador
+// paroquial cadastra — catequista e coordenador usam consulta e painel.
+const podeVerCadastro = () => !Auth.estaLogado() || Auth.ehAdmin();
+
 // Mostra ou esconde o que depende do papel de quem esta logado.
 // Isto e conforto visual: quem bloqueia de verdade e o backend.
 const aplicarPermissoesNaTela = () => {
   const admin = Auth.ehAdmin();
   document.querySelectorAll('.somente-admin').forEach((el) => {
     el.hidden = !admin;
+  });
+  document.querySelectorAll('.somente-cadastro').forEach((el) => {
+    el.hidden = !podeVerCadastro();
   });
 };
 
@@ -976,6 +984,12 @@ const switchTab = (tabName) => {
 
   // Alguem sem permissao chegou pela URL (index.html?tab=usuarios).
   if (TABS_SO_ADMIN.includes(tabName) && !Auth.ehAdmin()) {
+    switchTab('menu');
+    return;
+  }
+
+  // Catequista e coordenador não têm tela de cadastro, nem forçando a URL.
+  if (tabName === 'cadastro' && !podeVerCadastro()) {
     switchTab('menu');
     return;
   }

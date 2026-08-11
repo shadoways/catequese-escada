@@ -331,9 +331,27 @@ document.getElementById('btn-imprimir').addEventListener('click', async () => {
   window.print();
 });
 
-document.getElementById('btn-voltar').addEventListener('click', () => {
-  if (window.history.length > 1) window.history.back();
-  else window.location.href = 'index.html';
+// O botão precisa dizer para onde leva. A ficha quase sempre é aberta em aba
+// nova a partir da consulta: nesse caso o certo é fechar a aba, não navegar
+// para outro lugar e deixar duas abas abertas. Uma aba recém-aberta tem só uma
+// entrada no histórico, e é assim que distinguimos os dois casos.
+const botaoVoltar = document.getElementById('btn-voltar');
+const abertaEmAbaNova = window.history.length <= 1;
+
+botaoVoltar.textContent = abertaEmAbaNova ? 'Fechar esta aba' : 'Ir para a consulta';
+
+botaoVoltar.addEventListener('click', () => {
+  const irParaConsulta = () => { window.location.href = 'index.html?tab=consulta'; };
+
+  if (!abertaEmAbaNova) {
+    irParaConsulta();
+    return;
+  }
+
+  // O navegador só permite fechar janelas abertas por script. Se recusar, a
+  // página continua aqui e seguimos para a consulta.
+  window.close();
+  setTimeout(irParaConsulta, 200);
 });
 
 iniciar();

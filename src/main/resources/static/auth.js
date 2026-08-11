@@ -8,6 +8,11 @@
 (() => {
   const CHAVE_TOKEN = 'catequese.token';
   const CHAVE_USUARIO = 'catequese.usuario';
+  // sessionStorage, e nao localStorage: vale so para esta aba e some quando ela
+  // fecha. Guarda por segundos a senha provisoria digitada no login, para a
+  // tela de troca obrigatoria ja vir com ela preenchida -- e uma senha longa
+  // gerada pelo sistema, que ninguem decora nem quer colar duas vezes.
+  const CHAVE_SENHA_PROVISORIA = 'catequese.senhaProvisoria';
 
   const lerUsuario = () => {
     try {
@@ -37,6 +42,27 @@
     limpar() {
       localStorage.removeItem(CHAVE_TOKEN);
       localStorage.removeItem(CHAVE_USUARIO);
+      sessionStorage.removeItem(CHAVE_SENHA_PROVISORIA);
+    },
+
+    /** Chamado pelo login quando a conta ainda esta com senha provisoria. */
+    guardarSenhaProvisoria(senha) {
+      try {
+        sessionStorage.setItem(CHAVE_SENHA_PROVISORIA, senha);
+      } catch (err) {
+        // Sem sessionStorage o usuario so tera de digitar a senha de novo.
+      }
+    },
+
+    /** Le e ja apaga: serve uma vez so, na tela de troca. */
+    consumirSenhaProvisoria() {
+      try {
+        const senha = sessionStorage.getItem(CHAVE_SENHA_PROVISORIA);
+        sessionStorage.removeItem(CHAVE_SENHA_PROVISORIA);
+        return senha || '';
+      } catch (err) {
+        return '';
+      }
     },
 
     /** Atalhos de papel. O backend e quem realmente bloqueia; isto so ajusta a tela. */
@@ -73,12 +99,14 @@
         return;
       }
 
+      // Sem atalho para trocar senha aqui: e uma acao rara e ficava competindo
+      // com o Sair. Quando existir uma tela de configuracoes do usuario, ela
+      // entra la -- trocar-senha.html continua acessivel pela URL.
       alvo.innerHTML = `
         <span class="usuario-info">
           <strong>${escapar(usuario.nome || usuario.username)}</strong>
           <span class="usuario-tipo">${rotuloTipo(usuario.tipo)}</span>
         </span>
-        <a class="botao-falso" href="trocar-senha.html">Trocar senha</a>
         <button type="button" class="secondary" id="btn-sair">Sair</button>
       `;
       const botao = document.getElementById('btn-sair');

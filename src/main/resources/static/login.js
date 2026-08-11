@@ -60,6 +60,9 @@ document.getElementById('form-login').addEventListener('submit', async (evento) 
 
     const dados = await resposta.json();
     Auth.salvarSessao(dados);
+    // A senha provisoria e longa e gerada pelo sistema. Levamos o que foi
+    // digitado aqui para a tela de troca, para o usuario nao ter de colar de novo.
+    if (dados.senhaProvisoria) Auth.guardarSenhaProvisoria(senha);
     seguir(dados);
   } catch (err) {
     aviso('login-aviso', `Erro de conexão: ${err.message}`);

@@ -17,16 +17,56 @@ if (Auth.exigirLogin()) {
   // navegador nao tem como conhecer. Sem limpar, o usuario envia um valor que
   // nem sabe que esta no campo e leva "Senha atual incorreta".
   // O preenchimento acontece logo depois do load, por isso o pequeno atraso.
-  const limparPreenchimentoAutomatico = () => {
-    ['senha-atual', 'senha-nova', 'senha-repete'].forEach((id) => {
+  // Lida com o preenchimento automático do navegador.
+  //
+  // O Chrome preenche campos de senha com credenciais salvas para o mesmo
+  // endereço, e localhost:8080 costuma ser reaproveitado por vários projetos.
+  // Aqui isso é sempre errado: a senha atual é a provisória, que o navegador
+  // não tem como conhecer.
+  //
+  // Limpar uma vez só não bastou: o Chrome repõe o valor depois. Por isso a
+  // correção é reaplicada algumas vezes, e para assim que o usuário digitar —
+  // a partir daí a tela não encosta mais no que ele escreveu.
+  const CAMPOS = ['senha-atual', 'senha-nova', 'senha-repete'];
+  const senhaProvisoria = Auth.consumirSenhaProvisoria();
+  let usuarioDigitou = false;
+
+  CAMPOS.forEach((id) => {
+    const campo = document.getElementById(id);
+    if (!campo) return;
+    // keydown e paste são ações de gente; preenchimento automático não dispara.
+    ['keydown', 'paste'].forEach((evento) =>
+      campo.addEventListener(evento, () => { usuarioDigitou = true; }));
+  });
+
+  const ajustarCampos = () => {
+    if (usuarioDigitou) return;
+
+    CAMPOS.forEach((id) => {
       const campo = document.getElementById(id);
       if (campo) campo.value = '';
     });
-    // Reavalia os critérios, que podem ter acendido com o valor preenchido.
     document.querySelectorAll('[data-criterios-de], [data-conferencia-de]')
       .forEach((caixa) => { caixa.innerHTML = ''; });
+
+    // Só depois de limpar é que devolvemos a senha provisória digitada no
+    // login — na ordem inversa, a limpeza apagaria justamente o que queremos.
+    if (senhaProvisoria) {
+      const campo = document.getElementById('senha-atual');
+      if (campo) campo.value = senhaProvisoria;
+    }
   };
-  window.addEventListener('load', () => setTimeout(limparPreenchimentoAutomatico, 250));
+
+  window.addEventListener('load', () => {
+    [100, 350, 800, 1500].forEach((atraso) => setTimeout(ajustarCampos, atraso));
+    // O usuário já tem a senha atual preenchida: o que falta é a nova.
+    if (senhaProvisoria) {
+      setTimeout(() => {
+        const proxima = document.getElementById('senha-nova');
+        if (proxima && !usuarioDigitou) proxima.focus();
+      }, 400);
+    }
+  });
 
   if (obrigatoria) {
     document.getElementById('titulo-troca').textContent = 'Defina sua nova senha';

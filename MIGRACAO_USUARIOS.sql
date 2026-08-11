@@ -28,6 +28,7 @@ USE catequese;
 DROP PROCEDURE IF EXISTS cria_coluna_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_unico_se_possivel;
+DROP PROCEDURE IF EXISTS permite_nulo_se_precisar;
 
 DELIMITER $$
 
@@ -114,6 +115,33 @@ BEGIN
                           'O indice unico ', p_indice, ' NAO foi criado. ',
                           'Resolva os duplicados e rode este script de novo.') AS aviso;
         END IF;
+    END IF;
+END$$
+
+-- Coluna que existe mas esta como NOT NULL sendo que a aplicacao grava nulo.
+-- Afrouxar a obrigatoriedade nunca perde dado: o que ja esta preenchido
+-- continua igual, apenas passa a aceitar nulo daqui em diante.
+CREATE PROCEDURE permite_nulo_se_precisar(
+    IN p_tabela VARCHAR(64),
+    IN p_coluna VARCHAR(64),
+    IN p_tipo VARCHAR(64)
+)
+BEGIN
+    DECLARE v_obrigatoria INT DEFAULT 0;
+
+    SELECT COUNT(*) INTO v_obrigatoria
+      FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = p_tabela
+       AND COLUMN_NAME = p_coluna
+       AND IS_NULLABLE = 'NO';
+
+    IF v_obrigatoria = 1 THEN
+        SET @ddl = CONCAT('ALTER TABLE ', p_tabela, ' MODIFY COLUMN ',
+                          p_coluna, ' ', p_tipo, ' NULL');
+        PREPARE st FROM @ddl;
+        EXECUTE st;
+        DEALLOCATE PREPARE st;
     END IF;
 END$$
 
@@ -220,7 +248,31 @@ CALL cria_coluna_se_faltar('tb_configuracao', 'atualizado_em',  'DATETIME NULL')
 CALL cria_coluna_se_faltar('tb_configuracao', 'atualizado_por', 'VARCHAR(255) NULL');
 
 -- =====================================================
--- PASSO 4: indices
+-- PASSO 4: obrigatoriedade das colunas
+--
+-- Estas colunas a aplicacao grava como nulas. Se no banco elas estiverem como
+-- NOT NULL, o cadastro de usuario falha com "Column 'x' cannot be null".
+-- Acontece quando a tabela foi criada a mao ou por um script antigo.
+-- =====================================================
+
+CALL permite_nulo_se_precisar('tb_usuario', 'email',            'VARCHAR(255)');
+CALL permite_nulo_se_precisar('tb_usuario', 'telefone',         'VARCHAR(40)');
+CALL permite_nulo_se_precisar('tb_usuario', 'data_troca_senha', 'DATETIME');
+CALL permite_nulo_se_precisar('tb_usuario', 'ultimo_login',     'DATETIME');
+CALL permite_nulo_se_precisar('tb_usuario', 'bloqueado_ate',    'DATETIME');
+CALL permite_nulo_se_precisar('tb_usuario', 'id_catequista',    'BIGINT');
+CALL permite_nulo_se_precisar('tb_usuario', 'id_coordenador',   'BIGINT');
+CALL permite_nulo_se_precisar('tb_usuario', 'data_criacao',     'DATETIME');
+
+CALL permite_nulo_se_precisar('tb_token_recuperacao', 'usado_em',       'DATETIME');
+CALL permite_nulo_se_precisar('tb_token_recuperacao', 'ip_solicitante', 'VARCHAR(45)');
+
+CALL permite_nulo_se_precisar('tb_configuracao', 'descricao',      'VARCHAR(255)');
+CALL permite_nulo_se_precisar('tb_configuracao', 'atualizado_em',  'DATETIME');
+CALL permite_nulo_se_precisar('tb_configuracao', 'atualizado_por', 'VARCHAR(255)');
+
+-- =====================================================
+-- PASSO 5: indices
 -- =====================================================
 
 CALL cria_indice_unico_se_possivel('tb_usuario', 'uk_usuario_username', 'username');
@@ -233,9 +285,10 @@ CALL cria_indice_se_faltar('tb_token_recuperacao', 'idx_token_usuario', 'id_usua
 DROP PROCEDURE IF EXISTS cria_coluna_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_unico_se_possivel;
+DROP PROCEDURE IF EXISTS permite_nulo_se_precisar;
 
 -- =====================================================
--- PASSO 5: relatorio final
+-- PASSO 6: relatorio final
 -- Lista tudo o que a aplicacao espera e ainda nao existe. Vazio = pronto.
 --
 -- Nao usei chave estrangeira de propriedade nenhuma neste script: o Hibernate

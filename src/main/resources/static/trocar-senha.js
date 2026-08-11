@@ -11,6 +11,23 @@ if (Auth.exigirLogin()) {
     caixa.innerHTML = texto ? `<div class="status ${tipo}">${texto}</div>` : '';
   };
 
+  // O Chrome preenche campos de senha sozinho com credenciais salvas para o
+  // mesmo endereco, e localhost:8080 costuma ser reaproveitado por varios
+  // projetos. Aqui isso e sempre errado: a senha atual e a provisoria, que o
+  // navegador nao tem como conhecer. Sem limpar, o usuario envia um valor que
+  // nem sabe que esta no campo e leva "Senha atual incorreta".
+  // O preenchimento acontece logo depois do load, por isso o pequeno atraso.
+  const limparPreenchimentoAutomatico = () => {
+    ['senha-atual', 'senha-nova', 'senha-repete'].forEach((id) => {
+      const campo = document.getElementById(id);
+      if (campo) campo.value = '';
+    });
+    // Reavalia os critérios, que podem ter acendido com o valor preenchido.
+    document.querySelectorAll('[data-criterios-de], [data-conferencia-de]')
+      .forEach((caixa) => { caixa.innerHTML = ''; });
+  };
+  window.addEventListener('load', () => setTimeout(limparPreenchimentoAutomatico, 250));
+
   if (obrigatoria) {
     document.getElementById('titulo-troca').textContent = 'Defina sua nova senha';
     aviso(

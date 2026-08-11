@@ -21,7 +21,10 @@
         <form id="form-troca">
           <label>
             Senha atual
-            <input id="senha-atual" type="password" autocomplete="current-password"
+            <!-- autocomplete=off + limpeza em trocar-senha.js: o navegador
+                 preenchia este campo com senha salva de outro sistema que ja
+                 rodou em localhost:8080, e o usuario enviava sem perceber. -->
+            <input id="senha-atual" type="password" autocomplete="off"
                    data-olho required />
           </label>
           <label>

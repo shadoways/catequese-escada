@@ -973,6 +973,11 @@ const aplicarPermissoesNaTela = () => {
   document.querySelectorAll('.somente-cadastro').forEach((el) => {
     el.hidden = !podeVerCadastro();
   });
+  // Consulta e painel são área interna: para quem chega sem login, o index
+  // mostra só o cadastro. Entrar é o caminho para o resto, pela barra do topo.
+  document.querySelectorAll('.somente-logado').forEach((el) => {
+    el.hidden = !Auth.estaLogado();
+  });
 };
 
 const switchTab = (tabName) => {

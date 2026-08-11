@@ -19,8 +19,8 @@
     <nav class="tabs" id="main-tabs" hidden>
       <button type="button" class="tab-btn active" data-tab="menu">Início</button>
       <button type="button" class="tab-btn somente-cadastro" data-tab="cadastro">Cadastro</button>
-      <button type="button" class="tab-btn" data-tab="consulta">Consultar catequisandos</button>
-      <button type="button" class="tab-btn" data-tab="dashboard">Turmas e documentos</button>
+      <button type="button" class="tab-btn somente-logado" data-tab="consulta">Consultar catequisandos</button>
+      <button type="button" class="tab-btn somente-logado" data-tab="dashboard">Turmas e documentos</button>
       <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>Usuários</button>
       <button type="button" class="tab-btn somente-admin" data-tab="configuracoes" hidden>Configurações</button>
     </nav>
@@ -45,7 +45,7 @@
           <p>Cadastrar um catequisando com dados, documentos e assinatura.</p>
           <span class="menu-card-cta">Iniciar cadastro →</span>
         </button>
-        <button type="button" class="menu-card" data-tab="consulta">
+        <button type="button" class="menu-card somente-logado" data-tab="consulta">
           <span class="menu-card-icon menu-card-icon--consulta" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="10.5" cy="10.5" r="6.5" />
@@ -56,7 +56,7 @@
           <p>Buscar catequisandos já cadastrados e abrir a ficha completa.</p>
           <span class="menu-card-cta">Consultar →</span>
         </button>
-        <button type="button" class="menu-card" data-tab="dashboard">
+        <button type="button" class="menu-card somente-logado" data-tab="dashboard">
           <span class="menu-card-icon menu-card-icon--dashboard" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 21V10M9 21V6M15 21V13M21 21V3" />

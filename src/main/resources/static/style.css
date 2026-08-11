@@ -583,9 +583,12 @@ canvas {
 
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  /* Teto de 320px por cartão: o menu muda de tamanho conforme o perfil, e sem
+     o limite um único cartão (visitante público) esticaria pela largura toda. */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 320px));
+  justify-content: center;
   gap: 20px;
-  max-width: 980px;
+  max-width: 1020px;
   margin: 0 auto;
 }
 

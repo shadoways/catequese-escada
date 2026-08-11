@@ -34,6 +34,14 @@ if (Auth.exigirLogin()) {
       return;
     }
 
+    // Confere aqui o que o servidor conferiria, para não gastar uma ida à rede
+    // e para a mensagem apontar exatamente o critério que falta.
+    const faltando = SenhaForte.problemas(novaSenha);
+    if (faltando.length) {
+      aviso(`A senha ainda não atende: ${faltando.join('; ')}.`);
+      return;
+    }
+
     botao.disabled = true;
     aviso('');
 

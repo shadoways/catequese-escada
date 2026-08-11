@@ -116,7 +116,10 @@ class RecuperacaoSenhaService(
         val registro = tokenRepository.findByTokenHash(hash(token))
             ?: return ResultadoRedefinicao.TokenInvalido
 
-        val agora = LocalDateTime.now()
+        // withNano(0): a coluna DATETIME nao guarda fracao de segundo e o MySQL
+        // arredonda na gravacao. Sem truncar, dataTrocaSenha em memoria fica um
+        // segundo diferente do banco e o token emitido nasce invalido.
+        val agora = LocalDateTime.now().withNano(0)
         if (!registro.estaValido(agora)) return ResultadoRedefinicao.TokenInvalido
 
         val usuario = usuarioRepository.findById(registro.idUsuario).orElse(null)

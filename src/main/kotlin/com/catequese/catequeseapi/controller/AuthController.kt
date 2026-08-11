@@ -38,7 +38,7 @@ class AuthController(
     fun login(@RequestBody body: LoginRequestDTO): ResponseEntity<Any> {
         val username = body.username.trim()
         val usuario = usuarioRepository.findByUsername(username)
-        val agora = LocalDateTime.now()
+        val agora = LocalDateTime.now().withNano(0)
 
         // Bloqueio ativo: nem tenta conferir a senha.
         val bloqueadoAte = usuario?.bloqueadoAte
@@ -112,7 +112,11 @@ class AuthController(
             usuario.copy(
                 passwordHash = passwordEncoder.encode(body.novaSenha),
                 senhaProvisoria = false,
-                dataTrocaSenha = LocalDateTime.now()
+                // withNano(0) e obrigatorio: a coluna DATETIME nao guarda fracao de
+                // segundo e o MySQL ARREDONDA na gravacao. Sem truncar, o objeto em
+                // memoria fica com um segundo diferente do que foi gravado, o token
+                // sai com a marca antiga e toda requisicao seguinte seria recusada.
+                dataTrocaSenha = LocalDateTime.now().withNano(0)
             )
         )
 

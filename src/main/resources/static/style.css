@@ -478,6 +478,77 @@ canvas {
 
 .auth-rodape[hidden] { display: none; }
 
+/* ---- Campo de senha com botão de revelar ---- */
+
+.campo-senha {
+  position: relative;
+  display: block;
+}
+
+/* Espaço à direita para o olho não cobrir o texto digitado */
+.campo-senha input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.olho-senha {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.olho-senha:hover {
+  color: var(--accent-2);
+  background: rgba(47, 111, 126, 0.1);
+  transform: translateY(-50%);
+}
+
+.olho-senha:active { transform: translateY(-50%); }
+
+/* ---- Conferência da senha enquanto o usuário digita ---- */
+
+.criterios-senha,
+.conferencia-senha {
+  display: grid;
+  gap: 5px;
+  margin-top: -6px;
+}
+
+.criterios-senha:empty,
+.conferencia-senha:empty { display: none; }
+
+.criterio {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  transition: color 160ms ease;
+}
+
+.criterio-marca {
+  font-weight: 700;
+  min-width: 1em;
+  text-align: center;
+}
+
+.criterio.ok { color: var(--accent-2); }
+
+.criterio.erro { color: var(--accent); }
+
 /* Botão com aparência de link, para ações secundárias */
 .link-botao {
   background: none;

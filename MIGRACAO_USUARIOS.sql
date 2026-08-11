@@ -29,6 +29,7 @@ DROP PROCEDURE IF EXISTS cria_coluna_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_unico_se_possivel;
 DROP PROCEDURE IF EXISTS permite_nulo_se_precisar;
+DROP PROCEDURE IF EXISTS amplia_texto_se_curto;
 
 DELIMITER $$
 
@@ -139,6 +140,34 @@ BEGIN
     IF v_obrigatoria = 1 THEN
         SET @ddl = CONCAT('ALTER TABLE ', p_tabela, ' MODIFY COLUMN ',
                           p_coluna, ' ', p_tipo, ' NULL');
+        PREPARE st FROM @ddl;
+        EXECUTE st;
+        DEALLOCATE PREPARE st;
+    END IF;
+END$$
+
+-- Coluna de texto menor do que a aplicacao precisa. Ampliar nunca perde dado.
+-- O caso critico e password_hash: o hash BCrypt tem 60 caracteres e, numa
+-- coluna menor, o MySQL trunca em silencio (fora do modo estrito). O login
+-- passaria a falhar SEMPRE, com "usuario ou senha invalidos", porque o hash
+-- guardado nunca mais confere.
+CREATE PROCEDURE amplia_texto_se_curto(
+    IN p_tabela VARCHAR(64),
+    IN p_coluna VARCHAR(64),
+    IN p_tamanho INT
+)
+BEGIN
+    DECLARE v_atual INT DEFAULT NULL;
+
+    SELECT CHARACTER_MAXIMUM_LENGTH INTO v_atual
+      FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = p_tabela
+       AND COLUMN_NAME = p_coluna;
+
+    IF v_atual IS NOT NULL AND v_atual < p_tamanho THEN
+        SET @ddl = CONCAT('ALTER TABLE ', p_tabela, ' MODIFY COLUMN ', p_coluna,
+                          ' VARCHAR(', p_tamanho, ')');
         PREPARE st FROM @ddl;
         EXECUTE st;
         DEALLOCATE PREPARE st;
@@ -271,6 +300,14 @@ CALL permite_nulo_se_precisar('tb_configuracao', 'descricao',      'VARCHAR(255)
 CALL permite_nulo_se_precisar('tb_configuracao', 'atualizado_em',  'DATETIME');
 CALL permite_nulo_se_precisar('tb_configuracao', 'atualizado_por', 'VARCHAR(255)');
 
+-- Tamanhos minimos. password_hash e o critico: BCrypt ocupa 60 caracteres.
+CALL amplia_texto_se_curto('tb_usuario', 'password_hash', 255);
+CALL amplia_texto_se_curto('tb_usuario', 'username',      255);
+CALL amplia_texto_se_curto('tb_usuario', 'nome',          255);
+CALL amplia_texto_se_curto('tb_usuario', 'tipo',          40);
+CALL amplia_texto_se_curto('tb_usuario', 'email',         255);
+CALL amplia_texto_se_curto('tb_token_recuperacao', 'token_hash', 64);
+
 -- =====================================================
 -- PASSO 5: indices
 -- =====================================================
@@ -286,6 +323,7 @@ DROP PROCEDURE IF EXISTS cria_coluna_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_se_faltar;
 DROP PROCEDURE IF EXISTS cria_indice_unico_se_possivel;
 DROP PROCEDURE IF EXISTS permite_nulo_se_precisar;
+DROP PROCEDURE IF EXISTS amplia_texto_se_curto;
 
 -- =====================================================
 -- PASSO 6: relatorio final

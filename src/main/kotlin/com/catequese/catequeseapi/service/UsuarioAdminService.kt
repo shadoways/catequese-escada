@@ -103,7 +103,9 @@ class UsuarioAdminService(
     fun resetarSenha(id: Long): SenhaProvisoriaDTO {
         val usuario = exigir(id)
         val senha = PoliticaSenha.gerarSenhaProvisoria()
-        val agora = LocalDateTime.now()
+        // withNano(0): DATETIME sem fracao de segundo, o MySQL arredonda na
+        // gravacao e a marca do token deixaria de bater com o banco.
+        val agora = LocalDateTime.now().withNano(0)
 
         val atualizado = usuarioRepository.save(
             usuario.copy(

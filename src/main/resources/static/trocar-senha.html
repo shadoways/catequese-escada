@@ -18,23 +18,24 @@
       <section class="panel">
         <h2 id="titulo-troca">Trocar senha</h2>
         <div id="troca-aviso"></div>
-        <p class="muted" id="troca-regras">
-          A nova senha precisa ter pelo menos 8 caracteres, com ao menos uma letra
-          e um número, e não pode ser igual ao seu usuário ou e-mail.
-        </p>
         <form id="form-troca">
           <label>
             Senha atual
-            <input id="senha-atual" type="password" autocomplete="current-password" required />
+            <input id="senha-atual" type="password" autocomplete="current-password"
+                   data-olho required />
           </label>
           <label>
             Nova senha
-            <input id="senha-nova" type="password" autocomplete="new-password" required />
+            <input id="senha-nova" type="password" autocomplete="new-password"
+                   data-olho required />
           </label>
+          <div class="criterios-senha" data-criterios-de="senha-nova"></div>
           <label>
             Repita a nova senha
-            <input id="senha-repete" type="password" autocomplete="new-password" required />
+            <input id="senha-repete" type="password" autocomplete="new-password"
+                   data-olho data-confirma="senha-nova" required />
           </label>
+          <div class="conferencia-senha" data-conferencia-de="senha-repete"></div>
           <button type="submit" id="btn-trocar">Salvar nova senha</button>
         </form>
         <div class="auth-rodape" id="rodape-troca">
@@ -45,6 +46,7 @@
   </div>
 
   <script src="auth.js"></script>
+  <script src="senha-forte.js"></script>
   <script src="trocar-senha.js"></script>
 </body>
 </html>

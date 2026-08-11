@@ -29,6 +29,13 @@ formulario.addEventListener('submit', async (evento) => {
     return;
   }
 
+  // Mesma conferência do servidor, feita antes de enviar.
+  const faltando = SenhaForte.problemas(novaSenha);
+  if (faltando.length) {
+    aviso(`A senha ainda não atende: ${faltando.join('; ')}.`);
+    return;
+  }
+
   botao.disabled = true;
   aviso('');
 

@@ -18,19 +18,19 @@
       <section class="panel">
         <h2>Criar nova senha</h2>
         <div id="redefinir-aviso"></div>
-        <p class="muted">
-          A nova senha precisa ter pelo menos 8 caracteres, com ao menos uma letra
-          e um número.
-        </p>
         <form id="form-redefinir">
           <label>
             Nova senha
-            <input id="nova-senha" type="password" autocomplete="new-password" required />
+            <input id="nova-senha" type="password" autocomplete="new-password"
+                   data-olho required />
           </label>
+          <div class="criterios-senha" data-criterios-de="nova-senha"></div>
           <label>
             Repita a nova senha
-            <input id="repete-senha" type="password" autocomplete="new-password" required />
+            <input id="repete-senha" type="password" autocomplete="new-password"
+                   data-olho data-confirma="nova-senha" required />
           </label>
+          <div class="conferencia-senha" data-conferencia-de="repete-senha"></div>
           <button type="submit" id="btn-redefinir">Salvar nova senha</button>
         </form>
         <div class="auth-rodape">
@@ -41,6 +41,7 @@
   </div>
 
   <script src="auth.js"></script>
+  <script src="senha-forte.js"></script>
   <script src="redefinir-senha.js"></script>
 </body>
 </html>

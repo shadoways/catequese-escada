@@ -416,11 +416,6 @@ const uploadFile = async (file, fileType = "ANEXO") => {
   return res.json();
 };
 
-const createDocumento = async (payload) => fetchJson("/api/documentos", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(payload)
-});
 
 const loadTurmas = async () => {
   const select = document.getElementById("turma-select");
@@ -588,167 +583,75 @@ submitBtn.addEventListener("click", async () => {
   setResult([]);
 
   try {
-    const catequisandoPayload = {
-      nome,
-      telefone: telefone || null,
-      email: email || null,
-      dataNascimento: normalizeDate(dataNascimento),
-      nomeResponsavel,
-      telefoneResponsavel,
-      endereco,
-      numeroDocumento,
-      tipoDocumento: tipoDocumentoSelecionado.value,
-      intoleranteGluten: document.getElementById("intolerante").checked,
-      foiBatizado: document.getElementById("batizado").checked,
-      fezPrimeiraEucaristia: document.getElementById("primeira-eucaristia").checked,
-      estadoConjugal: estadoConjugalSelecionado.value,
-      ativo: true
-    };
+    // Os anexos sobem primeiro para o GCS; só depois a inscrição inteira é
+    // enviada de uma vez. Se a gravação falhar, o banco desfaz tudo sozinho e
+    // não sobra cadastro pela metade — antes isso dependia de a tela conseguir
+    // apagar o que já tinha criado, o que falhava justamente quando a rede caía.
+    const documentos = [];
+    const hoje = new Date().toISOString().slice(0, 10);
 
-    const fichaPayload = {
-      dataInscricao: normalizeDate(dataInscricaoVal),
-      observacoes: document.getElementById("observacoes").value.trim() || null
-    };
-
-    // montar turma e comunidade como antes
-    if (turmaId) {
-      const turma = turmasById[turmaId] || await fetchJson(`/api/turmas/${Number(turmaId)}`);
-      catequisandoPayload.turma = turma;
+    for (const fileType of ['DOCUMENTO', 'CERTIDAO', 'FOTO']) {
+      if (!selectedFiles[fileType]) continue;
+      const upload = await uploadFile(selectedFiles[fileType], fileType);
+      if (!upload || !upload.filename) {
+        throw new Error(`${fileType}: arquivo não foi salvo.`);
+      }
+      documentos.push({
+        tipoDocumento: fileType,
+        caminhoArquivo: upload.path || upload.filename,
+        dataEnvio: hoje
+      });
     }
 
-    if (comunidadeId) {
-      const comunidade = comunidadesById[comunidadeId] || await fetchJson(`/api/comunidades/${Number(comunidadeId)}`);
-      catequisandoPayload.comunidade = comunidade;
+    if (hasSignature) {
+      const dataUrl = canvas.toDataURL("image/png");
+      const byteString = atob(dataUrl.split(",")[1]);
+      const buffer = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i += 1) {
+        buffer[i] = byteString.charCodeAt(i);
+      }
+      const signatureFile = new File([buffer], `assinatura-${Date.now()}.png`, { type: "image/png" });
+      const upload = await uploadFile(signatureFile, "ASSINATURA");
+      if (!upload || !upload.filename) {
+        throw new Error("ASSINATURA: arquivo não foi salvo.");
+      }
+      documentos.push({
+        tipoDocumento: "ASSINATURA",
+        caminhoArquivo: upload.path || upload.filename,
+        dataEnvio: hoje
+      });
     }
 
-    const catequisando = await fetchJson("/api/catequisandos", {
+    const inscricao = {
+      catequisando: {
+        nome,
+        telefone: telefone || null,
+        email: email || null,
+        dataNascimento: normalizeDate(dataNascimento),
+        nomeResponsavel,
+        telefoneResponsavel,
+        endereco,
+        numeroDocumento,
+        tipoDocumento: tipoDocumentoSelecionado.value,
+        intoleranteGluten: document.getElementById("intolerante").checked,
+        foiBatizado: document.getElementById("batizado").checked,
+        fezPrimeiraEucaristia: document.getElementById("primeira-eucaristia").checked,
+        estadoConjugal: estadoConjugalSelecionado.value,
+        idTurma: turmaId ? Number(turmaId) : null,
+        idComunidade: comunidadeId ? Number(comunidadeId) : null
+      },
+      ficha: {
+        dataInscricao: normalizeDate(dataInscricaoVal),
+        observacoes: document.getElementById("observacoes").value.trim() || null
+      },
+      documentos
+    };
+
+    await fetchJson("/api/inscricoes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(catequisandoPayload)
+      body: JSON.stringify(inscricao)
     });
-
-    // Enviar catequisandoId no payload da ficha (novo DTO)
-    fichaPayload.catequisandoId = catequisando.idCatequisando;
-    await fetchJson("/api/fichas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fichaPayload)
-    });
-
-        const today = new Date().toISOString().slice(0, 10);
-        const uploadedDocIds = []; // Rastrear IDs para rollback
-
-        try {
-          // UPLOADS SEQUENCIAIS para garantir atomicidade
-          const fileTypes = ['DOCUMENTO', 'CERTIDAO', 'FOTO'];
-
-          for (const fileType of fileTypes) {
-            if (selectedFiles[fileType]) {
-              const file = selectedFiles[fileType];
-              console.log(`📤 Iniciando upload: ${fileType}`);
-
-              // 1. Upload para GCS primeiro
-              const upload = await uploadFile(file, fileType);
-
-              // 2. Validar que arquivo foi salvo
-              if (!upload || !upload.filename) {
-                throw new Error(`${fileType}: Arquivo não foi salvo no GCS`);
-              }
-              console.log(`✅ ${fileType} salvo no GCS: ${upload.filename}`);
-
-              // 3. SÓ DEPOIS criar documento no banco
-              const docResponse = await createDocumento({
-                tipoDocumento: fileType,
-                caminhoArquivo: upload.path || upload.filename,
-                dataEnvio: today,
-                catequisandoId: catequisando.idCatequisando,
-                tipoStatus: 'ENVIADO'
-              });
-
-              uploadedDocIds.push(docResponse.idDocumento);
-              console.log(`✅ ${fileType} criado no banco: ID ${docResponse.idDocumento}`);
-            }
-          }
-
-          // ASSINATURA (sequencial também)
-          if (hasSignature) {
-            console.log(`📤 Iniciando upload: ASSINATURA`);
-
-            const dataUrl = canvas.toDataURL("image/png");
-            const byteString = atob(dataUrl.split(",")[1]);
-            const buffer = new Uint8Array(byteString.length);
-            for (let i = 0; i < byteString.length; i += 1) {
-              buffer[i] = byteString.charCodeAt(i);
-            }
-            const signatureFile = new File([buffer], `assinatura-${Date.now()}.png`, { type: "image/png" });
-
-            // 1. Upload para GCS
-            const upload = await uploadFile(signatureFile, "ASSINATURA");
-
-            // 2. Validar
-            if (!upload || !upload.filename) {
-              throw new Error("ASSINATURA: Arquivo não foi salvo no GCS");
-            }
-            console.log(`✅ ASSINATURA salvo no GCS: ${upload.filename}`);
-
-            // 3. Criar no banco
-            const docResponse = await createDocumento({
-              tipoDocumento: "ASSINATURA",
-              caminhoArquivo: upload.path || upload.filename,
-              dataEnvio: today,
-              catequisandoId: catequisando.idCatequisando,
-              tipoStatus: 'ENVIADO'
-            });
-
-            uploadedDocIds.push(docResponse.idDocumento);
-            console.log(`✅ ASSINATURA criada no banco: ID ${docResponse.idDocumento}`);
-          }
-
-        } catch (uploadError) {
-          // ❌ ROLLBACK ROBUSTO
-          console.error("❌ ERRO NO UPLOAD! Iniciando rollback...", uploadError);
-
-          // Apagar exige permissão de coordenador. No cadastro público (sem
-          // login) o rollback é recusado com 403, e é importante saber disso:
-          // sem essa checagem a tela diria que reverteu tudo, o que seria
-          // mentira, e ninguém iria procurar o registro pela metade no banco.
-          // fetch() não lança em 4xx, então é preciso olhar o res.ok.
-          let revertidoPorCompleto = true;
-          const apagar = async (url, oQue) => {
-            try {
-              const res = await fetch(url, { method: 'DELETE' });
-              if (!res.ok) {
-                revertidoPorCompleto = false;
-                console.warn(`⚠️ Não foi possível apagar ${oQue}: HTTP ${res.status}`);
-                return;
-              }
-              console.log(`✅ ${oQue} apagado`);
-            } catch (err) {
-              revertidoPorCompleto = false;
-              console.error(`⚠️ Erro ao apagar ${oQue}:`, err.message);
-            }
-          };
-
-          // Documentos em ordem INVERSA (mais seguro, evita órfãos)
-          for (const docId of uploadedDocIds.reverse()) {
-            await apagar(`/api/documentos/${docId}`, `documento ${docId}`);
-          }
-          await apagar(
-            `/api/fichas/catequisando/${catequisando.idCatequisando}`,
-            `ficha do catequisando ${catequisando.idCatequisando}`
-          );
-          await apagar(
-            `/api/catequisandos/${catequisando.idCatequisando}`,
-            `catequisando ${catequisando.idCatequisando}`
-          );
-
-          const desfecho = revertidoPorCompleto
-            ? 'Todos os dados foram revertidos automaticamente.'
-            : 'Parte dos dados pode ter ficado gravada. ' +
-              'Anote o horário e procure a secretaria da paróquia antes de cadastrar de novo.';
-          console.log(`🔄 Rollback concluído (completo: ${revertidoPorCompleto}).`);
-          throw new Error(`Falha no upload: ${uploadError.message}. ${desfecho}`);
-        }
 
     const successMessages = ["Cadastro realizado com sucesso"];
 
@@ -935,16 +838,72 @@ const TABS_SO_ADMIN = ['usuarios', 'configuracoes'];
 // Enquanto não sabemos, assumimos aberto: é o comportamento de sempre, e não
 // faz sentido mostrar "encerradas" por causa de uma consulta que ainda não voltou.
 let cadastroAberto = true;
+// Chave de inscrição: null = ainda não conferimos; true/false = resultado.
+let chaveValida = null;
+let motivoChave = '';
+
+const definirAviso = (titulo, texto, pedirChave) => {
+  const elTitulo = document.getElementById('aviso-cadastro-titulo');
+  const elTexto = document.getElementById('aviso-cadastro-texto');
+  const elChave = document.getElementById('aviso-cadastro-chave');
+  if (elTitulo) elTitulo.textContent = titulo;
+  if (elTexto) elTexto.textContent = texto;
+  if (elChave) elChave.hidden = !pedirChave;
+};
 
 const aplicarEstadoCadastro = () => {
-  // Coordenador continua cadastrando com as inscrições encerradas.
-  const bloqueado = !cadastroAberto && !Auth.podeEditar();
-  const aviso = document.getElementById('aviso-cadastro-fechado');
+  // Coordenador e coordenador paroquial cadastram pelo sistema: não dependem
+  // de chave nem do período de inscrições.
+  const interno = Auth.podeEditar();
+  const fechado = !cadastroAberto && !interno;
+  const semChave = !interno && chaveValida === false;
+  const bloqueado = fechado || semChave;
+
+  if (fechado) {
+    definirAviso(
+      'Inscrições encerradas',
+      'O período de inscrições da catequese não está aberto no momento. ' +
+      'Procure a secretaria da paróquia para mais informações.',
+      false
+    );
+  } else if (semChave) {
+    definirAviso(
+      'Chave de inscrição necessária',
+      motivoChave || 'Use o link enviado pela paróquia, ou informe abaixo a chave de inscrição.',
+      true
+    );
+  }
+
+  const aviso = document.getElementById('aviso-cadastro-bloqueado');
   if (aviso) aviso.hidden = !bloqueado;
   ['section-catequisando', 'section-anexos-assinatura', 'section-envio'].forEach((id) => {
     const secao = document.getElementById(id);
     if (secao) secao.hidden = bloqueado;
   });
+};
+
+// Confere a chave antes de mostrar o formulário, para a pessoa não preencher
+// tudo e só descobrir no envio que o link não vale mais.
+const verificarChaveInscricao = async () => {
+  if (Auth.podeEditar()) { chaveValida = true; return; }
+
+  const codigo = Auth.chaveInscricao();
+  if (!codigo) {
+    chaveValida = false;
+    motivoChave = 'Use o link enviado pela paróquia, ou informe abaixo a chave de inscrição.';
+    return;
+  }
+
+  try {
+    const resposta = await fetch(`/api/chaves/validar?codigo=${encodeURIComponent(codigo)}`);
+    const dados = await resposta.json();
+    chaveValida = Boolean(dados.valida);
+    motivoChave = dados.motivo || '';
+  } catch (err) {
+    // Sem resposta não dá para afirmar que é inválida; o backend barra no envio.
+    chaveValida = true;
+    console.warn('Não foi possível conferir a chave de inscrição:', err.message);
+  }
 };
 
 // configuracoes.js chama isto ao salvar, para a tela não ficar desatualizada.
@@ -955,10 +914,12 @@ window.definirCadastroAberto = (valor) => {
 
 const verificarCadastroAberto = async () => {
   try {
+    await verificarChaveInscricao();
     const resposta = await fetch('/api/config/cadastro');
-    if (!resposta.ok) return;
-    const dados = await resposta.json();
-    cadastroAberto = Boolean(dados.cadastroAberto);
+    if (resposta.ok) {
+      const dados = await resposta.json();
+      cadastroAberto = Boolean(dados.cadastroAberto);
+    }
     aplicarEstadoCadastro();
   } catch (err) {
     // Sem resposta, mantém o cadastro visível: o backend barra de qualquer forma.
@@ -1036,6 +997,23 @@ document.querySelectorAll('.menu-card').forEach((card) => {
 
 aplicarPermissoesNaTela();
 verificarCadastroAberto();
+
+// Quem recebeu o código por outro caminho (cartaz, mural, de viva voz) pode
+// digitá-lo em vez de usar o link.
+const botaoChave = document.getElementById('btn-usar-chave');
+if (botaoChave) {
+  botaoChave.addEventListener('click', async () => {
+    const entrada = document.getElementById('entrada-chave');
+    const codigo = (entrada?.value || '').trim();
+    if (!codigo) return;
+    botaoChave.disabled = true;
+    Auth.definirChaveInscricao(codigo);
+    await verificarChaveInscricao();
+    aplicarEstadoCadastro();
+    botaoChave.disabled = false;
+    if (chaveValida === false && entrada) entrada.focus();
+  });
+}
 
 // Depois do login o usuário volta direto para a aba que tentou abrir
 // (login.js redireciona para index.html?tab=consulta, por exemplo).

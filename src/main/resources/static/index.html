@@ -93,12 +93,22 @@
     </div>
 
     <div class="layout tab-content" id="tab-cadastro" data-tab-content="cadastro" hidden>
-      <section class="panel" id="aviso-cadastro-fechado" style="grid-column: 1 / -1;" hidden>
-        <h2>Inscrições encerradas</h2>
-        <p class="muted">
+      <section class="panel" id="aviso-cadastro-bloqueado" style="grid-column: 1 / -1;" hidden>
+        <h2 id="aviso-cadastro-titulo">Inscrições encerradas</h2>
+        <p class="muted" id="aviso-cadastro-texto">
           O período de inscrições da catequese não está aberto no momento.
           Procure a secretaria da paróquia para mais informações.
         </p>
+        <div id="aviso-cadastro-chave" hidden>
+          <label style="max-width: 320px;">
+            Chave de inscrição
+            <input id="entrada-chave" type="text" placeholder="CAT-XXXX-XXXX"
+                   autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="row" style="margin-top: 10px;">
+            <button type="button" id="btn-usar-chave">Liberar cadastro</button>
+          </div>
+        </div>
       </section>
 
       <section class="panel" id="section-catequisando">
@@ -427,6 +437,40 @@
         <div class="row">
           <button type="button" id="btn-salvar-config">Salvar</button>
         </div>
+      </section>
+
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Chaves de inscrição</h2>
+          <button type="button" id="btn-nova-chave">Gerar chave</button>
+        </div>
+        <p class="muted">
+          Sem uma chave válida, ninguém consegue enviar o formulário público —
+          isso evita cadastros de quem não tem relação com a catequese.
+          Gere uma chave por período ou evento e divulgue o link só para quem interessa.
+        </p>
+
+        <div id="form-chave" class="grid" hidden>
+          <label>
+            Descrição
+            <input id="chave-descricao" type="text" placeholder="Inscrições 2026 — Matriz" />
+          </label>
+          <label>
+            Validade (dias)
+            <input id="chave-validade" type="number" min="1" max="365" value="30" />
+          </label>
+          <label>
+            Limite de cadastros
+            <input id="chave-limite" type="number" min="1" placeholder="deixe vazio para ilimitado" />
+          </label>
+          <div class="row" style="grid-column: 1 / -1;">
+            <button type="button" id="btn-criar-chave">Criar</button>
+            <button type="button" class="secondary" id="btn-cancelar-chave">Cancelar</button>
+          </div>
+        </div>
+
+        <div id="chaves-status" class="summary"></div>
+        <div id="chaves-lista" class="result-list"></div>
       </section>
     </div>
   </div>

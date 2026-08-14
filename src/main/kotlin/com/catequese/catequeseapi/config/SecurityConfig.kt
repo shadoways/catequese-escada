@@ -4,6 +4,7 @@ import com.catequese.catequeseapi.repository.UsuarioRepository
 import com.catequese.catequeseapi.security.CadastroPublicoFilter
 import com.catequese.catequeseapi.security.JwtAuthFilter
 import com.catequese.catequeseapi.security.JwtService
+import com.catequese.catequeseapi.service.ChaveInscricaoService
 import com.catequese.catequeseapi.service.ConfiguracaoService
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
@@ -35,7 +36,10 @@ class SecurityConfig(
     private val jwtService: JwtService,
     private val usuarioRepository: UsuarioRepository,
     private val configuracaoService: ConfiguracaoService,
-    @Value("\${app.security.enabled:false}") private val securityEnabled: Boolean
+    private val chaveInscricaoService: ChaveInscricaoService,
+    // Padrao TRUE tambem aqui: se a linha sumir do application.properties,
+    // o sistema tem de continuar fechado, nunca abrir sozinho.
+    @Value("\${app.security.enabled:true}") private val securityEnabled: Boolean
 ) {
     private val log = LoggerFactory.getLogger(SecurityConfig::class.java)
 
@@ -57,7 +61,7 @@ class SecurityConfig(
             // Depois do JwtAuthFilter, para ja saber quem esta chamando: quem
             // pode editar continua cadastrando com as inscricoes encerradas.
             .addFilterAfter(
-                CadastroPublicoFilter(configuracaoService),
+                CadastroPublicoFilter(configuracaoService, chaveInscricaoService),
                 JwtAuthFilter::class.java
             )
             // Sem isso o Spring devolveria 403 tambem para quem nao mandou token.
@@ -77,14 +81,16 @@ class SecurityConfig(
 
         if (!securityEnabled) {
             log.warn(
-                "app.security.enabled=false -- a API esta ABERTA. O login funciona e emite " +
-                    "token, mas nenhuma rota exige autenticacao ainda."
+                "app.security.enabled=false -- a API esta ABERTA (valvula de escape). " +
+                    "Volte para true assim que o problema estiver resolvido."
             )
-            // A flag existe para nao quebrar o frontend que ainda nao manda token.
-            // Isso nao vale para a gestao de usuarios, que e endpoint novo: deixar
-            // aberto permitiria a qualquer um criar um administrador.
+            // Mesmo destrancado, gestao de usuarios e de chaves continua restrita:
+            // deixar aberto permitiria a qualquer um criar um administrador ou
+            // emitir chaves de inscricao.
             http.authorizeHttpRequests {
-                it.requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                it.requestMatchers(HttpMethod.GET, "/api/chaves/validar").permitAll()
+                    .requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                    .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers(HttpMethod.PUT, "/api/config/**")
                     .hasRole("COORDENADOR_PAROQUIAL")
                     .anyRequest().permitAll()
@@ -123,15 +129,20 @@ class SecurityConfig(
 
                 // ---- Publico: a tela de cadastro e aberta ----
                 // O formulario precisa das listas de turma/comunidade para montar os
-                // selects, e precisa gravar catequisando, ficha, documentos e arquivos.
+                // selects, envia a inscricao inteira de uma vez e sobe os anexos.
+                // Quem barra quem pode gravar e o CadastroPublicoFilter, que exige
+                // uma chave de inscricao valida e o cadastro aberto.
                 .requestMatchers(HttpMethod.GET, "/api/turmas", "/api/comunidades").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/catequisandos").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/fichas").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/documentos").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/inscricoes").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/files/**").permitAll()
+
+                // A tela publica confere o codigo antes de mostrar o formulario.
+                // Vem ANTES da regra de /api/chaves, senao cairia no acesso de admin.
+                .requestMatchers(HttpMethod.GET, "/api/chaves/validar").permitAll()
 
                 // ---- Somente administrador (coordenador paroquial) ----
                 .requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers(HttpMethod.PUT, "/api/config/**").hasRole("COORDENADOR_PAROQUIAL")
 
                 // ---- Leitura: qualquer usuario logado, inclusive catequista ----

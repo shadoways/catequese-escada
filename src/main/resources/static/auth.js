@@ -13,6 +13,20 @@
   // tela de troca obrigatoria ja vir com ela preenchida -- e uma senha longa
   // gerada pelo sistema, que ninguem decora nem quer colar duas vezes.
   const CHAVE_SENHA_PROVISORIA = 'catequese.senhaProvisoria';
+  // Chave de inscrição que chega pelo link divulgado pela paróquia
+  // (index.html?chave=CAT-XXXX-XXXX). Fica na aba: some quando ela fecha.
+  const CHAVE_INSCRICAO = 'catequese.chaveInscricao';
+
+  // Captura logo na carga e guarda, para sobreviver à navegação entre abas da
+  // aplicação sem precisar carregar o parâmetro na URL o tempo todo.
+  try {
+    const daUrl = new URLSearchParams(window.location.search).get('chave');
+    if (daUrl && daUrl.trim()) {
+      sessionStorage.setItem(CHAVE_INSCRICAO, daUrl.trim().toUpperCase());
+    }
+  } catch (err) {
+    // Sem sessionStorage, o cadastro simplesmente pedirá o código.
+  }
 
   const lerUsuario = () => {
     try {
@@ -68,6 +82,24 @@
     /** Atalhos de papel. O backend e quem realmente bloqueia; isto so ajusta a tela. */
     podeEditar: () => Boolean(lerUsuario()?.podeEditar),
     ehAdmin: () => Boolean(lerUsuario()?.admin),
+
+    chaveInscricao() {
+      try {
+        return sessionStorage.getItem(CHAVE_INSCRICAO) || '';
+      } catch (err) {
+        return '';
+      }
+    },
+
+    definirChaveInscricao(codigo) {
+      try {
+        const limpo = (codigo || '').trim().toUpperCase();
+        if (limpo) sessionStorage.setItem(CHAVE_INSCRICAO, limpo);
+        else sessionStorage.removeItem(CHAVE_INSCRICAO);
+      } catch (err) {
+        // Ignorado: sem sessionStorage o envio será recusado e a tela avisa.
+      }
+    },
 
     irParaLogin(destino) {
       const params = new URLSearchParams();
@@ -143,10 +175,15 @@
     if (!ehChamadaDaApi(entrada)) return fetchOriginal(entrada, init);
 
     const token = Auth.token();
+    const chave = Auth.chaveInscricao();
     const opcoes = { ...init };
-    if (token) {
+
+    if (token || chave) {
       const headers = new Headers(opcoes.headers || {});
-      headers.set('Authorization', `Bearer ${token}`);
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      // O envio da inscrição e o upload dos anexos exigem a chave. Mandar
+      // sempre é inofensivo: quem não precisa dela simplesmente ignora.
+      if (chave) headers.set('X-Chave-Inscricao', chave);
       opcoes.headers = headers;
     }
 

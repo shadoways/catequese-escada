@@ -666,6 +666,17 @@ canvas {
   color: var(--accent);
 }
 
+/* Sem isto, o display:grid vence o atributo hidden e o formulário continua
+   visível. Mesma armadilha já vista em .tabs e no form das telas de senha. */
+.grid[hidden] { display: none; }
+
+/* Código da chave de inscrição: precisa ser lido e ditado sem erro */
+.codigo-chave {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.08em;
+  font-size: 1.05rem;
+}
+
 /* Interruptor de configuração */
 .interruptor-linha {
   display: flex;

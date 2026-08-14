@@ -223,6 +223,24 @@ CREATE TABLE IF NOT EXISTS tb_token_recuperacao (
     ip_solicitante VARCHAR(45) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Chaves temporarias que liberam o cadastro publico.
+-- Sem uma chave valida, o formulario de inscricao nao aceita envio: evita que
+-- qualquer um que descubra o endereco do sistema cadastre o que quiser.
+CREATE TABLE IF NOT EXISTS tb_chave_inscricao (
+    id_chave BIGINT AUTO_INCREMENT PRIMARY KEY,
+    -- Vai no link divulgado, no formato CAT-XXXX-XXXX.
+    codigo VARCHAR(40) NOT NULL,
+    descricao VARCHAR(255) NULL,
+    expira_em DATETIME NOT NULL,
+    -- Nulo = sem limite de quantidade de cadastros.
+    limite_usos INT NULL,
+    usos INT NOT NULL DEFAULT 0,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    criado_por VARCHAR(255) NULL,
+    criado_em DATETIME NULL,
+    revogada_em DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Configuracoes do sistema, no formato chave/valor.
 -- Hoje guarda so o interruptor do cadastro publico. Chave/valor evita uma
 -- migracao de banco a cada opcao nova que aparecer.
@@ -271,6 +289,16 @@ CALL cria_coluna_se_faltar('tb_token_recuperacao', 'usado_em',       'DATETIME N
 CALL cria_coluna_se_faltar('tb_token_recuperacao', 'criado_em',      'DATETIME NULL');
 CALL cria_coluna_se_faltar('tb_token_recuperacao', 'ip_solicitante', 'VARCHAR(45) NULL');
 
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'codigo',      'VARCHAR(40) NULL');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'descricao',   'VARCHAR(255) NULL');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'expira_em',   'DATETIME NULL');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'limite_usos', 'INT NULL');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'usos',        'INT NOT NULL DEFAULT 0');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'ativo',       'BOOLEAN NOT NULL DEFAULT TRUE');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'criado_por',  'VARCHAR(255) NULL');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'criado_em',   'DATETIME NULL');
+CALL cria_coluna_se_faltar('tb_chave_inscricao', 'revogada_em', 'DATETIME NULL');
+
 CALL cria_coluna_se_faltar('tb_configuracao', 'valor',          'VARCHAR(255) NULL');
 CALL cria_coluna_se_faltar('tb_configuracao', 'descricao',      'VARCHAR(255) NULL');
 CALL cria_coluna_se_faltar('tb_configuracao', 'atualizado_em',  'DATETIME NULL');
@@ -315,6 +343,8 @@ CALL amplia_texto_se_curto('tb_token_recuperacao', 'token_hash', 64);
 CALL cria_indice_unico_se_possivel('tb_usuario', 'uk_usuario_username', 'username');
 CALL cria_indice_se_faltar('tb_usuario', 'idx_usuario_tipo',  'tipo');
 CALL cria_indice_se_faltar('tb_usuario', 'idx_usuario_email', 'email');
+
+CALL cria_indice_unico_se_possivel('tb_chave_inscricao', 'uk_chave_codigo', 'codigo');
 
 CALL cria_indice_se_faltar('tb_token_recuperacao', 'idx_token_hash',    'token_hash');
 CALL cria_indice_se_faltar('tb_token_recuperacao', 'idx_token_usuario', 'id_usuario');
@@ -366,6 +396,16 @@ SELECT esperada.tabela, esperada.coluna AS coluna_faltando
   UNION ALL SELECT 'tb_token_recuperacao', 'usado_em'
   UNION ALL SELECT 'tb_token_recuperacao', 'criado_em'
   UNION ALL SELECT 'tb_token_recuperacao', 'ip_solicitante'
+  UNION ALL SELECT 'tb_chave_inscricao', 'id_chave'
+  UNION ALL SELECT 'tb_chave_inscricao', 'codigo'
+  UNION ALL SELECT 'tb_chave_inscricao', 'descricao'
+  UNION ALL SELECT 'tb_chave_inscricao', 'expira_em'
+  UNION ALL SELECT 'tb_chave_inscricao', 'limite_usos'
+  UNION ALL SELECT 'tb_chave_inscricao', 'usos'
+  UNION ALL SELECT 'tb_chave_inscricao', 'ativo'
+  UNION ALL SELECT 'tb_chave_inscricao', 'criado_por'
+  UNION ALL SELECT 'tb_chave_inscricao', 'criado_em'
+  UNION ALL SELECT 'tb_chave_inscricao', 'revogada_em'
   UNION ALL SELECT 'tb_configuracao', 'chave'
   UNION ALL SELECT 'tb_configuracao', 'valor'
   UNION ALL SELECT 'tb_configuracao', 'descricao'

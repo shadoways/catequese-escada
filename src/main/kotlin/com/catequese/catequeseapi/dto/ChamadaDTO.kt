@@ -1,10 +1,32 @@
 package com.catequese.catequeseapi.dto
 
+import com.catequese.catequeseapi.model.CategoriaTurma
 import com.catequese.catequeseapi.model.Encontro
 import com.catequese.catequeseapi.model.SituacaoEncontro
 import com.catequese.catequeseapi.model.SituacaoPresenca
 import java.time.LocalDate
 import java.time.LocalDateTime
+
+/**
+ * Uma turma na tela "Minhas turmas".
+ *
+ * Traz junto o encontro em aberto porque e a primeira coisa que o catequista
+ * precisa saber ao abrir o sistema: ou ele continua a chamada de hoje, ou
+ * comeca uma nova. Sem isso a tela precisaria de uma segunda chamada a API
+ * por turma so para descobrir em que pe cada uma esta.
+ */
+data class TurmaChamadaDTO(
+    val idTurma: Long,
+    val nome: String,
+    val categoria: CategoriaTurma?,
+    val etapa: Int?,
+    val ano: Int,
+    val matriculados: Int,
+    val exigeFrequencia: Boolean,
+    /** Nulo quando nao ha chamada em andamento. */
+    val encontroAberto: EncontroDTO? = null,
+    val ultimoEncontro: LocalDate? = null
+)
 
 /** Abertura da chamada do dia. Sem data, assume hoje. */
 data class AbrirEncontroDTO(

@@ -1281,3 +1281,196 @@ canvas {
 }
 
 
+
+/* =====================================================================
+   Chamada dos encontros (F5)
+   ===================================================================== */
+
+.menu-card-icon--chamada {
+  background: rgba(47, 111, 126, 0.12);
+  color: var(--accent-2);
+}
+
+/* Lista de turmas. Mesmo teto de 320px do menu: sem ele, um catequista com
+   uma única turma veria o cartão esticado pela largura toda da tela. */
+.turmas-chamada {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.turma-chamada-card {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.turma-chamada-card:hover,
+.turma-chamada-card:focus-visible {
+  border-color: var(--accent-2);
+  transform: translateY(-2px);
+}
+
+.turma-chamada-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.turma-chamada-card .status { margin: 0; }
+.turma-chamada-card p { margin: 0; }
+
+/* Uma linha por catequisando. Em telas largas nome e opções ficam lado a
+   lado; no celular a linha vira coluna (ver a media query no fim do bloco),
+   porque com 3 botões de situação não sobra largura para os dois. */
+.chamada-lista {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.chamada-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  /* Mais claro que o painel: sem contraste as linhas somem no fundo. */
+  background: var(--paper-2);
+}
+
+.chamada-item-nome {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cham-autoria {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.chamada-item-opcoes {
+  display: flex;
+  gap: 6px;
+}
+
+/* A justificativa ocupa a linha inteira, abaixo do nome e das opções. */
+.cham-justificativa {
+  grid-column: 1 / -1;
+}
+
+.cham-justificativa[hidden] { display: none; }
+
+.cham-opcao {
+  border: 1px solid var(--stroke);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cham-opcao:hover { border-color: var(--accent-2); }
+
+/* A letra curta só aparece no celular, onde o rótulo inteiro não cabe. */
+.cham-opcao-curto { display: none; }
+
+.cham-opcao--presente.ativa {
+  background: rgba(47, 111, 126, 0.16);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+.cham-opcao--falta.ativa {
+  background: rgba(192, 95, 60, 0.16);
+  border-color: var(--accent);
+  color: #9f2c0b;
+  font-weight: 600;
+}
+
+.cham-opcao--justificada.ativa {
+  background: rgba(241, 201, 122, 0.35);
+  border-color: #d8ab52;
+  color: #8b6914;
+  font-weight: 600;
+}
+
+.cham-acoes-rapidas {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cham-rodape {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Encerrar é a ação de mudança irreversível da tela: fica sozinha em
+   destaque, e as duas ao lado dela ficam secundárias. */
+.cham-rodape #cham-btn-encerrar { min-width: 190px; }
+
+.cham-rodape button:disabled,
+.cham-acoes-rapidas button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .chamada-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chamada-item-opcoes {
+    justify-content: space-between;
+  }
+
+  .cham-opcao {
+    flex: 1;
+    padding: 10px 4px;
+    text-align: center;
+  }
+
+  /* Com a linha em coluna, o rótulo completo estoura; a inicial basta,
+     e o title/aria-label continuam dizendo o nome inteiro. */
+  .cham-opcao-curto { display: inline; font-weight: 700; }
+  .cham-opcao-rotulo { display: none; }
+
+  .cham-rodape button { width: 100%; }
+}
+
+/* A chamada é uma coluna só: a lista de presença é uma leitura vertical, e
+   dentro do .layout de duas colunas ela ficaria espremida em metade da tela.
+   O teto de 900px evita a linha longa demais em monitor grande. */
+.chamada-layout {
+  display: grid;
+  gap: 24px;
+  max-width: 900px;
+}
+
+/* Pareado com o display acima, senão o grid vence o atributo hidden --
+   a mesma armadilha já vista em .tabs, .grid e no form das telas de senha. */
+.chamada-layout[hidden] { display: none; }
+
+/* A legenda só faz sentido onde os botões viram iniciais. No desktop o rótulo
+   inteiro está no próprio botão, e repetir seria ruído. */
+.cham-legenda { display: none; }
+
+@media (max-width: 600px) {
+  .cham-legenda { display: block; margin: 0; font-size: 0.82rem; }
+}

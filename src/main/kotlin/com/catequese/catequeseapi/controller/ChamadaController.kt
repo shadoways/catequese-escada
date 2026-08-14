@@ -5,6 +5,7 @@ import com.catequese.catequeseapi.dto.ChamadaDTO
 import com.catequese.catequeseapi.dto.EncontroDTO
 import com.catequese.catequeseapi.dto.FinalizarEncontroDTO
 import com.catequese.catequeseapi.dto.MarcarLoteDTO
+import com.catequese.catequeseapi.dto.TurmaChamadaDTO
 import com.catequese.catequeseapi.service.ChamadaService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 /**
@@ -26,6 +28,13 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/chamada")
 class ChamadaController(private val chamadaService: ChamadaService) {
+
+    /** Tela inicial do catequista: as turmas dele e em que pe esta cada uma. */
+    @GetMapping("/minhas-turmas")
+    fun minhasTurmas(
+        @RequestParam(required = false) ano: Int?
+    ): ResponseEntity<List<TurmaChamadaDTO>> =
+        ResponseEntity.ok(chamadaService.minhasTurmas(ano))
 
     @GetMapping("/turma/{idTurma}/encontros")
     fun encontros(@PathVariable idTurma: Long): ResponseEntity<List<EncontroDTO>> =

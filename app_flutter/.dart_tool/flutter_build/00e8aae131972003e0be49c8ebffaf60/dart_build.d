@@ -1,0 +1,1 @@
+ /home/usuario/workspace/catequese-escada/app_flutter/.dart_tool/flutter_build/00e8aae131972003e0be49c8ebffaf60/dart_build_result.json: 

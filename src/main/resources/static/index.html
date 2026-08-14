@@ -19,6 +19,7 @@
     <nav class="tabs" id="main-tabs" hidden>
       <button type="button" class="tab-btn active" data-tab="menu">Início</button>
       <button type="button" class="tab-btn somente-cadastro" data-tab="cadastro">Cadastro</button>
+      <button type="button" class="tab-btn somente-logado" data-tab="chamada">Chamada</button>
       <button type="button" class="tab-btn somente-logado" data-tab="consulta">Consultar catequisandos</button>
       <button type="button" class="tab-btn somente-logado" data-tab="dashboard">Turmas e documentos</button>
       <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>Usuários</button>
@@ -44,6 +45,18 @@
           <h3>Novo cadastro</h3>
           <p>Cadastrar um catequisando com dados, documentos e assinatura.</p>
           <span class="menu-card-cta">Iniciar cadastro →</span>
+        </button>
+        <button type="button" class="menu-card somente-logado" data-tab="chamada">
+          <span class="menu-card-icon menu-card-icon--chamada" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2v4M16 2v4M3 10h18" />
+              <rect x="3" y="4" width="18" height="17" rx="2" />
+              <path d="M8.5 15.5l2 2 4-4.5" />
+            </svg>
+          </span>
+          <h3>Chamada</h3>
+          <p>Marcar presença do encontro de hoje e acompanhar a frequência da turma.</p>
+          <span class="menu-card-cta">Fazer chamada →</span>
         </button>
         <button type="button" class="menu-card somente-logado" data-tab="consulta">
           <span class="menu-card-icon menu-card-icon--consulta" aria-hidden="true">
@@ -90,6 +103,79 @@
           <span class="menu-card-cta">Ajustar →</span>
         </button>
       </div>
+    </div>
+
+    <!--
+      Chamada. Duas telas no mesmo lugar, nunca as duas ao mesmo tempo:
+      a lista de turmas e a chamada de uma turma. Era pedido explicito que a
+      tela nao ficasse sobrecarregada -- o catequista abre o sistema para fazer
+      uma coisa so, e essa coisa precisa estar a um clique.
+    -->
+    <div class="chamada-layout tab-content" id="tab-chamada" data-tab-content="chamada" hidden>
+
+      <section class="panel" id="cham-tela-turmas">
+        <div class="row">
+          <h2>Minhas turmas</h2>
+          <button type="button" class="secondary" id="cham-recarregar">Atualizar</button>
+        </div>
+        <p class="muted" id="cham-turmas-ajuda">
+          Escolha a turma para fazer a chamada do encontro de hoje.
+        </p>
+        <div id="cham-turmas-lista" class="turmas-chamada"></div>
+      </section>
+
+      <section class="panel" id="cham-tela-encontro" hidden>
+        <div class="row">
+          <h2 id="cham-encontro-titulo">Chamada</h2>
+          <button type="button" class="secondary" id="cham-voltar">Voltar para minhas turmas</button>
+        </div>
+
+        <div id="cham-encontro-estado" class="summary"></div>
+
+        <!-- Nenhum encontro aberto: abrir um novo. -->
+        <div id="cham-abrir" hidden>
+          <div class="grid">
+            <label>
+              Data do encontro
+              <input type="date" id="cham-data" />
+            </label>
+            <label>
+              Tema do encontro (opcional)
+              <input type="text" id="cham-tema" maxlength="255"
+                     placeholder="Ex.: Os sacramentos da iniciação" />
+            </label>
+          </div>
+          <button type="button" id="cham-btn-abrir">Abrir chamada</button>
+        </div>
+
+        <!-- Encontro aberto: a lista de presença. -->
+        <div id="cham-lista-area" hidden>
+          <div class="row cham-acoes-rapidas">
+            <span class="muted" id="cham-contagem"></span>
+            <span class="cham-atalhos">
+              <button type="button" class="secondary" id="cham-todos-presentes">
+                Marcar todos como presentes
+              </button>
+            </span>
+          </div>
+
+          <p class="cham-legenda muted">P = presente &nbsp;·&nbsp; F = falta &nbsp;·&nbsp; J = falta justificada</p>
+
+          <div id="cham-itens" class="chamada-lista"></div>
+
+          <div class="row cham-rodape">
+            <button type="button" id="cham-btn-salvar" class="secondary">Salvar sem encerrar</button>
+            <button type="button" id="cham-btn-encerrar">Encerrar chamada</button>
+            <button type="button" id="cham-btn-cancelar" class="secondary">
+              Encontro não aconteceu
+            </button>
+          </div>
+          <p class="muted">
+            Depois de encerrada, a lista não pode mais ser alterada. Se precisar
+            corrigir algo, peça ao coordenador paroquial para reabrir o encontro.
+          </p>
+        </div>
+      </section>
     </div>
 
     <div class="layout tab-content" id="tab-cadastro" data-tab-content="cadastro" hidden>
@@ -477,6 +563,7 @@
 
   <script src="auth.js"></script>
   <script src="script.js"></script>
+  <script src="chamada.js"></script>
   <script src="usuarios.js"></script>
   <script src="configuracoes.js"></script>
 </body>

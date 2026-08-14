@@ -6,6 +6,7 @@ import com.catequese.catequeseapi.dto.EncontroDTO
 import com.catequese.catequeseapi.dto.FinalizarEncontroDTO
 import com.catequese.catequeseapi.dto.ItemChamadaDTO
 import com.catequese.catequeseapi.dto.MarcarLoteDTO
+import com.catequese.catequeseapi.dto.TurmaChamadaDTO
 import com.catequese.catequeseapi.exception.ResourceNotFoundException
 import com.catequese.catequeseapi.model.Catequisando
 import com.catequese.catequeseapi.model.Encontro
@@ -51,6 +52,59 @@ class ChamadaService(
     class ChamadaInvalidaException(mensagem: String) : IllegalArgumentException(mensagem)
 
     // ---- Consulta ----------------------------------------------------------
+
+    /**
+     * As turmas em que este usuario pode fazer chamada.
+     *
+     * Catequista ve as turmas em que atua -- pelo vinculo novo
+     * (tb_turma_catequista) e tambem pelo campo antigo de responsavel, senao
+     * quem ainda nao foi migrado abriria a tela vazia. Coordenador ve as
+     * turmas que tem alguem da comunidade dele. Administrador ve todas.
+     */
+    fun minhasTurmas(anoPedido: Int?): List<TurmaChamadaDTO> {
+        val ano = anoPedido ?: LocalDate.now().year
+        val turmasDoCatequista = escopo.turmasDoCatequista()
+        val comunidades = escopo.comunidadesPermitidas()
+        val idCatequistaDoUsuario = escopo.usuarioLogado()?.idCatequista
+
+        return turmaRepository.findAll()
+            .map { turma -> turma to matriculadosDaTurma(turma, ano) }
+            .filter { (turma, matriculados) ->
+                when {
+                    turmasDoCatequista != null ->
+                        turma.idTurma in turmasDoCatequista ||
+                            (
+                                idCatequistaDoUsuario != null &&
+                                    turma.catequista?.idCatequista == idCatequistaDoUsuario
+                                )
+
+                    comunidades != null -> matriculados.any { catequisando ->
+                        val idComunidade = catequisando.comunidade?.idComunidade
+                        idComunidade != null && idComunidade in comunidades
+                    }
+
+                    else -> true
+                }
+            }
+            .map { (turma, matriculados) ->
+                val encontros = encontroRepository.findByTurmaOrderByDataDesc(turma)
+                val aberto = encontros.firstOrNull { it.estaAberto() }
+                val categoria = turma.categoria
+
+                TurmaChamadaDTO(
+                    idTurma = turma.idTurma,
+                    nome = turma.nome,
+                    categoria = categoria,
+                    etapa = turma.etapa,
+                    ano = ano,
+                    matriculados = matriculados.size,
+                    exigeFrequencia = categoria?.exigeFrequencia == true,
+                    encontroAberto = aberto?.let { resumo(it, matriculados.size) },
+                    ultimoEncontro = encontros.firstOrNull { !it.estaAberto() }?.data
+                )
+            }
+            .sortedBy { it.nome.lowercase() }
+    }
 
     fun encontrosDaTurma(idTurma: Long): List<EncontroDTO> {
         val turma = exigirTurma(idTurma)
@@ -358,13 +412,15 @@ class ChamadaService(
     private fun matriculadosDe(encontro: Encontro): List<Catequisando> {
         val turma = encontro.turma ?: return emptyList()
         val ano = encontro.data?.year ?: LocalDate.now().year
+        return matriculadosDaTurma(turma, ano)
+    }
 
-        return matriculaRepository.findByTurmaAndAno(turma, ano)
+    private fun matriculadosDaTurma(turma: Turma, ano: Int): List<Catequisando> =
+        matriculaRepository.findByTurmaAndAno(turma, ano)
             .filter { it.situacao != SituacaoMatricula.TRANSFERIDO }
             .filter { it.situacao != SituacaoMatricula.DESISTENTE }
             .mapNotNull { it.catequisando }
             .sortedBy { it.nome.lowercase() }
-    }
 
     private fun resumo(encontro: Encontro, totalMatriculados: Int? = null): EncontroDTO {
         val presencas = presencaRepository.findByEncontro(encontro)

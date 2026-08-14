@@ -1,6 +1,18 @@
 """Procura padroes que exigem smart cast em propriedade (nao compila quando a
 classe e aberta: entidades JPA com o plugin allOpen)."""
 import re, glob, sys
+import os
+
+# O glob abaixo e RELATIVO. Rodar este script de fora da raiz do repositorio
+# fazia ele escanear ZERO arquivos e imprimir "0 problemas" -- um sucesso
+# vazio, que ja deixou passar um erro de compilacao para producao.
+# A partir daqui, ele se recusa a rodar no lugar errado.
+if not os.path.isdir('src/main/kotlin'):
+    raise SystemExit(
+        "ERRO: rode este script na raiz do repositorio (onde existe "
+        "src/main/kotlin). Diretorio atual: " + os.getcwd()
+    )
+
 
 problemas = 0
 for f in sorted(glob.glob('src/main/kotlin/**/*.kt', recursive=True)):

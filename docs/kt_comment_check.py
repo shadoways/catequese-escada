@@ -1,4 +1,16 @@
 import sys, glob
+import os
+
+# O glob abaixo e RELATIVO. Rodar este script de fora da raiz do repositorio
+# fazia ele escanear ZERO arquivos e imprimir "0 problemas" -- um sucesso
+# vazio, que ja deixou passar um erro de compilacao para producao.
+# A partir daqui, ele se recusa a rodar no lugar errado.
+if not os.path.isdir('src/main/kotlin'):
+    raise SystemExit(
+        "ERRO: rode este script na raiz do repositorio (onde existe "
+        "src/main/kotlin). Diretorio atual: " + os.getcwd()
+    )
+
 
 def analisa(caminho):
     s = open(caminho, encoding='utf-8').read()

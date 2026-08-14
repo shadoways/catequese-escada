@@ -23,6 +23,7 @@
       <button type="button" class="tab-btn somente-logado" data-tab="frequencia">Frequência</button>
       <button type="button" class="tab-btn somente-logado" data-tab="consulta">Consultar catequisandos</button>
       <button type="button" class="tab-btn somente-logado" data-tab="dashboard">Turmas e documentos</button>
+      <button type="button" class="tab-btn somente-admin" data-tab="admin" hidden>Turmas e matrículas</button>
       <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>Usuários</button>
       <button type="button" class="tab-btn somente-admin" data-tab="configuracoes" hidden>Configurações</button>
     </nav>
@@ -90,6 +91,18 @@
           <h3>Turmas e documentos</h3>
           <p>Ver catequistas, turmas e quais documentos ainda faltam.</p>
           <span class="menu-card-cta">Ver painel →</span>
+        </button>
+        <button type="button" class="menu-card somente-admin" data-tab="admin" hidden>
+          <span class="menu-card-icon menu-card-icon--admin" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M3 9h18M9 9v11" />
+              <path d="M13 13h5M13 16.5h5" />
+            </svg>
+          </span>
+          <h3>Turmas e matrículas</h3>
+          <p>Classificar turmas, matricular, transferir e corrigir chamadas encerradas.</p>
+          <span class="menu-card-cta">Administrar →</span>
         </button>
         <button type="button" class="menu-card somente-admin" data-tab="usuarios" hidden>
           <span class="menu-card-icon menu-card-icon--usuarios" aria-hidden="true">
@@ -255,6 +268,89 @@
           <span class="muted" id="freq-contagem-lista"></span>
         </div>
         <div id="freq-lista" class="freq-lista"></div>
+      </section>
+    </div>
+
+    <!--
+      Area do coordenador paroquial. Tres contextos, um de cada vez: turmas,
+      matriculas de uma turma, e correcao de chamada encerrada.
+    -->
+    <div class="chamada-layout tab-content" id="tab-admin" data-tab-content="admin" hidden>
+
+      <section class="panel" id="adm-tela-turmas">
+        <div class="row">
+          <h2>Turmas</h2>
+          <label class="adm-ano-campo">
+            Ano
+            <input type="number" id="adm-ano" min="2000" max="2100" step="1" />
+          </label>
+          <button type="button" class="secondary" id="adm-recarregar">Atualizar</button>
+        </div>
+        <p class="muted">
+          A categoria define a regra de frequência. Enquanto a turma não tiver
+          categoria, a frequência dela não é apurada.
+        </p>
+        <div id="adm-status" class="summary"></div>
+        <div id="adm-turmas-lista" class="adm-turmas"></div>
+      </section>
+
+      <section class="panel" id="adm-tela-matriculas" hidden>
+        <div class="row">
+          <h2 id="adm-matriculas-titulo">Matrículas</h2>
+          <button type="button" class="secondary" id="adm-voltar-turmas">
+            Voltar para as turmas
+          </button>
+        </div>
+        <div id="adm-matriculas-status" class="summary"></div>
+
+        <div class="grid">
+          <label>
+            Matricular catequisando
+            <select id="adm-novo-catequisando"></select>
+          </label>
+          <label>
+            Data da matrícula
+            <input type="date" id="adm-nova-data" />
+          </label>
+        </div>
+        <p class="muted">
+          A data da matrícula é o marco zero da frequência: quem entra em abril
+          não responde pelos encontros de fevereiro e março.
+        </p>
+        <button type="button" id="adm-btn-matricular">Matricular</button>
+
+        <div id="adm-matriculas-lista" class="adm-matriculas"></div>
+      </section>
+
+      <section class="panel" id="adm-tela-correcao" hidden>
+        <div class="row">
+          <h2 id="adm-correcao-titulo">Corrigir chamada</h2>
+          <button type="button" class="secondary" id="adm-voltar-correcao">
+            Voltar para as turmas
+          </button>
+        </div>
+        <div id="adm-correcao-status" class="summary"></div>
+        <div id="adm-encontros-lista" class="adm-encontros"></div>
+
+        <div id="adm-correcao-area" hidden>
+          <div id="adm-correcao-itens" class="chamada-lista"></div>
+          <label>
+            Motivo da correção (obrigatório)
+            <input type="text" id="adm-correcao-motivo" maxlength="255"
+                   placeholder="Ex.: catequista marcou falta por engano" />
+          </label>
+          <p class="muted">
+            A correção muda a frequência de alguém. O motivo fica registrado
+            junto com quem corrigiu — daqui a seis meses ninguém vai lembrar
+            por que aquele número mudou.
+          </p>
+          <div class="row">
+            <button type="button" id="adm-btn-corrigir">Salvar correção</button>
+            <button type="button" class="secondary" id="adm-btn-reabrir">
+              Reabrir encontro
+            </button>
+          </div>
+        </div>
       </section>
     </div>
 
@@ -654,6 +750,7 @@
   <script src="chamada.js"></script>
   <script src="frequencia.js"></script>
   <script src="ficha-catequisando.js"></script>
+  <script src="admin-catequese.js"></script>
   <script src="usuarios.js"></script>
   <script src="configuracoes.js"></script>
 </body>

@@ -89,6 +89,7 @@ class SecurityConfig(
             // emitir chaves de inscricao.
             http.authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.GET, "/api/chaves/validar").permitAll()
+                    .requestMatchers("/api/admin/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers(HttpMethod.PUT, "/api/config/**")
@@ -148,6 +149,9 @@ class SecurityConfig(
                 .requestMatchers(HttpMethod.GET, "/api/chaves/validar").permitAll()
 
                 // ---- Somente administrador (coordenador paroquial) ----
+                // Vem ANTES da regra generica de GET; sem isso qualquer
+                // usuario logado leria a area de administracao.
+                .requestMatchers("/api/admin/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers(HttpMethod.PUT, "/api/config/**").hasRole("COORDENADOR_PAROQUIAL")

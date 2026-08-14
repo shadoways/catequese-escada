@@ -1749,3 +1749,106 @@ canvas {
   .fic-percurso,
   .fic-documento { align-items: flex-start; }
 }
+
+/* =====================================================================
+   Área do coordenador paroquial (F8)
+   ===================================================================== */
+
+.menu-card-icon--admin {
+  background: rgba(192, 95, 60, 0.12);
+  color: var(--accent);
+}
+
+.adm-ano-campo { max-width: 130px; }
+
+.adm-turmas,
+.adm-matriculas,
+.adm-encontros {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.adm-turma,
+.adm-matricula {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+/* Turma sem categoria trava a frequência: precisa saltar aos olhos na lista. */
+.adm-turma--pendente {
+  border-left: 3px solid var(--highlight);
+  background: rgba(241, 201, 122, 0.12);
+}
+
+.adm-turma-topo,
+.adm-matricula-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.adm-turma-topo .status,
+.adm-matricula-topo .status,
+.adm-matricula > .status {
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.adm-turma-acoes,
+.adm-matricula-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.adm-turma-acoes label,
+.adm-matricula-acoes label {
+  /* min-width:0 é o que permite o item flex encolher. Sem ele, o <select>
+     assume a largura da opção mais longa e escapa do cartão, passando por
+     cima do campo vizinho. */
+  min-width: 0;
+  flex: 1 1 170px;
+}
+
+.adm-turma-acoes select,
+.adm-matricula-acoes select {
+  width: 100%;
+  min-width: 0;
+}
+
+.adm-encontro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper-2);
+  cursor: pointer;
+}
+
+.adm-encontro:hover,
+.adm-encontro:focus-visible { border-color: var(--accent-2); }
+
+.adm-encontro .status {
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .adm-turma-acoes button,
+  .adm-matricula-acoes button { width: 100%; }
+
+  .adm-ano-campo { max-width: none; }
+}

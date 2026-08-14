@@ -113,8 +113,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
       `frequencia.js` + relatório impresso fora das abas.
 - [x] **F7 — Front: Ficha do catequisando** (`e97780b`): `ficha-catequisando.js`
       + `GET /api/ficha-catequisando/{id}` (status de documento, sem arquivo).
-- [ ] **F8 — Admin**: classificar turmas, matrículas, transferência, reabrir
-      encontro e corrigir presença.
+- [x] **F8 — Admin** (`6b90ef1` + `8c99eff`): `/api/admin`, `admin-catequese.js`,
+      classificação, matrículas, transferência e correção de chamada.
 - [ ] **F9 — Encerramento de ano em lote** + conclusão dos 2 anos.
 - [ ] **F10 — Presença em eventos** (aproveitando `Evento`).
 
@@ -139,8 +139,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
 - **F5 entregue** (`023814f`): front da chamada. **Sem SQL novo.**
 - **F6 entregue** (`8eafbe4`): front da frequência. **Sem SQL novo.**
 - **F7 entregue** (`e97780b`): ficha do catequisando. **Sem SQL novo.**
-- Próximo: **F8 — Admin**: classificar turmas, matrículas, transferência,
-  reabrir encontro, corrigir presença.
+- **F8 entregue** (`6b90ef1` + `8c99eff`): área do admin. **Sem SQL novo.**
+- Próximo: **F9 — encerramento de ano em lote** + conclusão dos 2 anos.
 - O filtro por comunidade (F2) é aplicado junto com os endpoints novos, e não
   retroativamente nos antigos.
 - Aguardando o usuário rodar as migrações e confirmar que o sistema sobe.
@@ -208,10 +208,9 @@ Estado em 14/08/2026, fim da sessão:
   distribution dão 403 no proxy). Os testes do `CalculoFrequenciaTest` são a
   única prova real das fronteiras (80% não reprova, 79% reprova, justificada
   fora do denominador).
-- **Próxima etapa: F8** — Admin: classificar turmas por categoria, gerir
-  matrículas, transferência, reabrir encontro e corrigir presença fechada.
-  É a etapa que destrava as anteriores: sem categoria na turma a frequência
-  não é apurada, e sem matrícula não há chamada.
+- **Próxima etapa: F9** — encerramento de ano em lote: promover etapa do
+  catecumenato, marcar concluídos, aplicar a regra dos 2 anos por categoria.
+  Depois, F10 — presença em eventos (aproveitando `Evento`).
 
 ### Entrega de código: como fazer
 
@@ -326,3 +325,38 @@ documentado no próprio teste. Ela continua valendo como guarda de MARCAÇÃO
 
 Testes agora: `teste_chamada.mjs` (30), `teste_frequencia.mjs` (35),
 `teste_ficha.mjs` (33). Rodar de `/home/claude/project`.
+
+## Notas de implementação (F8)
+
+- Tudo sob `/api/admin`, restrito ao admin **na SecurityConfig E** de novo em
+  cada método do `AdminCatequeseService`. Uma regra protege a rota, a outra
+  protege o método. A regra `/api/admin/**` precisa vir **ANTES** da regra
+  genérica `GET /api/**` — há uma checagem de ordem no `teste_admin.mjs`.
+- Classificar turma: etapa sem categoria é anulada no servidor (é a categoria
+  que diz quantos anos o percurso tem).
+- **Transferência cria DUAS matrículas**: origem vira `TRANSFERIDO`, destino
+  ganha uma nova com a data da mudança. Mover a matrícula faria a turma de
+  destino cobrar encontros de quando a pessoa nem estava lá.
+- Correção de chamada encerrada: `POST /api/chamada/encontro/{id}/corrigir`,
+  uma transação só, **motivo obrigatório**, autor gravado como `(correcao)`.
+  Preferido a reabrir → marcar → fechar: assim o encontro não fica aberto por
+  acidente no meio do caminho.
+- CSS: `min-width: 0` no item flex é o que deixa o `<select>` encolher; sem
+  ele o campo assume a largura da opção mais longa e escapa do cartão.
+
+### ERRO GRAVE COMETIDO NESTA ETAPA — ler antes de confiar em verificação
+
+O `FichaCatequisandoController` da F7 foi entregue **sem compilar**: tinha o
+padrão de rota com barra-asterisco dentro de um KDoc, e em Kotlin comentário
+de bloco **aninha**. É o mesmo erro do commit `cb8466f`.
+
+Passou porque os verificadores usam glob RELATIVO (`src/main/kotlin/...`) e
+eu os rodei de `/home/claude/project`, onde não existe `src/` — escanearam
+**zero arquivos** e imprimiram "0 problemas". Sucesso vazio é pior que
+nenhuma verificação, porque dá confiança sem base.
+
+Ambos agora **abortam** se não estiverem na raiz do repositório. Sempre rodar:
+`cd catequese-git && python3 ../kt_comment_check.py && python3 ../smartcast_check.py`
+
+Testes: `teste_chamada.mjs` (30), `teste_frequencia.mjs` (35),
+`teste_ficha.mjs` (33), `teste_admin.mjs` (38). Rodar de `/home/claude/project`.

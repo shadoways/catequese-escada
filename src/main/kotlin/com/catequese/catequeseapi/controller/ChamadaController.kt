@@ -2,6 +2,7 @@ package com.catequese.catequeseapi.controller
 
 import com.catequese.catequeseapi.dto.AbrirEncontroDTO
 import com.catequese.catequeseapi.dto.ChamadaDTO
+import com.catequese.catequeseapi.dto.CorrecaoChamadaDTO
 import com.catequese.catequeseapi.dto.EncontroDTO
 import com.catequese.catequeseapi.dto.FinalizarEncontroDTO
 import com.catequese.catequeseapi.dto.MarcarLoteDTO
@@ -68,6 +69,17 @@ class ChamadaController(private val chamadaService: ChamadaService) {
         @RequestBody body: FinalizarEncontroDTO
     ): ResponseEntity<EncontroDTO> =
         ResponseEntity.ok(chamadaService.cancelar(idEncontro, body, quem()))
+
+    /**
+     * Corrige uma chamada JA ENCERRADA, numa transacao so, exigindo motivo.
+     * Somente coordenador paroquial; a checagem esta no servico.
+     */
+    @PostMapping("/encontro/{idEncontro}/corrigir")
+    fun corrigir(
+        @PathVariable idEncontro: Long,
+        @RequestBody body: CorrecaoChamadaDTO
+    ): ResponseEntity<ChamadaDTO> =
+        ResponseEntity.ok(chamadaService.corrigir(idEncontro, body, quem()))
 
     /** Somente coordenador paroquial; a checagem esta no servico. */
     @PostMapping("/encontro/{idEncontro}/reabrir")

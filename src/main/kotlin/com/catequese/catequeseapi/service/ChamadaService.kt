@@ -2,6 +2,7 @@ package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.AbrirEncontroDTO
 import com.catequese.catequeseapi.dto.ChamadaDTO
+import com.catequese.catequeseapi.dto.CorrecaoChamadaDTO
 import com.catequese.catequeseapi.dto.EncontroDTO
 import com.catequese.catequeseapi.dto.FinalizarEncontroDTO
 import com.catequese.catequeseapi.dto.ItemChamadaDTO
@@ -270,6 +271,79 @@ class ChamadaService(
             ?: throw ChamadaInvalidaException("Informe o motivo do cancelamento.")
 
         return cancelarInterno(encontro, motivo, quem, automatico = false)
+    }
+
+    /**
+     * Correcao de chamada JA ENCERRADA. So administrador.
+     *
+     * Existe em vez de obrigar a sequencia reabrir -> marcar -> fechar por dois
+     * motivos: e uma transacao so, entao nao ha como o encontro ficar aberto
+     * por acidente no meio do caminho; e o motivo passa a ser obrigatorio.
+     * Mexer em lista fechada muda a frequencia de alguem, e daqui a seis meses
+     * ninguem vai lembrar por que aquele numero mudou.
+     */
+    @Transactional
+    fun corrigir(idEncontro: Long, dto: CorrecaoChamadaDTO, quem: String?): ChamadaDTO {
+        if (!escopo.ehAdmin()) {
+            throw ChamadaInvalidaException(
+                "Somente o coordenador paroquial pode corrigir uma chamada encerrada."
+            )
+        }
+
+        val motivo = dto.motivo?.trim()?.ifBlank { null }
+            ?: throw ChamadaInvalidaException(
+                "Informe o motivo da correcao. Ele fica registrado no historico do encontro."
+            )
+
+        val encontro = exigirEncontro(idEncontro)
+        if (encontro.estaAberto()) {
+            throw ChamadaInvalidaException(
+                "Este encontro ainda esta aberto: use a chamada normal em vez da correcao."
+            )
+        }
+        if (dto.correcoes.isEmpty()) {
+            throw ChamadaInvalidaException("Nenhuma correcao foi informada.")
+        }
+
+        val matriculados = matriculadosDe(encontro).associateBy { it.idCatequisando }
+        val existentes = presencaRepository.findByEncontro(encontro).associateBy {
+            it.catequisando?.idCatequisando
+        }
+        val agora = LocalDateTime.now().withNano(0)
+        // O autor fica marcado como correcao para o historico nao confundir
+        // com a marcacao original feita pelo catequista no dia.
+        val autor = "${quem ?: AUTOR_SISTEMA} (correcao)"
+
+        val paraGravar = dto.correcoes.map { correcao ->
+            val catequisando = matriculados[correcao.idCatequisando]
+                ?: throw ChamadaInvalidaException(
+                    "Catequisando ${correcao.idCatequisando} nao esta matriculado nesta turma."
+                )
+
+            val justificativa = correcao.justificativa?.trim()?.ifBlank { null }
+            if (correcao.situacao == SituacaoPresenca.JUSTIFICADA && justificativa == null) {
+                throw ChamadaInvalidaException(
+                    "Informe o motivo da falta justificada de ${catequisando.nome}."
+                )
+            }
+
+            val anterior = existentes[correcao.idCatequisando]
+            (anterior ?: novaPresenca(encontro, catequisando)).copy(
+                situacao = correcao.situacao,
+                justificativa = justificativa,
+                presente = correcao.situacao == SituacaoPresenca.PRESENTE,
+                marcadoPor = autor,
+                marcadoEm = agora
+            )
+        }
+
+        presencaRepository.saveAll(paraGravar)
+
+        log.warn(
+            "CORRECAO na chamada de {} da turma {} por '{}' ({} registro(s)). Motivo: {}",
+            encontro.data, encontro.turma?.nome, quem ?: "?", paraGravar.size, motivo
+        )
+        return chamada(idEncontro)
     }
 
     /** Reabertura para corrigir engano. So administrador. */

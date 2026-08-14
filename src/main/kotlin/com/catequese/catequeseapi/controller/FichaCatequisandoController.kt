@@ -15,8 +15,12 @@ import org.springframework.web.bind.annotation.RestController
  * inteira, com os anexos; esta devolve apenas o STATUS de entrega de cada
  * documento. Sao publicos diferentes com necessidades diferentes.
  *
- * Somente leitura. GET /api/** ja exige usuario logado na SecurityConfig; o
+ * Somente leitura. A regra de GET da SecurityConfig ja exige usuario logado; o
  * recorte por turma e por comunidade fica no FichaCatequisandoService.
+ *
+ * NAO escrever o padrao de rota com barra-asterisco aqui dentro: em Kotlin
+ * comentario de bloco aninha, entao ele abriria um comentario que nunca fecha
+ * e o arquivo para de compilar.
  */
 @RestController
 @RequestMapping("/api/ficha-catequisando")

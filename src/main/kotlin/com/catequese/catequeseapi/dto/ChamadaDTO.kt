@@ -1,0 +1,101 @@
+package com.catequese.catequeseapi.dto
+
+import com.catequese.catequeseapi.model.Encontro
+import com.catequese.catequeseapi.model.SituacaoEncontro
+import com.catequese.catequeseapi.model.SituacaoPresenca
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+/** Abertura da chamada do dia. Sem data, assume hoje. */
+data class AbrirEncontroDTO(
+    val idTurma: Long = 0,
+    val data: LocalDate? = null,
+    val tema: String? = null
+)
+
+/** Uma marcacao. `justificativa` e obrigatoria quando a situacao e JUSTIFICADA. */
+data class MarcarPresencaDTO(
+    val idCatequisando: Long = 0,
+    val situacao: SituacaoPresenca = SituacaoPresenca.FALTA,
+    val justificativa: String? = null
+)
+
+/** Envio da chamada inteira de uma vez, ao final do encontro. */
+data class MarcarLoteDTO(
+    val marcacoes: List<MarcarPresencaDTO> = emptyList()
+)
+
+/**
+ * Fechamento ou cancelamento.
+ * O motivo passa a ser obrigatorio quando ninguem foi marcado como presente:
+ * na pratica, um encontro sem nenhum presente e um encontro que nao aconteceu.
+ */
+data class FinalizarEncontroDTO(
+    val motivo: String? = null,
+    val tema: String? = null
+)
+
+data class EncontroDTO(
+    val idEncontro: Long,
+    val idTurma: Long?,
+    val nomeTurma: String?,
+    val data: LocalDate?,
+    val tema: String?,
+    val situacao: SituacaoEncontro,
+    val motivoCancelamento: String?,
+    val abertoPor: String?,
+    val abertoEm: LocalDateTime?,
+    val fechadoPor: String?,
+    val fechadoEm: LocalDateTime?,
+    val fechamentoAutomatico: Boolean,
+    val presentes: Int,
+    val faltas: Int,
+    val justificadas: Int,
+    val totalMatriculados: Int,
+    /** A tela usa isto para liberar ou nao os controles de marcacao. */
+    val editavel: Boolean
+) {
+    companion object {
+        fun de(
+            encontro: Encontro,
+            presentes: Int = 0,
+            faltas: Int = 0,
+            justificadas: Int = 0,
+            totalMatriculados: Int = 0,
+            editavel: Boolean = false
+        ) = EncontroDTO(
+            idEncontro = encontro.idEncontro,
+            idTurma = encontro.turma?.idTurma,
+            nomeTurma = encontro.turma?.nome,
+            data = encontro.data,
+            tema = encontro.tema,
+            situacao = encontro.situacao,
+            motivoCancelamento = encontro.motivoCancelamento,
+            abertoPor = encontro.abertoPor,
+            abertoEm = encontro.abertoEm,
+            fechadoPor = encontro.fechadoPor,
+            fechadoEm = encontro.fechadoEm,
+            fechamentoAutomatico = encontro.fechamentoAutomatico,
+            presentes = presentes,
+            faltas = faltas,
+            justificadas = justificadas,
+            totalMatriculados = totalMatriculados,
+            editavel = editavel
+        )
+    }
+}
+
+/** Uma linha da lista de chamada. */
+data class ItemChamadaDTO(
+    val idCatequisando: Long,
+    val nome: String,
+    val situacao: SituacaoPresenca?,
+    val justificativa: String?,
+    val marcadoPor: String?,
+    val marcadoEm: LocalDateTime?
+)
+
+data class ChamadaDTO(
+    val encontro: EncontroDTO,
+    val itens: List<ItemChamadaDTO>
+)

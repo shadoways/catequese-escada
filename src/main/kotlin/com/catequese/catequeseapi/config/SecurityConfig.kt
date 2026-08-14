@@ -119,6 +119,13 @@ class SecurityConfig(
                     "/api/auth/redefinir-senha"
                 ).permitAll()
 
+                // Chamada: marcar presenca e a unica escrita liberada ao
+                // catequista. Sem esta linha ele cairia na regra geral de
+                // escrita, que exige coordenador, e nao conseguiria fazer a
+                // chamada da propria turma. Quem o limita as turmas dele e o
+                // ChamadaService.
+                .requestMatchers("/api/chamada/**").authenticated()
+
                 // Trocar a propria senha vale para QUALQUER tipo logado.
                 // Sem esta linha o catequista cairia na regra de escrita mais
                 // abaixo e nao conseguiria trocar a propria senha.

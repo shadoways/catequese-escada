@@ -238,7 +238,8 @@ const freqLinhaHTML = (linha) => {
     <details class="freq-item" data-id="${linha.idCatequisando}">
       <summary class="freq-item-topo">
         <span class="freq-item-nome">
-          <strong>${freqEscape(linha.nome)}</strong>
+          <button type="button" class="nome-link" data-ficha="${linha.idCatequisando}"
+                  title="Abrir a ficha de ${freqEscape(linha.nome)}">${freqEscape(linha.nome)}</button>
           ${etapa}
         </span>
         <span class="freq-item-numeros">
@@ -269,6 +270,18 @@ const freqDesenharLista = () => {
     return;
   }
   alvo.innerHTML = linhas.map(freqLinhaHTML).join('');
+
+  alvo.querySelectorAll('[data-ficha]').forEach((botao) => {
+    botao.addEventListener('click', (evento) => {
+      // Sem isto o clique borbulha para o <summary> e abre/fecha o detalhe
+      // junto, o que faria a lista pular sob o dedo de quem so queria a ficha.
+      evento.preventDefault();
+      evento.stopPropagation();
+      if (window.abrirFichaCatequisando) {
+        window.abrirFichaCatequisando(Number(botao.dataset.ficha), botao.textContent.trim());
+      }
+    });
+  });
 };
 
 // ---- Impressao ------------------------------------------------------------

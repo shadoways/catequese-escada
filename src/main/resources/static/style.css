@@ -1632,3 +1632,120 @@ canvas {
     color: #444;
   }
 }
+
+/* =====================================================================
+   Ficha do catequisando na área do catequista (F7)
+   ===================================================================== */
+
+.fic-bloco {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper-2);
+  margin-bottom: 12px;
+}
+
+.fic-bloco > h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.fic-bloco .status { margin: 0; }
+
+.fic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px 18px;
+}
+
+.fic-campo {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fic-campo-rotulo {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Endereço e e-mail longos não podem esticar a coluna e estourar a página. */
+.fic-campo-valor { overflow-wrap: anywhere; }
+
+.fic-documentos {
+  display: grid;
+  gap: 6px;
+}
+
+.fic-documento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.fic-documento .status {
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.fic-etapa,
+.fic-percurso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.fic-etapa { display: grid; gap: 3px; }
+
+/* A etapa em andamento é a que responde "onde ele está agora". */
+.fic-etapa--atual {
+  border-left: 3px solid var(--accent-2);
+  background: rgba(47, 111, 126, 0.08);
+}
+
+.fic-etapa-nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.fic-etapa-nome .status,
+.fic-percurso .status {
+  padding: 3px 10px;
+  font-size: 0.8rem;
+}
+
+.fic-percurso { justify-content: space-between; }
+
+.fic-percurso-turma {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fic-percurso-freq {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .fic-percurso,
+  .fic-documento { align-items: flex-start; }
+}

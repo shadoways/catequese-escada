@@ -111,8 +111,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
       aba nova no index e `GET /api/chamada/minhas-turmas`.
 - [x] **F6 — Front: Frequência da turma + relatório** (`8eafbe4`): aba própria
       `frequencia.js` + relatório impresso fora das abas.
-- [ ] **F7 — Front: Ficha do catequisando** (dados, documentos entregues sem ver
-      arquivo, frequência, histórico, contato do responsável, etapa do catecúmeno).
+- [x] **F7 — Front: Ficha do catequisando** (`e97780b`): `ficha-catequisando.js`
+      + `GET /api/ficha-catequisando/{id}` (status de documento, sem arquivo).
 - [ ] **F8 — Admin**: classificar turmas, matrículas, transferência, reabrir
       encontro e corrigir presença.
 - [ ] **F9 — Encerramento de ano em lote** + conclusão dos 2 anos.
@@ -138,7 +138,9 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
 - **F4 entregue** (`575afa3`): cálculo de frequência. **Sem SQL novo.**
 - **F5 entregue** (`023814f`): front da chamada. **Sem SQL novo.**
 - **F6 entregue** (`8eafbe4`): front da frequência. **Sem SQL novo.**
-- Próximo: **F7 — front: Ficha do catequisando**.
+- **F7 entregue** (`e97780b`): ficha do catequisando. **Sem SQL novo.**
+- Próximo: **F8 — Admin**: classificar turmas, matrículas, transferência,
+  reabrir encontro, corrigir presença.
 - O filtro por comunidade (F2) é aplicado junto com os endpoints novos, e não
   retroativamente nos antigos.
 - Aguardando o usuário rodar as migrações e confirmar que o sistema sobe.
@@ -206,9 +208,10 @@ Estado em 14/08/2026, fim da sessão:
   distribution dão 403 no proxy). Os testes do `CalculoFrequenciaTest` são a
   única prova real das fronteiras (80% não reprova, 79% reprova, justificada
   fora do denominador).
-- **Próxima etapa: F7** — front: Ficha do catequisando (dados, documentos
-  entregues sem ver o arquivo, frequência, histórico, contato do responsável,
-  etapa do catecúmeno).
+- **Próxima etapa: F8** — Admin: classificar turmas por categoria, gerir
+  matrículas, transferência, reabrir encontro e corrigir presença fechada.
+  É a etapa que destrava as anteriores: sem categoria na turma a frequência
+  não é apurada, e sem matrícula não há chamada.
 
 ### Entrega de código: como fazer
 
@@ -294,3 +297,32 @@ que não é nem bom nem ruim.**
 Testes: `teste_chamada.mjs` (30) e `teste_frequencia.mjs` (35), ambos com
 controle negativo. Rodar com `node teste_*.mjs` a partir de
 `/home/claude/project`.
+
+## Notas de implementação (F7)
+
+- `GET /api/ficha-catequisando/{id}` é rota **separada** de `/api/fichas` por
+  privacidade, não por organização. `DocumentoStatusDTO` **não tem** campo de
+  caminho de arquivo — o descarte é no servidor. Mandar o caminho e esconder
+  na tela não esconderia nada de quem abrisse a resposta da API.
+- Acesso: catequista alcança quem passou por **alguma turma dele, em qualquer
+  ano** (senão o histórico ficaria inacessível para quem acompanha a pessoa);
+  coordenador, a própria comunidade; admin, tudo.
+- A ficha é a **terceira tela** da aba Frequência (`#freq-painel-ficha`).
+  Substitui filtros + resumo + lista; nunca aparece junto.
+- Ordem dos blocos é intencional: **Contato primeiro**, porque o motivo mais
+  comum de abrir a ficha é precisar avisar a família.
+- Rótulos acentuados ficam no FRONT. Os `.kt` são mantidos em ASCII de
+  propósito; o backend manda `rotulo` em ASCII e a tela usa o mapa local.
+- Corrigido no caminho: `findAll()` na tabela de fichas → `findByCatequisando`.
+
+### Achado sobre teste vazio (vale como método)
+
+A checagem "clicar no nome não alterna o `<details>`" **não falha** se o
+`stopPropagation` for removido: um `<button>` dentro de `<summary>` já não
+alterna, por ser conteúdo interativo. Descoberto por controle negativo e
+documentado no próprio teste. Ela continua valendo como guarda de MARCAÇÃO
+(se alguém trocar o `<button>` por `<span>`, aí sim quebra).
+**Lição: sem controle negativo, não dá para saber se a checagem testa algo.**
+
+Testes agora: `teste_chamada.mjs` (30), `teste_frequencia.mjs` (35),
+`teste_ficha.mjs` (33). Rodar de `/home/claude/project`.

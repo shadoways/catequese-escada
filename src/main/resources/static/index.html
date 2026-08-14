@@ -198,7 +198,7 @@
     -->
     <div class="chamada-layout tab-content" id="tab-frequencia" data-tab-content="frequencia" hidden>
 
-      <section class="panel">
+      <section class="panel" id="freq-painel-filtros">
         <div class="row">
           <h2>Frequência da turma</h2>
         </div>
@@ -233,6 +233,20 @@
         <div id="freq-cabecalho" class="freq-cabecalho"></div>
         <div id="freq-contadores" class="freq-contadores"></div>
         <div id="freq-alertas-turma"></div>
+      </section>
+
+      <!--
+        Ficha do catequisando. Terceira tela da aba: ela SUBSTITUI o resumo e a
+        lista, nunca aparece junto. Chega-se aqui clicando no nome.
+      -->
+      <section class="panel" id="freq-painel-ficha" hidden>
+        <div class="row">
+          <h2 id="ficha-nome">Ficha</h2>
+          <button type="button" class="secondary" id="ficha-voltar">
+            Voltar para a frequência da turma
+          </button>
+        </div>
+        <div id="ficha-conteudo"></div>
       </section>
 
       <section class="panel" id="freq-painel-lista" hidden>
@@ -639,6 +653,7 @@
   <script src="script.js"></script>
   <script src="chamada.js"></script>
   <script src="frequencia.js"></script>
+  <script src="ficha-catequisando.js"></script>
   <script src="usuarios.js"></script>
   <script src="configuracoes.js"></script>
 </body>

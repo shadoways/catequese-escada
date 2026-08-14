@@ -1,9 +1,11 @@
 package com.catequese.catequeseapi.controller
 
 import com.catequese.catequeseapi.dto.AbrirEncontroDTO
+import com.catequese.catequeseapi.dto.AbrirEventoDTO
 import com.catequese.catequeseapi.dto.ChamadaDTO
 import com.catequese.catequeseapi.dto.CorrecaoChamadaDTO
 import com.catequese.catequeseapi.dto.EncontroDTO
+import com.catequese.catequeseapi.dto.EventoChamadaDTO
 import com.catequese.catequeseapi.dto.FinalizarEncontroDTO
 import com.catequese.catequeseapi.dto.MarcarLoteDTO
 import com.catequese.catequeseapi.dto.TurmaChamadaDTO
@@ -36,6 +38,18 @@ class ChamadaController(private val chamadaService: ChamadaService) {
         @RequestParam(required = false) ano: Int?
     ): ResponseEntity<List<TurmaChamadaDTO>> =
         ResponseEntity.ok(chamadaService.minhasTurmas(ano))
+
+    /** Eventos do ano e o estado da chamada de cada turma do usuario. */
+    @GetMapping("/eventos")
+    fun eventos(
+        @RequestParam(required = false) ano: Int?
+    ): ResponseEntity<List<EventoChamadaDTO>> =
+        ResponseEntity.ok(chamadaService.eventosParaChamada(ano))
+
+    /** Abre a chamada de um evento para uma turma. */
+    @PostMapping("/evento/abrir")
+    fun abrirEvento(@RequestBody body: AbrirEventoDTO): ResponseEntity<EncontroDTO> =
+        ResponseEntity.status(HttpStatus.CREATED).body(chamadaService.abrirEvento(body, quem()))
 
     @GetMapping("/turma/{idTurma}/encontros")
     fun encontros(@PathVariable idTurma: Long): ResponseEntity<List<EncontroDTO>> =

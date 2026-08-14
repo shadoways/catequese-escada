@@ -80,8 +80,14 @@ class FrequenciaService(
         val alerta = configuracaoService.percentualAlerta()
         val categoria = turma.categoria
 
-        val doAno = encontroRepository.findByTurmaOrderByDataDesc(turma)
+        val todosDoAno = encontroRepository.findByTurmaOrderByDataDesc(turma)
             .filter { it.data?.year == ano }
+
+        // Retiro e missa NAO entram na conta dos 80%. Sao atividades extras:
+        // faltar num retiro nao pode reprovar quem cumpriu os encontros da
+        // catequese. A presenca fica registrada e consultavel, so nao pesa.
+        val doAno = todosDoAno.filter { it.idEvento == null }
+        val deEvento = todosDoAno.filter { it.idEvento != null }
         val fechados = doAno.filter { it.situacao == SituacaoEncontro.FECHADO }
 
         // Uma consulta so para as presencas do ano inteiro: com 40 encontros e
@@ -127,6 +133,11 @@ class FrequenciaService(
             alertasDaTurma += "Esta turma ainda nao foi classificada por categoria, " +
                 "entao a frequencia nao esta sendo cobrada. Peca ao coordenador paroquial " +
                 "para definir a categoria da turma."
+        }
+        val eventosEncerrados = deEvento.count { it.situacao == SituacaoEncontro.FECHADO }
+        if (eventosEncerrados > 0) {
+            alertasDaTurma += "Esta turma tem $eventosEncerrados chamada(s) de evento " +
+                "(retiro, missa) que NAO entram no calculo dos ${CalculoFrequencia.MINIMO_PADRAO}%."
         }
         if (doAno.any { it.situacao == SituacaoEncontro.ABERTO }) {
             alertasDaTurma += "Ha encontro em aberto nesta turma. Ele so entra na conta " +
@@ -190,6 +201,8 @@ class FrequenciaService(
                 val turma = matricula.turma ?: return@mapNotNull null
                 val fechados = encontroRepository.findByTurmaOrderByDataDesc(turma)
                     .filter { it.data?.year == matricula.ano }
+                    // Mesma regra do daTurma: evento nao entra na conta.
+                    .filter { it.idEvento == null }
                     .filter { it.situacao == SituacaoEncontro.FECHADO }
                 val presencas: List<Presenca> = if (fechados.isEmpty()) {
                     emptyList()

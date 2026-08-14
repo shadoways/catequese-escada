@@ -80,6 +80,7 @@ const chamErro = async (resposta, padrao) => {
 
 const chamMostrarTurmas = () => {
   document.getElementById('cham-tela-turmas').hidden = false;
+  document.getElementById('cham-tela-eventos').hidden = false;
   document.getElementById('cham-tela-encontro').hidden = true;
   chamTurmaAtual = null;
   chamEncontroAtual = null;
@@ -163,6 +164,7 @@ const chamAbrirTurma = async (idTurma) => {
   if (!chamTurmaAtual) return;
 
   document.getElementById('cham-tela-turmas').hidden = true;
+  document.getElementById('cham-tela-eventos').hidden = true;
   document.getElementById('cham-tela-encontro').hidden = false;
   document.getElementById('cham-encontro-titulo').textContent =
     `Chamada — ${chamTurmaAtual.nome}`;
@@ -461,6 +463,7 @@ const chamEncerrar = async () => {
       'ok'
     );
     await chamCarregarTurmas();
+    await chamCarregarEventos();
   } catch (err) {
     chamStatus(`Falha de conexão ao encerrar: ${err.message}`, 'error');
   }
@@ -525,6 +528,135 @@ const chamAbrirEncontro = async () => {
   }
 };
 
+// ---- Eventos (retiro, missa) ----------------------------------------------
+
+/*
+ * A presenca no evento e gravada como um Encontro comum, ligado ao evento
+ * pelo id. Isso deixa marcar, encerrar e auditar funcionando igual, sem
+ * codigo duplicado -- a tela de chamada abaixo e literalmente a mesma.
+ *
+ * A diferenca esta no calculo: o backend ignora encontros de evento nos 80%.
+ * Foi decisao de projeto e nao de implementacao: retiro e atividade extra, e
+ * faltar nele nao pode reprovar quem cumpriu os encontros da catequese.
+ */
+
+let chamEventos = [];
+
+const chamCarregarEventos = async () => {
+  const alvo = document.getElementById('cham-eventos-lista');
+  if (!alvo) return;
+  alvo.innerHTML = '<p class="muted">Carregando eventos...</p>';
+
+  try {
+    const resposta = await fetch('/api/chamada/eventos');
+    if (!resposta.ok) {
+      alvo.innerHTML = `<div class="status error">${chamEscape(await chamErro(resposta, 'Não foi possível carregar os eventos.'))}</div>`;
+      return;
+    }
+    chamEventos = await resposta.json();
+    if (!chamEventos.length) {
+      alvo.innerHTML =
+        '<div class="status neutro">Nenhum evento cadastrado para este ano.</div>';
+      return;
+    }
+
+    alvo.innerHTML = chamEventos.map(chamCartaoEvento).join('');
+    alvo.querySelectorAll('[data-abrir-evento]').forEach((b) => {
+      b.addEventListener('click', () => {
+        chamAbrirChamadaDeEvento(Number(b.dataset.abrirEvento), Number(b.dataset.turma));
+      });
+    });
+  } catch (err) {
+    alvo.innerHTML = `<div class="status error">Falha de conexão: ${chamEscape(err.message)}</div>`;
+  }
+};
+
+const chamPeriodoEvento = (evento) => {
+  const inicio = chamDataBR(evento.dataInicio);
+  const fim = chamDataBR(evento.dataFim);
+  if (inicio && fim && inicio !== fim) return `${inicio} a ${fim}`;
+  return inicio || fim || 'sem data definida';
+};
+
+const chamCartaoEvento = (evento) => {
+  const turmas = (evento.turmas || []).map((t) => {
+    if (!t.idEncontro) {
+      return `
+        <div class="evento-turma">
+          <span>${chamEscape(t.nomeTurma)}</span>
+          <span class="muted">${t.matriculados} matriculado(s)</span>
+          <button type="button" class="secondary"
+                  data-abrir-evento="${evento.idEvento}" data-turma="${t.idTurma}">
+            Abrir chamada
+          </button>
+        </div>
+      `;
+    }
+    const encerrada = !t.editavel;
+    return `
+      <div class="evento-turma">
+        <span>${chamEscape(t.nomeTurma)}</span>
+        <span class="status ${encerrada ? 'ok' : 'warning'}">
+          ${encerrada ? `${t.presentes} presente(s)` : 'chamada em aberto'}
+        </span>
+        <button type="button" class="secondary"
+                data-abrir-evento="${evento.idEvento}" data-turma="${t.idTurma}">
+          ${encerrada ? 'Ver' : 'Continuar'}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="evento-card" data-evento="${evento.idEvento}">
+      <div class="evento-topo">
+        <strong>${chamEscape(evento.titulo)}</strong>
+        <span class="muted">${chamEscape(chamPeriodoEvento(evento))}</span>
+        ${evento.local ? `<span class="muted">${chamEscape(evento.local)}</span>` : ''}
+      </div>
+      ${evento.publicoAlvo ? `<span class="muted">Público: ${chamEscape(evento.publicoAlvo)}</span>` : ''}
+      <div class="evento-turmas">${turmas}</div>
+    </div>
+  `;
+};
+
+const chamAbrirChamadaDeEvento = async (idEvento, idTurma) => {
+  const evento = chamEventos.find((e) => e.idEvento === idEvento);
+  const turmaDoEvento = evento && (evento.turmas || []).find((t) => t.idTurma === idTurma);
+  chamTurmaAtual = chamTurmas.find((t) => t.idTurma === idTurma) || null;
+  if (!evento || !turmaDoEvento) return;
+
+  document.getElementById('cham-tela-turmas').hidden = true;
+  document.getElementById('cham-tela-eventos').hidden = true;
+  document.getElementById('cham-tela-encontro').hidden = false;
+  document.getElementById('cham-encontro-titulo').textContent =
+    `${evento.titulo} — ${turmaDoEvento.nomeTurma}`;
+
+  // Chamada ja aberta: vai direto para a lista.
+  if (turmaDoEvento.idEncontro) {
+    await chamCarregarChamada(turmaDoEvento.idEncontro);
+    return;
+  }
+
+  chamStatus('Abrindo a chamada do evento...', '');
+  try {
+    const resposta = await fetch('/api/chamada/evento/abrir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEvento, idTurma })
+    });
+    if (!resposta.ok) {
+      chamStatus(await chamErro(resposta, 'Não foi possível abrir a chamada do evento.'), 'error');
+      return;
+    }
+    const encontro = await resposta.json();
+    await chamCarregarChamada(encontro.idEncontro);
+    await chamCarregarEventos();
+  } catch (err) {
+    chamStatus(`Falha de conexão: ${err.message}`, 'error');
+  }
+};
+
 // ---- Ligações da tela ----------------------------------------------------
 
 document.getElementById('cham-voltar')?.addEventListener('click', chamMostrarTurmas);
@@ -549,4 +681,5 @@ document.getElementById('cham-todos-presentes')?.addEventListener('click', () =>
 window.carregarChamada = () => {
   chamMostrarTurmas();
   chamCarregarTurmas();
+  chamCarregarEventos();
 };

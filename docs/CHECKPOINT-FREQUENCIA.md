@@ -117,7 +117,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
       classificação, matrículas, transferência e correção de chamada.
 - [x] **F9 — Encerramento de ano em lote** (`1247b6d`): prévia + aplicação
       seletiva, regra dos 2 anos, promoção de etapa do catecumenato.
-- [ ] **F10 — Presença em eventos** (aproveitando `Evento`).
+- [x] **F10 — Presença em eventos** (`6c88c5c`): retiro e missa como Encontro
+      ligado ao Evento, **fora** do cálculo dos 80%.
 
 ## Permissões da área nova
 
@@ -141,8 +142,9 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
 - **F6 entregue** (`8eafbe4`): front da frequência. **Sem SQL novo.**
 - **F7 entregue** (`e97780b`): ficha do catequisando. **Sem SQL novo.**
 - **F8 entregue** (`6b90ef1` + `8c99eff`): área do admin. **Sem SQL novo.**
-- **F9 entregue** (`1247b6d`): encerramento de ano. **Sem SQL novo.**
-- Próximo: **F10 — presença em eventos** (aproveitando `Evento`). Última etapa.
+- **F10 entregue** (`6c88c5c`): presença em eventos. **Sem SQL novo.**
+- **PLANO DE 10 ETAPAS CONCLUÍDO.** Próximo passo é do usuário: `./gradlew build`
+  e `./gradlew test`. Nada foi compilado neste ambiente.
 - O filtro por comunidade (F2) é aplicado junto com os endpoints novos, e não
   retroativamente nos antigos.
 - Aguardando o usuário rodar as migrações e confirmar que o sistema sobe.
@@ -210,8 +212,9 @@ Estado em 14/08/2026, fim da sessão:
   distribution dão 403 no proxy). Os testes do `CalculoFrequenciaTest` são a
   única prova real das fronteiras (80% não reprova, 79% reprova, justificada
   fora do denominador).
-- **Próxima etapa: F10** — presença em eventos (retiros, missas), aproveitando
-  a entidade `Evento` que já existe e não é usada por nada. É a última do plano.
+- **NÃO HÁ PRÓXIMA ETAPA DO PLANO.** As dez foram entregues. O que falta é
+  fora do meu alcance: compilar (`./gradlew build`), rodar os testes
+  (`./gradlew test`) e testar em produção paralela.
 
 ### Entrega de código: como fazer
 
@@ -391,3 +394,41 @@ compilação entregue na F7.
 
 Também: numa cadeia `cp X Y && python3 ...`, se o `cp` falha o python nem
 roda — e o "(nao acusou)" do controle negativo vira falso negativo.
+
+## Notas de implementação (F10)
+
+- Aproveita `Evento` (que existia sem uso) e `tb_encontro.id_evento` (criada
+  na F1). **Sem SQL novo.**
+- A presença no evento é um `Encontro` comum com `idEvento` preenchido: marcar,
+  encerrar, cancelar e auditar funcionam sem uma linha duplicada, e a tela de
+  chamada é literalmente a mesma.
+
+### DECISÃO DE PROJETO que o usuário não especificou
+
+**Evento NÃO entra no cálculo dos 80%.** Retiro e missa são atividades extras;
+faltar num retiro não pode reprovar quem cumpriu os encontros. Implementado
+como `filter { it.idEvento == null }` em `FrequenciaService.daTurma` e em
+`historicoInterno`, com aviso na tela quando existem eventos fora da conta.
+
+Se a paróquia quiser que um retiro **conte**, isso vira uma decisão por evento
+e precisa de coluna nova (ex.: `tb_evento.conta_frequencia`). Não implementado
+— confirmar com o usuário antes.
+
+- "Um encontro aberto por vez" passou a ignorar eventos: um retiro em aberto
+  não pode travar a aula da semana seguinte.
+
+Testes: `teste_chamada` (30), `teste_frequencia` (35), `teste_ficha` (33),
+`teste_admin` (38), `teste_encerramento` (35), `teste_eventos` (25).
+**Total 196.** Rodar de `/home/claude/project` com caminho absoluto.
+
+## O QUE NUNCA FOI VERIFICADO (ler antes de dizer que está pronto)
+
+- **Nada foi compilado.** Gradle e Maven Central dão 403 no proxy deste
+  ambiente. Todo o Kotlin foi conferido por leitura + dois verificadores que
+  pegam apenas DUAS classes de erro (comentário aninhado e smart cast).
+- **Nenhum teste JUnit foi executado.** O `CalculoFrequenciaTest` (25 casos)
+  nunca rodou; foi conferido por simulação em Python.
+- **Nenhuma query rodou contra banco real.** `ddl-auto=validate` pode recusar
+  a subida se alguma coluna divergir.
+- Os testes Playwright validam o FRONT com a API mockada. Eles não provam que
+  o backend responde aquilo — provam que a tela reage corretamente ao contrato.

@@ -107,6 +107,42 @@ data class EncontroDTO(
     }
 }
 
+/**
+ * Um evento (retiro, missa, encontrao) na tela do catequista.
+ *
+ * A presenca no evento e gravada como um Encontro comum, ligado ao evento
+ * pelo id -- assim toda a maquinaria de chamada (marcar, encerrar, auditoria)
+ * vale sem duplicacao. O que muda e que ele NAO entra na conta dos 80%.
+ */
+data class EventoChamadaDTO(
+    val idEvento: Long,
+    val titulo: String,
+    val local: String?,
+    val publicoAlvo: String?,
+    val dataInicio: LocalDate?,
+    val dataFim: LocalDate?,
+    val turmas: List<TurmaEventoDTO> = emptyList()
+)
+
+/** Situacao de uma turma naquele evento. */
+data class TurmaEventoDTO(
+    val idTurma: Long,
+    val nomeTurma: String,
+    val matriculados: Int,
+    /** Nulo quando a chamada do evento ainda nao foi aberta para esta turma. */
+    val idEncontro: Long? = null,
+    val situacao: SituacaoEncontro? = null,
+    val presentes: Int = 0,
+    val editavel: Boolean = false
+)
+
+/** Abertura da chamada de um evento para uma turma. */
+data class AbrirEventoDTO(
+    val idEvento: Long = 0,
+    val idTurma: Long = 0,
+    val data: LocalDate? = null
+)
+
 /** Uma linha da lista de chamada. */
 data class ItemChamadaDTO(
     val idCatequisando: Long,

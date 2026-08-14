@@ -1,13 +1,16 @@
 package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.AbrirEncontroDTO
+import com.catequese.catequeseapi.dto.AbrirEventoDTO
 import com.catequese.catequeseapi.dto.ChamadaDTO
 import com.catequese.catequeseapi.dto.CorrecaoChamadaDTO
 import com.catequese.catequeseapi.dto.EncontroDTO
+import com.catequese.catequeseapi.dto.EventoChamadaDTO
 import com.catequese.catequeseapi.dto.FinalizarEncontroDTO
 import com.catequese.catequeseapi.dto.ItemChamadaDTO
 import com.catequese.catequeseapi.dto.MarcarLoteDTO
 import com.catequese.catequeseapi.dto.TurmaChamadaDTO
+import com.catequese.catequeseapi.dto.TurmaEventoDTO
 import com.catequese.catequeseapi.exception.ResourceNotFoundException
 import com.catequese.catequeseapi.model.Catequisando
 import com.catequese.catequeseapi.model.Encontro
@@ -17,6 +20,7 @@ import com.catequese.catequeseapi.model.SituacaoMatricula
 import com.catequese.catequeseapi.model.SituacaoPresenca
 import com.catequese.catequeseapi.model.Turma
 import com.catequese.catequeseapi.repository.EncontroRepository
+import com.catequese.catequeseapi.repository.EventoRepository
 import com.catequese.catequeseapi.repository.MatriculaRepository
 import com.catequese.catequeseapi.repository.PresencaRepository
 import com.catequese.catequeseapi.repository.TurmaRepository
@@ -45,6 +49,7 @@ class ChamadaService(
     private val presencaRepository: PresencaRepository,
     private val matriculaRepository: MatriculaRepository,
     private val turmaRepository: TurmaRepository,
+    private val eventoRepository: EventoRepository,
     private val escopo: EscopoAcessoService
 ) {
     private val log = LoggerFactory.getLogger(ChamadaService::class.java)
@@ -107,6 +112,118 @@ class ChamadaService(
             .sortedBy { it.nome.lowercase() }
     }
 
+    /**
+     * Eventos (retiro, missa) e o estado da chamada de cada turma do usuario.
+     *
+     * A presenca no evento e gravada como um Encontro comum, ligado ao evento
+     * pelo id: assim marcar, encerrar e auditar funciona igual, sem codigo
+     * duplicado. A diferenca esta no calculo -- o FrequenciaService ignora
+     * encontros de evento, para um retiro nao mexer nos 80% de ninguem.
+     */
+    fun eventosParaChamada(anoPedido: Int?): List<EventoChamadaDTO> {
+        val ano = anoPedido ?: LocalDate.now().year
+        val minhas = minhasTurmas(ano)
+        if (minhas.isEmpty()) return emptyList()
+
+        val idsDasMinhas = HashSet<Long>()
+        minhas.forEach { idsDasMinhas.add(it.idTurma) }
+
+        return eventoRepository.findAll()
+            .filter { evento ->
+                val inicio = evento.dataInicio
+                val fim = evento.dataFim
+                // Evento sem data nenhuma continua aparecendo: e melhor
+                // mostrar do que esconder algo que o catequista procura.
+                (inicio == null && fim == null) ||
+                    inicio?.year == ano || fim?.year == ano
+            }
+            .sortedByDescending { it.dataInicio ?: LocalDate.of(ano, 1, 1) }
+            .map { evento ->
+                val turmas = minhas.map { turma ->
+                    val encontro = encontroRepository.findByTurmaOrderByDataDesc(
+                        turmaRepository.findById(turma.idTurma).orElseThrow {
+                            ResourceNotFoundException("Turma nao encontrada")
+                        }
+                    ).firstOrNull { it.idEvento == evento.idEvento }
+
+                    val presentes = if (encontro == null) {
+                        0
+                    } else {
+                        presencaRepository.findByEncontro(encontro)
+                            .count { it.situacao == SituacaoPresenca.PRESENTE }
+                    }
+
+                    TurmaEventoDTO(
+                        idTurma = turma.idTurma,
+                        nomeTurma = turma.nome,
+                        matriculados = turma.matriculados,
+                        idEncontro = encontro?.idEncontro,
+                        situacao = encontro?.situacao,
+                        presentes = presentes,
+                        editavel = encontro?.estaAberto() == true
+                    )
+                }
+
+                EventoChamadaDTO(
+                    idEvento = evento.idEvento,
+                    titulo = evento.titulo,
+                    local = evento.local,
+                    publicoAlvo = evento.publicoAlvo,
+                    dataInicio = evento.dataInicio,
+                    dataFim = evento.dataFim,
+                    turmas = turmas
+                )
+            }
+    }
+
+    /**
+     * Abre a chamada de um evento para uma turma.
+     *
+     * Diferente do encontro comum, aqui NAO vale a regra "um aberto por vez":
+     * o retiro acontece no mesmo periodo das aulas normais, e travar um pelo
+     * outro impediria registrar exatamente o que se quer registrar.
+     */
+    @Transactional
+    fun abrirEvento(dto: AbrirEventoDTO, quem: String?): EncontroDTO {
+        val turma = exigirTurma(dto.idTurma)
+        val evento = eventoRepository.findById(dto.idEvento)
+            .orElseThrow { ResourceNotFoundException("Evento nao encontrado") }
+
+        val data = dto.data ?: evento.dataInicio ?: LocalDate.now()
+        if (data.isAfter(LocalDate.now())) {
+            throw ChamadaInvalidaException(
+                "O evento ainda nao aconteceu: nao da para abrir a chamada de uma data futura."
+            )
+        }
+
+        // Ja existe chamada deste evento para esta turma? Continua aquela.
+        encontroRepository.findByTurmaOrderByDataDesc(turma)
+            .firstOrNull { it.idEvento == evento.idEvento }
+            ?.let { existente ->
+                if (existente.estaAberto()) return resumo(existente)
+                throw ChamadaInvalidaException(
+                    "A chamada de ${evento.titulo} nesta turma ja foi encerrada."
+                )
+            }
+
+        val encontro = encontroRepository.save(
+            Encontro(
+                turma = turma,
+                data = data,
+                tema = evento.titulo,
+                situacao = SituacaoEncontro.ABERTO,
+                idEvento = evento.idEvento,
+                abertoPor = quem,
+                abertoEm = LocalDateTime.now().withNano(0)
+            )
+        )
+        log.info(
+            "Chamada do evento '{}' aberta na turma {} por '{}'",
+            evento.titulo, turma.nome, quem ?: "?"
+        )
+        return resumo(encontro)
+    }
+
     fun encontrosDaTurma(idTurma: Long): List<EncontroDTO> {
         val turma = exigirTurma(idTurma)
         return encontroRepository.findByTurmaOrderByDataDesc(turma).map { resumo(it) }
@@ -154,7 +271,10 @@ class ChamadaService(
         }
 
         // Um aberto por vez: senao sobram listas antigas em aberto.
-        encontroRepository.findFirstByTurmaAndSituacao(turma, SituacaoEncontro.ABERTO)
+        // Chamada de evento nao conta aqui: um retiro em aberto nao pode
+        // impedir a aula da semana seguinte.
+        encontroRepository.findByTurmaOrderByDataDesc(turma)
+            .firstOrNull { it.estaAberto() && it.idEvento == null }
             ?.let { aberto ->
                 throw ChamadaInvalidaException(
                     "Ha um encontro de ${aberto.data} ainda aberto nesta turma. " +

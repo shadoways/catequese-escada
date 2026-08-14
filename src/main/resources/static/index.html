@@ -149,6 +149,23 @@
         <div id="cham-turmas-lista" class="turmas-chamada"></div>
       </section>
 
+      <!--
+        Eventos (retiro, missa). Ficam num painel separado abaixo das turmas
+        porque sao excecao, nao rotina: quem abre o sistema numa quarta-feira
+        quer a chamada da aula, nao o retiro de junho.
+      -->
+      <section class="panel" id="cham-tela-eventos">
+        <div class="row">
+          <h2>Eventos</h2>
+        </div>
+        <p class="muted">
+          Retiros e missas ficam registrados à parte: a presença é guardada e
+          pode ser consultada, mas <strong>não entra no cálculo dos 80%</strong>.
+          Faltar num retiro não reprova quem cumpriu os encontros.
+        </p>
+        <div id="cham-eventos-lista" class="eventos-chamada"></div>
+      </section>
+
       <section class="panel" id="cham-tela-encontro" hidden>
         <div class="row">
           <h2 id="cham-encontro-titulo">Chamada</h2>

@@ -31,5 +31,15 @@ data class Configuracao(
 ) {
     companion object {
         const val CADASTRO_ABERTO = "cadastro.aberto"
+
+        /**
+         * A partir de que percentual o sistema comeca a avisar que a frequencia
+         * esta perto do limite. Fica configuravel porque e aviso preventivo, e
+         * cada paroquia pode querer ser mais ou menos cedo.
+         *
+         * O MINIMO de 80% nao e configuravel: e regra da catequese, nao ajuste.
+         */
+        const val FREQUENCIA_AVISO = "frequencia.aviso.percentual"
+        const val FREQUENCIA_AVISO_PADRAO = 85
     }
 }

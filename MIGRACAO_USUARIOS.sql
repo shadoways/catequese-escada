@@ -253,6 +253,77 @@ CREATE TABLE IF NOT EXISTS tb_configuracao (
     atualizado_por VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Matricula: vinculo do catequisando com uma turma, num ano.
+-- E o que da historico ao sistema. Sem ela, ao passar de Crisma I para
+-- Crisma II o ano anterior se perderia.
+CREATE TABLE IF NOT EXISTS tb_matricula (
+    id_matricula BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_catequisando BIGINT NOT NULL,
+    id_turma BIGINT NOT NULL,
+    ano INT NOT NULL,
+    -- Marco zero da frequencia: quem entrou em abril nao e cobrado por marco.
+    data_matricula DATE NULL,
+    -- CURSANDO | CONCLUIDO | NAO_CONCLUIDO | TRANSFERIDO | DESISTENTE
+    situacao VARCHAR(30) NOT NULL DEFAULT 'CURSANDO',
+    observacao VARCHAR(500) NULL,
+    criado_em DATETIME NULL,
+    atualizado_em DATETIME NULL,
+    atualizado_por VARCHAR(255) NULL,
+    INDEX idx_matricula_catequisando (id_catequisando),
+    INDEX idx_matricula_turma_ano (id_turma, ano)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Encontro: a "aula" onde a chamada e feita.
+CREATE TABLE IF NOT EXISTS tb_encontro (
+    id_encontro BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_turma BIGINT NOT NULL,
+    data DATE NOT NULL,
+    -- Assunto do dia: vira o diario da turma.
+    tema VARCHAR(255) NULL,
+    -- ABERTO | FECHADO | CANCELADO
+    situacao VARCHAR(20) NOT NULL DEFAULT 'ABERTO',
+    -- Obrigatorio quando cancelado, inclusive ao fechar sem nenhuma presenca.
+    motivo_cancelamento VARCHAR(500) NULL,
+    -- Retiro, missa: presenca fora do encontro comum.
+    id_evento BIGINT NULL,
+    aberto_por VARCHAR(255) NULL,
+    aberto_em DATETIME NULL,
+    fechado_por VARCHAR(255) NULL,
+    fechado_em DATETIME NULL,
+    -- True quando quem fechou foi o sistema, e nao uma pessoa.
+    fechamento_automatico BOOLEAN NOT NULL DEFAULT FALSE,
+    INDEX idx_encontro_turma_data (id_turma, data),
+    INDEX idx_encontro_situacao (situacao)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Historico de etapas do catecumenato, por pessoa.
+-- E historico, e nao um campo unico, porque cada etapa tem apuracao propria de
+-- frequencia e duracao variavel. A etapa em andamento e a de data_fim nula.
+CREATE TABLE IF NOT EXISTS tb_etapa_catecumeno (
+    id_etapa BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_catequisando BIGINT NOT NULL,
+    -- PRE_CATECUMENATO | CATECUMENATO | PURIFICACAO_ILUMINACAO | MISTAGOGIA
+    etapa VARCHAR(40) NOT NULL,
+    data_inicio DATE NULL,
+    data_fim DATE NULL,
+    observacao VARCHAR(500) NULL,
+    registrado_por VARCHAR(255) NULL,
+    registrado_em DATETIME NULL,
+    INDEX idx_etapa_catequisando (id_catequisando)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Equipe de catequistas da turma. A coluna id_catequista de tb_turma continua
+-- valendo como responsavel principal; esta tabela acrescenta os demais.
+CREATE TABLE IF NOT EXISTS tb_turma_catequista (
+    id_turma_catequista BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_turma BIGINT NOT NULL,
+    id_catequista BIGINT NOT NULL,
+    principal BOOLEAN NOT NULL DEFAULT FALSE,
+    criado_em DATETIME NULL,
+    INDEX idx_turma_catequista_turma (id_turma),
+    INDEX idx_turma_catequista_catequista (id_catequista)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- =====================================================
 -- PASSO 3: colunas
 -- Cobre tanto tabela recem-criada quanto tabela antiga, incompleta ou criada
@@ -288,6 +359,24 @@ CALL cria_coluna_se_faltar('tb_token_recuperacao', 'expira_em',      'DATETIME N
 CALL cria_coluna_se_faltar('tb_token_recuperacao', 'usado_em',       'DATETIME NULL');
 CALL cria_coluna_se_faltar('tb_token_recuperacao', 'criado_em',      'DATETIME NULL');
 CALL cria_coluna_se_faltar('tb_token_recuperacao', 'ip_solicitante', 'VARCHAR(45) NULL');
+
+-- Comunidade do usuario: o coordenador so enxerga a propria.
+CALL cria_coluna_se_faltar('tb_usuario', 'id_comunidade', 'BIGINT NULL');
+
+-- Categoria e etapa da turma decidem a regra de frequencia.
+-- PRE_CATEQUESE | EUCARISTIA | CRISMA | ADULTOS | CATECUMENATO | PERSEVERANCA
+CALL cria_coluna_se_faltar('tb_turma', 'categoria', 'VARCHAR(40) NULL');
+-- 1 = primeiro ano (Crisma I), 2 = segundo ano (Crisma II).
+CALL cria_coluna_se_faltar('tb_turma', 'etapa',     'INT NULL');
+
+-- Presenca ganha encontro, situacao e autoria. As colunas data e presente
+-- continuam por causa dos registros anteriores ao conceito de encontro.
+CALL cria_coluna_se_faltar('tb_presenca', 'id_encontro',    'BIGINT NULL');
+-- PRESENTE | FALTA | JUSTIFICADA
+CALL cria_coluna_se_faltar('tb_presenca', 'situacao',       'VARCHAR(20) NULL');
+CALL cria_coluna_se_faltar('tb_presenca', 'justificativa',  'VARCHAR(500) NULL');
+CALL cria_coluna_se_faltar('tb_presenca', 'marcado_por',    'VARCHAR(255) NULL');
+CALL cria_coluna_se_faltar('tb_presenca', 'marcado_em',     'DATETIME NULL');
 
 CALL cria_coluna_se_faltar('tb_chave_inscricao', 'codigo',      'VARCHAR(40) NULL');
 CALL cria_coluna_se_faltar('tb_chave_inscricao', 'descricao',   'VARCHAR(255) NULL');
@@ -346,6 +435,10 @@ CALL cria_indice_se_faltar('tb_usuario', 'idx_usuario_email', 'email');
 
 CALL cria_indice_unico_se_possivel('tb_chave_inscricao', 'uk_chave_codigo', 'codigo');
 
+CALL cria_indice_se_faltar('tb_matricula', 'idx_matricula_catequisando', 'id_catequisando');
+CALL cria_indice_se_faltar('tb_encontro',  'idx_encontro_turma_data',    'id_turma, data');
+CALL cria_indice_se_faltar('tb_presenca',  'idx_presenca_encontro',      'id_encontro');
+
 CALL cria_indice_se_faltar('tb_token_recuperacao', 'idx_token_hash',    'token_hash');
 CALL cria_indice_se_faltar('tb_token_recuperacao', 'idx_token_usuario', 'id_usuario');
 
@@ -396,6 +489,49 @@ SELECT esperada.tabela, esperada.coluna AS coluna_faltando
   UNION ALL SELECT 'tb_token_recuperacao', 'usado_em'
   UNION ALL SELECT 'tb_token_recuperacao', 'criado_em'
   UNION ALL SELECT 'tb_token_recuperacao', 'ip_solicitante'
+  UNION ALL SELECT 'tb_turma', 'categoria'
+  UNION ALL SELECT 'tb_turma', 'etapa'
+  UNION ALL SELECT 'tb_usuario', 'id_comunidade'
+  UNION ALL SELECT 'tb_presenca', 'id_encontro'
+  UNION ALL SELECT 'tb_presenca', 'situacao'
+  UNION ALL SELECT 'tb_presenca', 'justificativa'
+  UNION ALL SELECT 'tb_presenca', 'marcado_por'
+  UNION ALL SELECT 'tb_presenca', 'marcado_em'
+  UNION ALL SELECT 'tb_matricula', 'id_matricula'
+  UNION ALL SELECT 'tb_matricula', 'id_catequisando'
+  UNION ALL SELECT 'tb_matricula', 'id_turma'
+  UNION ALL SELECT 'tb_matricula', 'ano'
+  UNION ALL SELECT 'tb_matricula', 'data_matricula'
+  UNION ALL SELECT 'tb_matricula', 'situacao'
+  UNION ALL SELECT 'tb_matricula', 'observacao'
+  UNION ALL SELECT 'tb_matricula', 'criado_em'
+  UNION ALL SELECT 'tb_matricula', 'atualizado_em'
+  UNION ALL SELECT 'tb_matricula', 'atualizado_por'
+  UNION ALL SELECT 'tb_encontro', 'id_encontro'
+  UNION ALL SELECT 'tb_encontro', 'id_turma'
+  UNION ALL SELECT 'tb_encontro', 'data'
+  UNION ALL SELECT 'tb_encontro', 'tema'
+  UNION ALL SELECT 'tb_encontro', 'situacao'
+  UNION ALL SELECT 'tb_encontro', 'motivo_cancelamento'
+  UNION ALL SELECT 'tb_encontro', 'id_evento'
+  UNION ALL SELECT 'tb_encontro', 'aberto_por'
+  UNION ALL SELECT 'tb_encontro', 'aberto_em'
+  UNION ALL SELECT 'tb_encontro', 'fechado_por'
+  UNION ALL SELECT 'tb_encontro', 'fechado_em'
+  UNION ALL SELECT 'tb_encontro', 'fechamento_automatico'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'id_etapa'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'id_catequisando'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'etapa'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'data_inicio'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'data_fim'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'observacao'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'registrado_por'
+  UNION ALL SELECT 'tb_etapa_catecumeno', 'registrado_em'
+  UNION ALL SELECT 'tb_turma_catequista', 'id_turma_catequista'
+  UNION ALL SELECT 'tb_turma_catequista', 'id_turma'
+  UNION ALL SELECT 'tb_turma_catequista', 'id_catequista'
+  UNION ALL SELECT 'tb_turma_catequista', 'principal'
+  UNION ALL SELECT 'tb_turma_catequista', 'criado_em'
   UNION ALL SELECT 'tb_chave_inscricao', 'id_chave'
   UNION ALL SELECT 'tb_chave_inscricao', 'codigo'
   UNION ALL SELECT 'tb_chave_inscricao', 'descricao'

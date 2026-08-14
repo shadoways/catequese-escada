@@ -2,6 +2,8 @@ package com.catequese.catequeseapi.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -20,6 +22,16 @@ data class Turma(
     val descricao: String?,
     val ano: Int?,
     val nivel: String?,
+
+    /**
+     * Decide a regra de frequencia. Enquanto estiver nulo, a turma nao e
+     * avaliada -- o administrador classifica as turmas antigas uma vez.
+     */
+    @Enumerated(EnumType.STRING)
+    val categoria: CategoriaTurma? = null,
+
+    /** 1 = primeiro ano (Crisma I), 2 = segundo ano (Crisma II). */
+    val etapa: Int? = null,
 
     @ManyToOne
     @JoinColumn(name = "id_catequista")

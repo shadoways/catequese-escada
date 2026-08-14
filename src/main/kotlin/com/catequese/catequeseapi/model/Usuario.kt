@@ -76,6 +76,14 @@ data class Usuario(
     @Column(name = "id_coordenador")
     val idCoordenador: Long? = null,
 
+    /**
+     * Comunidade do usuario. O coordenador so enxerga os dados da propria
+     * comunidade; o coordenador paroquial ve todas, e por isso costuma ficar
+     * sem vinculo aqui.
+     */
+    @Column(name = "id_comunidade")
+    val idComunidade: Long? = null,
+
     val ativo: Boolean = true,
 
     @Column(name = "data_criacao")

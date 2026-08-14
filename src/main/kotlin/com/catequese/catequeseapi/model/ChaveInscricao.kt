@@ -54,7 +54,14 @@ data class ChaveInscricao(
 ) {
     fun expirada(agora: LocalDateTime = LocalDateTime.now()): Boolean = !expiraEm.isAfter(agora)
 
-    fun esgotada(): Boolean = limiteUsos != null && usos >= limiteUsos
+    // O limite vai para uma variavel local antes de ser comparado: entidades
+    // JPA sao classes abertas (plugin allOpen), e Kotlin nao faz smart cast em
+    // propriedade de classe aberta. Escrever "limiteUsos != null && usos >=
+    // limiteUsos" nao compila.
+    fun esgotada(): Boolean {
+        val limite = limiteUsos ?: return false
+        return usos >= limite
+    }
 
     /** Motivo da recusa, ou null se a chave pode ser usada agora. */
     fun motivoRecusa(agora: LocalDateTime = LocalDateTime.now()): String? = when {

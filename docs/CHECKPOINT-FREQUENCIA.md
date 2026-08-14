@@ -115,7 +115,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
       + `GET /api/ficha-catequisando/{id}` (status de documento, sem arquivo).
 - [x] **F8 — Admin** (`6b90ef1` + `8c99eff`): `/api/admin`, `admin-catequese.js`,
       classificação, matrículas, transferência e correção de chamada.
-- [ ] **F9 — Encerramento de ano em lote** + conclusão dos 2 anos.
+- [x] **F9 — Encerramento de ano em lote** (`1247b6d`): prévia + aplicação
+      seletiva, regra dos 2 anos, promoção de etapa do catecumenato.
 - [ ] **F10 — Presença em eventos** (aproveitando `Evento`).
 
 ## Permissões da área nova
@@ -140,7 +141,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
 - **F6 entregue** (`8eafbe4`): front da frequência. **Sem SQL novo.**
 - **F7 entregue** (`e97780b`): ficha do catequisando. **Sem SQL novo.**
 - **F8 entregue** (`6b90ef1` + `8c99eff`): área do admin. **Sem SQL novo.**
-- Próximo: **F9 — encerramento de ano em lote** + conclusão dos 2 anos.
+- **F9 entregue** (`1247b6d`): encerramento de ano. **Sem SQL novo.**
+- Próximo: **F10 — presença em eventos** (aproveitando `Evento`). Última etapa.
 - O filtro por comunidade (F2) é aplicado junto com os endpoints novos, e não
   retroativamente nos antigos.
 - Aguardando o usuário rodar as migrações e confirmar que o sistema sobe.
@@ -208,9 +210,8 @@ Estado em 14/08/2026, fim da sessão:
   distribution dão 403 no proxy). Os testes do `CalculoFrequenciaTest` são a
   única prova real das fronteiras (80% não reprova, 79% reprova, justificada
   fora do denominador).
-- **Próxima etapa: F9** — encerramento de ano em lote: promover etapa do
-  catecumenato, marcar concluídos, aplicar a regra dos 2 anos por categoria.
-  Depois, F10 — presença em eventos (aproveitando `Evento`).
+- **Próxima etapa: F10** — presença em eventos (retiros, missas), aproveitando
+  a entidade `Evento` que já existe e não é usada por nada. É a última do plano.
 
 ### Entrega de código: como fazer
 
@@ -360,3 +361,33 @@ Ambos agora **abortam** se não estiverem na raiz do repositório. Sempre rodar:
 
 Testes: `teste_chamada.mjs` (30), `teste_frequencia.mjs` (35),
 `teste_ficha.mjs` (33), `teste_admin.mjs` (38). Rodar de `/home/claude/project`.
+
+## Notas de implementação (F9)
+
+- Duas fases: `GET /api/admin/encerramento/previa` (não altera nada) e
+  `POST /api/admin/encerramento/aplicar` com `idsMatricula` **explícitos**.
+  Um "aplicar tudo" implícito faria o admin encerrar linhas que não leu.
+- A aplicação **RECALCULA** a prévia em vez de confiar no que a tela mandou:
+  entre a conferência e o clique, uma chamada pode ter sido corrigida.
+- **SEM_APURACAO não decide.** Reprovar seria culpar a pessoa por falha de
+  registro; aprovar seria inventar resultado. A linha aparece tracejada, com
+  o checkbox `disabled`, e "Marcar todas" a ignora.
+- Regra dos adultos aplicada aqui de novo, via `freq.podeConcluir`: 88% no ano
+  e mesmo assim NAO_CONCLUIDO se o 1º semestre fechou abaixo.
+- Percurso de 2 anos: conta `CONCLUIDO` da mesma categoria em anos anteriores.
+- Promoção de etapa fecha a anterior (`dataFim`) antes de abrir a nova — são
+  dois registros porque cada etapa tem apuração própria.
+
+Testes: `teste_chamada` (30), `teste_frequencia` (35), `teste_ficha` (33),
+`teste_admin` (38), `teste_encerramento` (35). Total 171.
+
+### Armadilha de shell que já custou tempo duas vezes
+
+`cd` PERSISTE entre chamadas de Bash nesta sessão. Rodar `node teste_*.mjs`
+ou os verificadores de outro diretório dá "0 OK" / "0 problemas" sem erro
+visível — resultado vazio que parece sucesso. **Sempre usar caminho absoluto
+ou `cd` explícito no início do comando.** Foi a causa raiz do erro de
+compilação entregue na F7.
+
+Também: numa cadeia `cp X Y && python3 ...`, se o `cp` falha o python nem
+roda — e o "(nao acusou)" do controle negativo vira falso negativo.

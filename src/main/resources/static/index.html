@@ -285,6 +285,7 @@
             <input type="number" id="adm-ano" min="2000" max="2100" step="1" />
           </label>
           <button type="button" class="secondary" id="adm-recarregar">Atualizar</button>
+          <button type="button" class="secondary" id="adm-abrir-encerramento">Encerrar ano</button>
         </div>
         <p class="muted">
           A categoria define a regra de frequência. Enquanto a turma não tiver
@@ -320,6 +321,42 @@
         <button type="button" id="adm-btn-matricular">Matricular</button>
 
         <div id="adm-matriculas-lista" class="adm-matriculas"></div>
+      </section>
+
+      <section class="panel" id="adm-tela-encerramento" hidden>
+        <div class="row">
+          <h2 id="adm-enc-titulo">Encerrar ano</h2>
+          <button type="button" class="secondary" id="adm-voltar-encerramento">
+            Voltar para as turmas
+          </button>
+        </div>
+        <p class="muted">
+          Esta é a operação que decide quem concluiu a catequese. Confira a
+          prévia abaixo e marque apenas as linhas que devem ser aplicadas —
+          o que não for marcado não é alterado.
+        </p>
+        <div id="adm-enc-status" class="summary"></div>
+        <div id="adm-enc-resumo" class="freq-contadores"></div>
+        <div id="adm-enc-alertas"></div>
+
+        <div class="row" id="adm-enc-controles" hidden>
+          <button type="button" class="secondary" id="adm-enc-marcar-todos">
+            Marcar todas as aplicáveis
+          </button>
+          <button type="button" class="secondary" id="adm-enc-desmarcar">
+            Desmarcar todas
+          </button>
+          <label class="adm-enc-promover">
+            <input type="checkbox" id="adm-enc-promover" />
+            Avançar também a etapa dos catecúmenos aprovados
+          </label>
+        </div>
+
+        <div id="adm-enc-lista" class="adm-encerramento"></div>
+
+        <div class="row" id="adm-enc-rodape" hidden>
+          <button type="button" id="adm-btn-encerrar">Aplicar às marcadas</button>
+        </div>
       </section>
 
       <section class="panel" id="adm-tela-correcao" hidden>

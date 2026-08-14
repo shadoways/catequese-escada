@@ -1852,3 +1852,87 @@ canvas {
 
   .adm-ano-campo { max-width: none; }
 }
+
+/* Encerramento de ano (F9) */
+
+.adm-encerramento {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.adm-enc-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+/* Sem base para decidir não é erro nem aprovação: é uma linha que exige
+   atenção humana. Fica apagada para não competir com as decidíveis. */
+.adm-enc-linha--sem-base {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
+.adm-enc-marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.adm-enc-marca input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.adm-enc-nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.adm-enc-numeros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adm-enc-numeros .status {
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.adm-enc-motivo {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+}
+
+.adm-enc-promover {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.adm-enc-promover input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 600px) {
+  .adm-enc-linha { grid-template-columns: minmax(0, 1fr); }
+  #adm-btn-encerrar { width: 100%; }
+}

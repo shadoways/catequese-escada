@@ -1,12 +1,16 @@
 package com.catequese.catequeseapi.controller
 
+import com.catequese.catequeseapi.dto.AplicarEncerramentoDTO
 import com.catequese.catequeseapi.dto.ClassificacaoTurmaDTO
 import com.catequese.catequeseapi.dto.MatriculaAdminDTO
 import com.catequese.catequeseapi.dto.NovaMatriculaDTO
+import com.catequese.catequeseapi.dto.PreviaAnoDTO
+import com.catequese.catequeseapi.dto.ResultadoEncerramentoDTO
 import com.catequese.catequeseapi.dto.SituacaoMatriculaDTO
 import com.catequese.catequeseapi.dto.TransferenciaDTO
 import com.catequese.catequeseapi.dto.TurmaAdminDTO
 import com.catequese.catequeseapi.service.AdminCatequeseService
+import com.catequese.catequeseapi.service.EncerramentoAnoService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -30,7 +34,10 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 @RequestMapping("/api/admin")
-class AdminCatequeseController(private val adminService: AdminCatequeseService) {
+class AdminCatequeseController(
+    private val adminService: AdminCatequeseService,
+    private val encerramentoService: EncerramentoAnoService
+) {
 
     @GetMapping("/turmas")
     fun turmas(@RequestParam(required = false) ano: Int?): ResponseEntity<List<TurmaAdminDTO>> =
@@ -61,6 +68,26 @@ class AdminCatequeseController(private val adminService: AdminCatequeseService) 
         @RequestBody body: SituacaoMatriculaDTO
     ): ResponseEntity<MatriculaAdminDTO> =
         ResponseEntity.ok(adminService.alterarSituacao(idMatricula, body))
+
+    // ---- Encerramento de ano ----------------------------------------------
+
+    /**
+     * Previa: o que aconteceria se o ano fosse encerrado agora.
+     * Nao altera nada. Encerrar o ano decide quem concluiu a catequese, e
+     * ninguem deveria descobrir o resultado depois de aplicado.
+     */
+    @GetMapping("/encerramento/previa")
+    fun previaEncerramento(
+        @RequestParam(required = false) ano: Int?
+    ): ResponseEntity<PreviaAnoDTO> =
+        ResponseEntity.ok(encerramentoService.previa(ano))
+
+    /** Aplica somente as matriculas escolhidas na previa. */
+    @PostMapping("/encerramento/aplicar")
+    fun aplicarEncerramento(
+        @RequestBody body: AplicarEncerramentoDTO
+    ): ResponseEntity<ResultadoEncerramentoDTO> =
+        ResponseEntity.ok(encerramentoService.aplicar(body))
 
     /** Devolve as duas matriculas: a encerrada na origem e a nova no destino. */
     @PostMapping("/matriculas/{idMatricula}/transferir")

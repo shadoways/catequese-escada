@@ -85,6 +85,7 @@ const admTela = (qual) => {
   document.getElementById('adm-tela-turmas').hidden = qual !== 'turmas';
   document.getElementById('adm-tela-matriculas').hidden = qual !== 'matriculas';
   document.getElementById('adm-tela-correcao').hidden = qual !== 'correcao';
+  document.getElementById('adm-tela-encerramento').hidden = qual !== 'encerramento';
 };
 
 // ---- Tela 1: turmas -------------------------------------------------------
@@ -591,6 +592,161 @@ const admReabrir = async () => {
   }
 };
 
+// ---- Tela 4: encerramento do ano ------------------------------------------
+
+/*
+ * Encerrar o ano decide quem concluiu a catequese. E a operacao mais
+ * destrutiva do sistema, entao a tela trabalha em duas fases: previa e
+ * aplicacao. A previa nao altera nada, e a aplicacao so toca no que foi
+ * marcado -- um "aplicar tudo" implicito faria o administrador encerrar
+ * linhas que ele nem chegou a ler.
+ */
+
+let admPrevia = null;
+
+const ADM_ROTULO_PROPOSTA = {
+  CONCLUIDO: 'Conclui',
+  NAO_CONCLUIDO: 'Não conclui'
+};
+
+const admAbrirEncerramento = async () => {
+  admTela('encerramento');
+  document.getElementById('adm-enc-titulo').textContent = `Encerrar ano ${admAno()}`;
+  document.getElementById('adm-enc-controles').hidden = true;
+  document.getElementById('adm-enc-rodape').hidden = true;
+  document.getElementById('adm-enc-lista').innerHTML = '<p class="muted">Calculando a prévia...</p>';
+  admAviso('adm-enc-status', '');
+
+  try {
+    const resposta = await fetch(`/api/admin/encerramento/previa?ano=${encodeURIComponent(admAno())}`);
+    if (!resposta.ok) {
+      admAviso('adm-enc-status', await admErro(resposta, 'Não foi possível calcular a prévia.'), 'error');
+      document.getElementById('adm-enc-lista').innerHTML = '';
+      return;
+    }
+    admPrevia = await resposta.json();
+    admDesenharPrevia();
+  } catch (err) {
+    admAviso('adm-enc-status', `Falha de conexão: ${err.message}`, 'error');
+  }
+};
+
+const admDesenharPrevia = () => {
+  if (!admPrevia) return;
+  const r = admPrevia.resumo;
+  const lista = document.getElementById('adm-enc-lista');
+
+  document.getElementById('adm-enc-resumo').innerHTML = [
+    { rotulo: 'Concluem', valor: r.concluem, classe: 'ok' },
+    { rotulo: 'Não concluem', valor: r.naoConcluem, classe: 'error' },
+    { rotulo: 'Sem base para decidir', valor: r.semBase, classe: 'neutro' },
+    { rotulo: 'Encerram o percurso', valor: r.concluemPercurso, classe: 'ok' },
+    { rotulo: 'Promoções de etapa', valor: r.promocoesDeEtapa, classe: 'neutro' }
+  ].map((c) => `
+    <div class="freq-contador">
+      <strong class="status ${c.classe}">${c.valor}</strong>
+      <span class="muted">${c.rotulo}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('adm-enc-alertas').innerHTML = (admPrevia.alertas || [])
+    .map((a) => `<div class="status warning">${admEscape(a)}</div>`).join('');
+
+  if (!admPrevia.linhas.length) {
+    lista.innerHTML =
+      '<div class="status neutro">Nenhuma matrícula em andamento neste ano. Não há o que encerrar.</div>';
+    return;
+  }
+
+  document.getElementById('adm-enc-controles').hidden = false;
+  document.getElementById('adm-enc-rodape').hidden = false;
+
+  lista.innerHTML = admPrevia.linhas.map((l) => {
+    const proposta = ADM_ROTULO_PROPOSTA[l.situacaoProposta] || 'Sem decisão';
+    const classe = l.situacaoProposta === 'CONCLUIDO'
+      ? 'ok'
+      : (l.situacaoProposta === 'NAO_CONCLUIDO' ? 'error' : 'neutro');
+
+    return `
+      <div class="adm-enc-linha${l.aplicavel ? '' : ' adm-enc-linha--sem-base'}"
+           data-previa="${l.idMatricula}">
+        <label class="adm-enc-marca">
+          <input type="checkbox" data-marca="${l.idMatricula}" ${l.aplicavel ? '' : 'disabled'} />
+          <span class="adm-enc-nome">
+            <strong>${admEscape(l.nome)}</strong>
+            <span class="muted">${admEscape(l.nomeTurma || '')}</span>
+          </span>
+        </label>
+        <span class="adm-enc-numeros">
+          <strong>${l.percentual === null || l.percentual === undefined ? '—' : `${l.percentual}%`}</strong>
+          <span class="status ${classe}">${admEscape(proposta)}</span>
+          ${l.concluiPercurso ? '<span class="status ok">encerra o percurso</span>' : ''}
+        </span>
+        <span class="muted adm-enc-motivo">${admEscape(l.motivo)}</span>
+      </div>
+    `;
+  }).join('');
+};
+
+const admMarcarPrevia = (marcar) => {
+  document.querySelectorAll('[data-marca]').forEach((c) => {
+    if (!c.disabled) c.checked = marcar;
+  });
+};
+
+const admAplicarEncerramento = async () => {
+  if (!admPrevia) return;
+  const ids = Array.from(document.querySelectorAll('[data-marca]:checked'))
+    .map((c) => Number(c.dataset.marca));
+
+  if (!ids.length) {
+    admAviso('adm-enc-status', 'Marque pelo menos uma linha para aplicar.', 'warning');
+    return;
+  }
+
+  const naoConcluem = admPrevia.linhas
+    .filter((l) => ids.includes(l.idMatricula) && l.situacaoProposta === 'NAO_CONCLUIDO').length;
+  const promover = document.getElementById('adm-enc-promover').checked;
+
+  // Confirmacao com os numeros, e nao um "tem certeza?" generico: o que
+  // importa e quantas pessoas ficam sem concluir a catequese.
+  const confirma = window.confirm(
+    `Encerrar ${ids.length} matrícula(s) de ${admPrevia.ano}.\n\n` +
+    `${naoConcluem} pessoa(s) ficarão como NÃO CONCLUÍDO.\n` +
+    (promover ? 'As etapas dos catecúmenos aprovados também serão avançadas.\n' : '') +
+    '\nO histórico fica registrado. Confirmar?'
+  );
+  if (!confirma) return;
+
+  try {
+    const resposta = await fetch('/api/admin/encerramento/aplicar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ano: admPrevia.ano, idsMatricula: ids, promoverEtapas: promover })
+    });
+    if (!resposta.ok) {
+      admAviso('adm-enc-status', await admErro(resposta, 'Não foi possível encerrar.'), 'error');
+      return;
+    }
+    const resultado = await resposta.json();
+    const ignoradas = resultado.ignoradas || [];
+
+    // Recarrega ANTES de avisar: admAbrirEncerramento limpa o status, entao
+    // avisar primeiro faria a confirmacao sumir na frente do usuario --
+    // logo depois da operacao que ele mais precisa ver confirmada.
+    await admAbrirEncerramento();
+    admAviso(
+      'adm-enc-status',
+      `${resultado.matriculasAtualizadas} matrícula(s) encerrada(s)` +
+      (resultado.etapasPromovidas ? `, ${resultado.etapasPromovidas} etapa(s) avançada(s)` : '') +
+      (ignoradas.length ? `. ${ignoradas.length} ignorada(s): ${ignoradas.join(' ')}` : '.'),
+      ignoradas.length ? 'warning' : 'ok'
+    );
+  } catch (err) {
+    admAviso('adm-enc-status', `Falha de conexão: ${err.message}`, 'error');
+  }
+};
+
 // ---- Ligações da tela -----------------------------------------------------
 
 document.getElementById('adm-recarregar')?.addEventListener('click', admCarregarTurmas);
@@ -600,6 +756,11 @@ document.getElementById('adm-voltar-correcao')?.addEventListener('click', () => 
 document.getElementById('adm-btn-matricular')?.addEventListener('click', admMatricular);
 document.getElementById('adm-btn-corrigir')?.addEventListener('click', admSalvarCorrecao);
 document.getElementById('adm-btn-reabrir')?.addEventListener('click', admReabrir);
+document.getElementById('adm-abrir-encerramento')?.addEventListener('click', admAbrirEncerramento);
+document.getElementById('adm-voltar-encerramento')?.addEventListener('click', () => admTela('turmas'));
+document.getElementById('adm-enc-marcar-todos')?.addEventListener('click', () => admMarcarPrevia(true));
+document.getElementById('adm-enc-desmarcar')?.addEventListener('click', () => admMarcarPrevia(false));
+document.getElementById('adm-btn-encerrar')?.addEventListener('click', admAplicarEncerramento);
 
 /** script.js chama isto ao entrar na aba. */
 window.carregarAdminCatequese = () => {

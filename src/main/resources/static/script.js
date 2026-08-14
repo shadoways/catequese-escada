@@ -831,7 +831,7 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 
 // ---- Navegação por abas ----
 // Cadastro e a tela publica; consulta e painel sao de uso interno.
-const TABS_PROTEGIDAS = ['chamada', 'consulta', 'dashboard', 'usuarios', 'configuracoes'];
+const TABS_PROTEGIDAS = ['chamada', 'frequencia', 'consulta', 'dashboard', 'usuarios', 'configuracoes'];
 const TABS_SO_ADMIN = ['usuarios', 'configuracoes'];
 
 // ---- Estado do cadastro público ----
@@ -980,6 +980,7 @@ const switchTab = (tabName) => {
   document.getElementById('main-tabs').hidden = tabName === 'menu';
   // chamada.js registra esta funcao; a aba e a tela de trabalho do catequista.
   if (tabName === 'chamada' && window.carregarChamada) window.carregarChamada();
+  if (tabName === 'frequencia' && window.carregarFrequencia) window.carregarFrequencia();
   if (tabName === 'consulta') carregarConsulta();
   if (tabName === 'dashboard') carregarDashboard();
   // usuarios.js registra esta função; só existe para quem carrega aquela tela.

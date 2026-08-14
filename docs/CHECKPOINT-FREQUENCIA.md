@@ -109,7 +109,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
       teste JUnit), `FrequenciaService`, DTOs e `/api/frequencia`.
 - [x] **F5 — Front: Minhas turmas + Chamada do dia** (`023814f`): `chamada.js`,
       aba nova no index e `GET /api/chamada/minhas-turmas`.
-- [ ] **F6 — Front: Frequência da turma** + relatório para impressão.
+- [x] **F6 — Front: Frequência da turma + relatório** (`8eafbe4`): aba própria
+      `frequencia.js` + relatório impresso fora das abas.
 - [ ] **F7 — Front: Ficha do catequisando** (dados, documentos entregues sem ver
       arquivo, frequência, histórico, contato do responsável, etapa do catecúmeno).
 - [ ] **F8 — Admin**: classificar turmas, matrículas, transferência, reabrir
@@ -136,7 +137,8 @@ Etapa I = 1º ano, II = 2º ano; máximo 2 anos por categoria → depois, conclu
 - **F3 entregue** (`78b1173`): `/api/chamada` + `ChamadaService` + rotina noturna.
 - **F4 entregue** (`575afa3`): cálculo de frequência. **Sem SQL novo.**
 - **F5 entregue** (`023814f`): front da chamada. **Sem SQL novo.**
-- Próximo: **F6 — front: Frequência da turma + relatório para impressão**.
+- **F6 entregue** (`8eafbe4`): front da frequência. **Sem SQL novo.**
+- Próximo: **F7 — front: Ficha do catequisando**.
 - O filtro por comunidade (F2) é aplicado junto com os endpoints novos, e não
   retroativamente nos antigos.
 - Aguardando o usuário rodar as migrações e confirmar que o sistema sobe.
@@ -204,8 +206,9 @@ Estado em 14/08/2026, fim da sessão:
   distribution dão 403 no proxy). Os testes do `CalculoFrequenciaTest` são a
   única prova real das fronteiras (80% não reprova, 79% reprova, justificada
   fora do denominador).
-- **Próxima etapa: F6** — front: Frequência da turma + relatório para
-  impressão (reusar o CSS de impressão da ficha).
+- **Próxima etapa: F7** — front: Ficha do catequisando (dados, documentos
+  entregues sem ver o arquivo, frequência, histórico, contato do responsável,
+  etapa do catecúmeno).
 
 ### Entrega de código: como fazer
 
@@ -260,3 +263,34 @@ para `.kt`, `.js`, `.html` e `.css` — testado.
 Consequência: o commit `023814f` existe **só no meu repositório**; o do usuário
 terá outro hash. **Não gerar mais bundles incrementais**, porque a partir daqui
 os históricos divergem e o bundle não aplicaria limpo.
+
+## Notas de implementação (F6)
+
+- Aba `frequencia` separada da `chamada`: marcar presença e conferir
+  aproveitamento são momentos diferentes. Prefixo `freq`.
+- **A tela não recalcula nada.** Tudo vem do `FrequenciaService`. Se o front
+  refizesse a conta, um dia os dois discordariam e ninguém saberia qual vale.
+- `<details>` por catequisando: com 30 pessoas, abrir todos os períodos de uma
+  vez inviabiliza quem só quer achar quem está abaixo.
+- Sem apuração mostra `—`, nunca `0%`.
+- `podeConcluir === false` vira "Não conclui neste ano" **junto do nome**.
+
+### Armadilha da impressão (importante para F7 e além)
+
+O bloco `@media print` que já existia (escrito para a ficha) esconde
+`.tab-content` **inteiro**. Imprimir qualquer aba direto sai em branco.
+Solução adotada: o relatório é montado por JS num `#freq-relatorio`
+(`class="relatorio-print"`) que fica **fora do `.shell` e fora de qualquer
+`.tab-content`**, com `display:none` na tela e `display:block !important` no
+`@media print`. Reaproveitar esse padrão em qualquer impressão nova.
+
+### Correção de CSS achada lendo a screenshot
+
+`.status` base é AVERMELHADO. Estados neutros ("Sem apuração", "Não se
+aplica", "Nenhum encontro registrado ainda") herdavam vermelho e pareciam
+problema. Criada `.status.neutro` (cinza). **Sempre usar `neutro` para estado
+que não é nem bom nem ruim.**
+
+Testes: `teste_chamada.mjs` (30) e `teste_frequencia.mjs` (35), ambos com
+controle negativo. Rodar com `node teste_*.mjs` a partir de
+`/home/claude/project`.

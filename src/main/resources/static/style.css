@@ -172,6 +172,11 @@ label input[type="radio"] {
 .status.warning { background: rgba(241, 201, 122, 0.3); color: #8b6914; }
 .status.error { background: rgba(192, 95, 60, 0.2); color: #9f2c0b; }
 
+/* Estado neutro: "sem apuração", "não se aplica", "nenhum encontro ainda".
+   Sem isto eles herdam o fundo avermelhado do .status base e passam a
+   parecer problema -- e nenhum deles é. */
+.status.neutro { background: rgba(91, 90, 82, 0.10); color: var(--muted); }
+
 /* Visual highlight para campo inválido */
 .invalid {
   border-color: #e03 !important;
@@ -1473,4 +1478,157 @@ canvas {
 
 @media (max-width: 600px) {
   .cham-legenda { display: block; margin: 0; font-size: 0.82rem; }
+}
+
+/* =====================================================================
+   Frequência da turma (F6)
+   ===================================================================== */
+
+.menu-card-icon--frequencia {
+  background: rgba(241, 201, 122, 0.3);
+  color: #8b6914;
+}
+
+.freq-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.freq-contadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.freq-contador {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 10px 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.freq-contador strong {
+  font-size: 1.4rem;
+  padding: 2px 12px;
+}
+
+.freq-lista {
+  display: grid;
+  gap: 8px;
+}
+
+/* <details>: o resumo cabe numa linha e o detalhe só abre para quem quer.
+   Com 30 catequisandos, mostrar todos os períodos de uma vez tornaria a
+   tela ilegível justamente para quem só quer achar quem está abaixo. */
+.freq-item {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: var(--paper-2);
+  padding: 4px 12px;
+}
+
+.freq-item-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+/* A seta padrão do <details> desalinha no Safari; o ::marker some nos dois. */
+.freq-item-topo::-webkit-details-marker { display: none; }
+.freq-item-topo::marker { content: ''; }
+
+.freq-item-nome,
+.freq-item-numeros {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.freq-percentual { font-size: 1.05rem; }
+
+.freq-item-detalhe {
+  display: grid;
+  gap: 6px;
+  padding: 4px 0 12px;
+  border-top: 1px solid var(--stroke);
+}
+
+.freq-item-detalhe p { margin: 4px 0; }
+
+.freq-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 0.9rem;
+}
+
+.freq-periodo-rotulo { font-weight: 600; }
+.freq-periodo-numeros { color: var(--muted); }
+
+/* O relatório só existe no papel. Na tela ele nunca aparece. */
+.relatorio-print { display: none; }
+
+@media (max-width: 600px) {
+  .freq-item-topo { align-items: flex-start; }
+  .freq-item-numeros { width: 100%; }
+}
+
+@media print {
+  /* A regra de impressão da ficha esconde .tab-content inteiro; por isso o
+     relatório mora fora dela. Aqui ele é o único visível. */
+  .relatorio-print { display: block !important; }
+
+  .freq-rel-cabecalho h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .freq-rel-cabecalho p { margin: 2px 0; font-size: 0.9rem; }
+  .freq-rel-emissao { color: #555; }
+
+  .freq-rel-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 0.85rem;
+  }
+
+  .freq-rel-tabela th,
+  .freq-rel-tabela td {
+    border: 1px solid #999;
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .freq-rel-tabela th { background: #eee; }
+  .freq-rel-tabela td.freq-rel-num { text-align: right; white-space: nowrap; }
+
+  /* Ninguém pode ficar partido entre duas folhas, senão o nome fica numa
+     página e o percentual na seguinte. */
+  .freq-rel-tabela tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* O cabeçalho da tabela se repete em cada folha do relatório longo. */
+  .freq-rel-tabela thead { display: table-header-group; }
+
+  .freq-rel-periodo { white-space: nowrap; }
+
+  .freq-rel-nota {
+    margin-top: 14px;
+    font-size: 0.8rem;
+    color: #444;
+  }
 }

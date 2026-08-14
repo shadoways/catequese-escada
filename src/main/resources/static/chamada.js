@@ -102,7 +102,7 @@ const chamCartaoTurma = (turma) => {
     classeEstado = 'ok';
   } else {
     estado = 'Nenhum encontro registrado ainda';
-    classeEstado = '';
+    classeEstado = 'neutro';
   }
 
   const aviso = turma.categoria

@@ -20,6 +20,7 @@
       <button type="button" class="tab-btn active" data-tab="menu">Início</button>
       <button type="button" class="tab-btn somente-cadastro" data-tab="cadastro">Cadastro</button>
       <button type="button" class="tab-btn somente-logado" data-tab="chamada">Chamada</button>
+      <button type="button" class="tab-btn somente-logado" data-tab="frequencia">Frequência</button>
       <button type="button" class="tab-btn somente-logado" data-tab="consulta">Consultar catequisandos</button>
       <button type="button" class="tab-btn somente-logado" data-tab="dashboard">Turmas e documentos</button>
       <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>Usuários</button>
@@ -57,6 +58,17 @@
           <h3>Chamada</h3>
           <p>Marcar presença do encontro de hoje e acompanhar a frequência da turma.</p>
           <span class="menu-card-cta">Fazer chamada →</span>
+        </button>
+        <button type="button" class="menu-card somente-logado" data-tab="frequencia">
+          <span class="menu-card-icon menu-card-icon--frequencia" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="M7 15l4-4 3 3 5-6" />
+            </svg>
+          </span>
+          <h3>Frequência da turma</h3>
+          <p>Ver o aproveitamento de cada catequisando e quem está abaixo do mínimo.</p>
+          <span class="menu-card-cta">Ver frequência →</span>
         </button>
         <button type="button" class="menu-card somente-logado" data-tab="consulta">
           <span class="menu-card-icon menu-card-icon--consulta" aria-hidden="true">
@@ -175,6 +187,60 @@
             corrigir algo, peça ao coordenador paroquial para reabrir o encontro.
           </p>
         </div>
+      </section>
+    </div>
+
+    <!--
+      Frequencia. Aba separada da chamada de proposito: marcar presenca e
+      consultar aproveitamento sao dois momentos diferentes, e juntar os dois
+      deixaria a tela da chamada pesada justo na hora em que o catequista esta
+      com a turma na frente.
+    -->
+    <div class="chamada-layout tab-content" id="tab-frequencia" data-tab-content="frequencia" hidden>
+
+      <section class="panel">
+        <div class="row">
+          <h2>Frequência da turma</h2>
+        </div>
+        <div class="grid">
+          <label>
+            Turma
+            <select id="freq-turma"></select>
+          </label>
+          <label>
+            Ano
+            <input type="number" id="freq-ano" min="2000" max="2100" step="1" />
+          </label>
+          <label>
+            Mostrar
+            <select id="freq-filtro">
+              <option value="TODOS">Todos os catequisandos</option>
+              <option value="ABAIXO_DO_MINIMO">Somente abaixo do mínimo</option>
+              <option value="ATENCAO">Abaixo do mínimo ou em risco</option>
+              <option value="SEM_APURACAO">Sem apuração ainda</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <button type="button" id="freq-consultar">Consultar</button>
+          <button type="button" class="secondary" id="freq-imprimir">Imprimir relatório</button>
+        </div>
+        <div id="freq-status" class="summary"></div>
+      </section>
+
+      <section class="panel" id="freq-painel-resumo" hidden>
+        <h2 id="freq-resumo-titulo">Resumo</h2>
+        <div id="freq-cabecalho" class="freq-cabecalho"></div>
+        <div id="freq-contadores" class="freq-contadores"></div>
+        <div id="freq-alertas-turma"></div>
+      </section>
+
+      <section class="panel" id="freq-painel-lista" hidden>
+        <div class="row">
+          <h2>Catequisandos</h2>
+          <span class="muted" id="freq-contagem-lista"></span>
+        </div>
+        <div id="freq-lista" class="freq-lista"></div>
       </section>
     </div>
 
@@ -561,9 +627,18 @@
     </div>
   </div>
 
+  <!--
+    Relatorio de frequencia para impressao. Fica FORA do .shell e de qualquer
+    .tab-content de proposito: a regra de @media print existente esconde
+    .tab-content inteiro (ela foi escrita para a ficha). Montado por JS na
+    hora de imprimir.
+  -->
+  <div id="freq-relatorio" class="relatorio-print"></div>
+
   <script src="auth.js"></script>
   <script src="script.js"></script>
   <script src="chamada.js"></script>
+  <script src="frequencia.js"></script>
   <script src="usuarios.js"></script>
   <script src="configuracoes.js"></script>
 </body>

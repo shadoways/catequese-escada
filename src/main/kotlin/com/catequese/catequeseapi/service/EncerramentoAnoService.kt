@@ -1,6 +1,7 @@
 package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.AplicarEncerramentoDTO
+import com.catequese.catequeseapi.dto.FrequenciaCatequisandoDTO
 import com.catequese.catequeseapi.dto.PreviaAnoDTO
 import com.catequese.catequeseapi.dto.PreviaEncerramentoDTO
 import com.catequese.catequeseapi.dto.ResultadoEncerramentoDTO
@@ -112,7 +113,7 @@ class EncerramentoAnoService(
     /** A decisao para uma matricula. Sem efeito colateral: so calcula. */
     private fun avaliar(
         matricula: Matricula,
-        freq: com.catequese.catequeseapi.dto.FrequenciaCatequisandoDTO?,
+        freq: FrequenciaCatequisandoDTO?,
         ano: Int
     ): PreviaEncerramentoDTO {
         val catequisando = matricula.catequisando

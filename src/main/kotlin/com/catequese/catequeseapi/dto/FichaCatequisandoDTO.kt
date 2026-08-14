@@ -16,7 +16,12 @@ import java.time.LocalDate
  * Quem precisa abrir o arquivo continua usando a ficha completa, que e
  * restrita a quem pode editar cadastro.
  */
-data class DocumentoStatusDTO(
+/*
+ * NAO chamar de DocumentoStatusDTO: ja existe um com esse nome no pacote
+ * 'dtos' (plural), com campos diferentes. Dois tipos de mesmo nome simples em
+ * pacotes vizinhos e uma armadilha -- basta alguem importar o errado.
+ */
+data class DocumentoEntregueDTO(
     val tipo: String,
     val entregue: Boolean,
     val status: String,
@@ -77,7 +82,7 @@ data class FichaCatequisandoDTO(
     val intoleranteGluten: Boolean,
     val ativo: Boolean,
     val dataInscricao: LocalDate?,
-    val documentos: List<DocumentoStatusDTO> = emptyList(),
+    val documentos: List<DocumentoEntregueDTO> = emptyList(),
     val etapaAtual: EtapaCatecumenato? = null,
     val historicoEtapas: List<EtapaHistoricoDTO> = emptyList(),
     val historicoMatriculas: List<MatriculaHistoricoDTO> = emptyList(),

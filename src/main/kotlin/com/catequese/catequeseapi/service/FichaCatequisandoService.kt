@@ -1,6 +1,6 @@
 package com.catequese.catequeseapi.service
 
-import com.catequese.catequeseapi.dto.DocumentoStatusDTO
+import com.catequese.catequeseapi.dto.DocumentoEntregueDTO
 import com.catequese.catequeseapi.dto.EtapaHistoricoDTO
 import com.catequese.catequeseapi.dto.FichaCatequisandoDTO
 import com.catequese.catequeseapi.dto.MatriculaHistoricoDTO
@@ -118,11 +118,11 @@ class FichaCatequisandoService(
      * arquivo. O descarte acontece aqui, no servidor: mandar o caminho e
      * esconder na tela nao esconderia nada de quem abrisse a resposta da API.
      */
-    private fun documentosDe(catequisando: Catequisando): List<DocumentoStatusDTO> =
+    private fun documentosDe(catequisando: Catequisando): List<DocumentoEntregueDTO> =
         documentoRepository.findByCatequisando(catequisando)
             .map { documento ->
                 val status = documento.tipoStatus
-                DocumentoStatusDTO(
+                DocumentoEntregueDTO(
                     tipo = documento.tipoDocumento?.trim()?.ifBlank { null } ?: "Documento",
                     entregue = status.equals("ENTREGUE", ignoreCase = true) ||
                         documento.caminhoArquivo?.isNotBlank() == true,

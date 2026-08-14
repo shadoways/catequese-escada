@@ -708,38 +708,46 @@ submitBtn.addEventListener("click", async () => {
           // ❌ ROLLBACK ROBUSTO
           console.error("❌ ERRO NO UPLOAD! Iniciando rollback...", uploadError);
 
-          // Deletar documentos em ordem INVERSA (mais seguro, evita órfãos)
-          console.log(`🗑️ Deletando ${uploadedDocIds.length} documento(s) criado(s)...`);
-          for (const docId of uploadedDocIds.reverse()) {
+          // Apagar exige permissão de coordenador. No cadastro público (sem
+          // login) o rollback é recusado com 403, e é importante saber disso:
+          // sem essa checagem a tela diria que reverteu tudo, o que seria
+          // mentira, e ninguém iria procurar o registro pela metade no banco.
+          // fetch() não lança em 4xx, então é preciso olhar o res.ok.
+          let revertidoPorCompleto = true;
+          const apagar = async (url, oQue) => {
             try {
-              await fetch(`/api/documentos/${docId}`, { method: 'DELETE' });
-              console.log(`✅ Documento ${docId} deletado`);
-            } catch (delErr) {
-              console.error(`⚠️ Erro ao deletar documento ${docId}:`, delErr.message);
-              // Continua mesmo se um delete falhar
+              const res = await fetch(url, { method: 'DELETE' });
+              if (!res.ok) {
+                revertidoPorCompleto = false;
+                console.warn(`⚠️ Não foi possível apagar ${oQue}: HTTP ${res.status}`);
+                return;
+              }
+              console.log(`✅ ${oQue} apagado`);
+            } catch (err) {
+              revertidoPorCompleto = false;
+              console.error(`⚠️ Erro ao apagar ${oQue}:`, err.message);
             }
-          }
+          };
 
-          // Deletar ficha
-          try {
-            console.log(`🗑️ Deletando ficha do catequisando ${catequisando.idCatequisando}...`);
-            await fetch(`/api/fichas/catequisando/${catequisando.idCatequisando}`, { method: 'DELETE' });
-            console.log(`✅ Ficha deletada`);
-          } catch (fichaErr) {
-            console.error(`⚠️ Erro ao deletar ficha:`, fichaErr.message);
+          // Documentos em ordem INVERSA (mais seguro, evita órfãos)
+          for (const docId of uploadedDocIds.reverse()) {
+            await apagar(`/api/documentos/${docId}`, `documento ${docId}`);
           }
+          await apagar(
+            `/api/fichas/catequisando/${catequisando.idCatequisando}`,
+            `ficha do catequisando ${catequisando.idCatequisando}`
+          );
+          await apagar(
+            `/api/catequisandos/${catequisando.idCatequisando}`,
+            `catequisando ${catequisando.idCatequisando}`
+          );
 
-          // Deletar catequisando (último)
-          try {
-            console.log(`🗑️ Deletando catequisando ${catequisando.idCatequisando}...`);
-            await fetch(`/api/catequisandos/${catequisando.idCatequisando}`, { method: 'DELETE' });
-            console.log(`✅ Catequisando deletado`);
-          } catch (cateqErr) {
-            console.error(`⚠️ Erro ao deletar catequisando:`, cateqErr.message);
-          }
-
-          console.log(`🔄 Rollback concluído. Relançando erro...`);
-          throw new Error(`Falha no upload: ${uploadError.message}. Todos os dados foram revertidos automaticamente.`);
+          const desfecho = revertidoPorCompleto
+            ? 'Todos os dados foram revertidos automaticamente.'
+            : 'Parte dos dados pode ter ficado gravada. ' +
+              'Anote o horário e procure a secretaria da paróquia antes de cadastrar de novo.';
+          console.log(`🔄 Rollback concluído (completo: ${revertidoPorCompleto}).`);
+          throw new Error(`Falha no upload: ${uploadError.message}. ${desfecho}`);
         }
 
     const successMessages = ["Cadastro realizado com sucesso"];

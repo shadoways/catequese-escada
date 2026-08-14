@@ -401,7 +401,7 @@ SELECT esperada.tabela, esperada.coluna AS coluna_faltando
 --
 -- Outras variaveis de ambiente da aplicacao:
 --   export JWT_SECRET="$(openssl rand -base64 48)"   # OBRIGATORIA, minimo 32 caracteres
---   export APP_SECURITY_ENABLED=false                # true so quando for exigir login
+--   export APP_SECURITY_ENABLED=false               # valvula de escape; o padrao e true
 --   export SPRING_MAIL_HOST=smtp.seuprovedor.com     # opcional (recuperacao por e-mail)
 --   export SPRING_MAIL_PORT=587
 --   export SPRING_MAIL_USERNAME=usuario

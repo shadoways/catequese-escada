@@ -22,12 +22,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * Regras de acesso da API.
  *
- * IMPORTANTE -- app.security.enabled:
- * enquanto o frontend nao tiver tela de login (Etapa 2) e as telas nao esconderem
- * as acoes por papel (Etapa 3), ligar as restricoes quebraria o uso atual do
- * sistema em producao. Por isso o padrao e `false`: o login ja funciona e ja
- * emite token, mas nenhuma rota e bloqueada ainda. Basta trocar para `true`
- * (ou exportar APP_SECURITY_ENABLED=true) para valer todo o controle abaixo.
+ * app.security.enabled, padrao TRUE: as regras abaixo valem.
+ *
+ * O `false` continua existindo como valvula de escape. Se um erro de regra
+ * trancar todo mundo para fora em producao, `export APP_SECURITY_ENABLED=false`
+ * devolve o acesso na hora, sem precisar de novo build -- mas deixa a API
+ * inteira aberta, entao serve so para destravar e corrigir.
  */
 @Configuration
 @EnableWebSecurity

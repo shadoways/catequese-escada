@@ -10,6 +10,15 @@
   --stroke: #d8cdbc;
   --shadow: 0 18px 55px rgba(33, 28, 20, 0.18);
   --radius: 18px;
+
+  /* Texto sobre fundo tintado (.status warning/error e afins). São --accent e
+     --highlight escurecidos até dar contraste de texto em fundo claro — por
+     isso não são "cores novas", mas precisam de nome próprio: repetir o hex
+     em cada regra é como o mesmo tom acabava divergindo um pouco de tela
+     para tela. */
+  --warning-text: #8b6914;
+  --warning-border: #d8ab52;
+  --danger-text: #9f2c0b;
 }
 
 * { box-sizing: border-box; }
@@ -169,18 +178,20 @@ label input[type="radio"] {
 }
 
 .status.ok { background: rgba(47, 111, 126, 0.14); color: var(--accent-2); }
-.status.warning { background: rgba(241, 201, 122, 0.3); color: #8b6914; }
-.status.error { background: rgba(192, 95, 60, 0.2); color: #9f2c0b; }
+.status.warning { background: rgba(241, 201, 122, 0.3); color: var(--warning-text); }
+.status.error { background: rgba(192, 95, 60, 0.2); color: var(--danger-text); }
 
 /* Estado neutro: "sem apuração", "não se aplica", "nenhum encontro ainda".
    Sem isto eles herdam o fundo avermelhado do .status base e passam a
    parecer problema -- e nenhum deles é. */
 .status.neutro { background: rgba(91, 90, 82, 0.10); color: var(--muted); }
 
-/* Visual highlight para campo inválido */
+/* Visual highlight para campo inválido. Usa a mesma família de --danger-text
+   -- antes era um vermelho puro (#e03) que destoava do terracota do resto
+   da paleta e não tinha nenhuma relação com a cor de erro usada em .status. */
 .invalid {
-  border-color: #e03 !important;
-  box-shadow: 0 0 0 4px rgba(224, 67, 67, 0.08);
+  border-color: var(--danger-text) !important;
+  box-shadow: 0 0 0 4px rgba(159, 44, 11, 0.12);
 }
 
 button {
@@ -658,7 +669,7 @@ canvas {
 
 .menu-card-icon--dashboard {
   background: rgba(241, 201, 122, 0.3);
-  color: #8b6914;
+  color: var(--warning-text);
 }
 
 .menu-card-icon--usuarios {
@@ -789,12 +800,26 @@ canvas {
   text-decoration: none;
 }
 
+/* Usado tanto em <a> (resultado de busca) quanto em <button> (nome clicável
+   dentro de uma lista, ex.: frequência da turma). Precisa anular o visual
+   padrão de botão explicitamente -- senão, sobre <button>, herda o fundo
+   sólido, o padding e a sombra da regra base de "button" e vira um botão
+   "pesado" chamando atenção de erro, quando é só um link para abrir a ficha. */
 .nome-link {
+  display: inline;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  font: inherit;
+  width: auto;
   color: var(--accent-2);
   text-decoration: none;
+  cursor: pointer;
 }
 
-.nome-link:hover { text-decoration: underline; }
+.nome-link:hover { text-decoration: underline; transform: none; }
 
 .doc-status {
   display: inline-flex;
@@ -1310,6 +1335,10 @@ canvas {
   justify-items: start;
   gap: 8px;
   text-align: left;
+  /* É um <button>: sem isto herda o "color: #fff" da regra base de botão, e
+     o nome da turma (dentro de <strong>, sem cor própria) fica quase
+     invisível sobre o fundo claro do cartão. */
+  color: var(--ink);
   background: var(--paper);
   border: 1px solid var(--stroke);
   border-radius: 14px;
@@ -1404,14 +1433,14 @@ canvas {
 .cham-opcao--falta.ativa {
   background: rgba(192, 95, 60, 0.16);
   border-color: var(--accent);
-  color: #9f2c0b;
+  color: var(--danger-text);
   font-weight: 600;
 }
 
 .cham-opcao--justificada.ativa {
   background: rgba(241, 201, 122, 0.35);
-  border-color: #d8ab52;
-  color: #8b6914;
+  border-color: var(--warning-border);
+  color: var(--warning-text);
   font-weight: 600;
 }
 
@@ -1486,7 +1515,7 @@ canvas {
 
 .menu-card-icon--frequencia {
   background: rgba(241, 201, 122, 0.3);
-  color: #8b6914;
+  color: var(--warning-text);
 }
 
 .freq-cabecalho {
@@ -1835,6 +1864,10 @@ canvas {
   border-radius: 12px;
   background: var(--paper-2);
   cursor: pointer;
+  /* Mesmo motivo do .turma-chamada-card: é um <button>, e sem "color"
+     próprio herda o branco da regra base e a data (dentro de <strong>)
+     fica ilegível sobre o fundo claro. */
+  color: var(--ink);
 }
 
 .adm-encontro:hover,

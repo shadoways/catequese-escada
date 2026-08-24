@@ -8,27 +8,93 @@
   <link rel="icon" type="image/png" href="logo.png" />
 </head>
 <body>
-  <div class="shell">
-    <header id="header">
-      <h1>Catequese Admin</h1>
-      <img src="logo.png" alt="Logo Catequese" />
-    </header>
+  <!--
+    Barra lateral fixa (padrao de sistema administrativo) em vez da antiga
+    barra de abas no topo -- com 9 itens ela quebrava linha e nao deixava
+    claro nem onde a pessoa estava, nem os grupos de funcionalidade. Aqui os
+    itens sao agrupados por finalidade (Cadastro / Atendimento /
+    Administracao) e ficam sempre visiveis, inclusive na tela inicial: o
+    objetivo e servir de mapa permanente, nao um apoio que so aparece depois
+    que a pessoa ja entrou em alguma tela.
+  -->
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="Logo Catequese" />
+        <span>Catequese Admin</span>
+      </div>
 
-    <div class="barra-usuario" id="barra-usuario"></div>
+      <div class="barra-usuario" id="barra-usuario"></div>
 
-    <nav class="tabs" id="main-tabs" hidden>
-      <button type="button" class="tab-btn active" data-tab="menu">Início</button>
-      <button type="button" class="tab-btn somente-cadastro" data-tab="cadastro">Cadastro</button>
-      <button type="button" class="tab-btn somente-logado" data-tab="chamada">Chamada</button>
-      <button type="button" class="tab-btn somente-logado" data-tab="frequencia">Frequência</button>
-      <button type="button" class="tab-btn somente-logado" data-tab="consulta">Consultar catequisandos</button>
-      <button type="button" class="tab-btn somente-logado" data-tab="dashboard">Turmas e documentos</button>
-      <button type="button" class="tab-btn somente-admin" data-tab="admin" hidden>Turmas e matrículas</button>
-      <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>Usuários</button>
-      <button type="button" class="tab-btn somente-admin" data-tab="configuracoes" hidden>Configurações</button>
-    </nav>
+      <nav class="tabs" id="main-tabs">
+        <button type="button" class="tab-btn active" data-tab="menu">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 11l9-8 9 8" /><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+          </svg>
+          Início
+        </button>
 
-    <div id="lote-progresso" class="summary" hidden></div>
+        <p class="tabs-grupo-titulo somente-cadastro">Cadastro</p>
+        <button type="button" class="tab-btn somente-cadastro" data-tab="cadastro">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M14 3v5h5" /><path d="M12 12v6M9 15h6" />
+          </svg>
+          Cadastro
+        </button>
+
+        <p class="tabs-grupo-titulo somente-logado">Atendimento</p>
+        <button type="button" class="tab-btn somente-logado" data-tab="chamada">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 2v4M16 2v4M3 10h18" /><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8.5 15.5l2 2 4-4.5" />
+          </svg>
+          Chamada
+        </button>
+        <button type="button" class="tab-btn somente-logado" data-tab="frequencia">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" />
+          </svg>
+          Frequência
+        </button>
+        <button type="button" class="tab-btn somente-logado" data-tab="consulta">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-4.35-4.35" />
+          </svg>
+          Consultar catequisandos
+        </button>
+        <button type="button" class="tab-btn somente-logado" data-tab="dashboard">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 21V10M9 21V6M15 21V13M21 21V3" />
+          </svg>
+          Turmas e documentos
+        </button>
+
+        <p class="tabs-grupo-titulo somente-admin" hidden>Administração</p>
+        <button type="button" class="tab-btn somente-admin" data-tab="admin" hidden>
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /><path d="M13 13h5M13 16.5h5" />
+          </svg>
+          Turmas e matrículas
+        </button>
+        <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          Usuários
+        </button>
+        <button type="button" class="tab-btn somente-admin" data-tab="configuracoes" hidden>
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          Configurações
+        </button>
+      </nav>
+    </aside>
+
+    <div class="shell">
+      <!-- Atualizado pelo switchTab() em script.js -- mostra em que secao a pessoa esta. -->
+      <p class="trilha-pagina" id="trilha-pagina">Início</p>
+
+      <div id="lote-progresso" class="summary" hidden></div>
 
     <div class="tab-content" id="tab-menu" data-tab-content="menu">
       <section class="menu-hero">
@@ -789,13 +855,16 @@
         <div id="chaves-lista" class="result-list"></div>
       </section>
     </div>
+    </div>
+    <!-- fecha .shell (coluna de conteudo) -->
   </div>
+  <!-- fecha .app-shell (sidebar + coluna de conteudo) -->
 
   <!--
-    Relatorio de frequencia para impressao. Fica FORA do .shell e de qualquer
-    .tab-content de proposito: a regra de @media print existente esconde
-    .tab-content inteiro (ela foi escrita para a ficha). Montado por JS na
-    hora de imprimir.
+    Relatorio de frequencia para impressao. Fica FORA do .shell/.app-shell e
+    de qualquer .tab-content de proposito: a regra de @media print existente
+    esconde .tab-content inteiro (ela foi escrita para a ficha). Montado por
+    JS na hora de imprimir.
   -->
   <div id="freq-relatorio" class="relatorio-print"></div>
 

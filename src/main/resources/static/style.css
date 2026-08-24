@@ -408,32 +408,178 @@ canvas {
 }
 
 /* ==========================================================================
-   Abas (Cadastro / Consulta / Turmas e documentos)
-   Reaproveita as variáveis, fonte e raio já definidos acima — sem novo estilo.
+   Estrutura geral do index.html: barra lateral fixa + coluna de conteúdo.
+   É o "app shell" das telas internas -- login.html, ficha.html e as demais
+   telas avulsas continuam usando .shell sozinho, sem sidebar, então nada
+   aqui pode depender de .shell viver dentro de .app-shell.
+   ========================================================================== */
+
+.app-shell {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+.app-shell > .shell {
+  flex: 1;
+  min-width: 0;
+  max-width: 1100px;
+}
+
+.sidebar {
+  flex: 0 0 250px;
+  width: 250px;
+  position: sticky;
+  top: 32px;
+  display: grid;
+  gap: 4px;
+  padding: 18px 14px;
+  background: var(--paper-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  animation: float-in 700ms ease-out;
+  align-self: flex-start;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 18px;
+}
+
+.sidebar-brand img { height: 34px; width: auto; }
+
+.sidebar-brand span {
+  font-weight: 600;
+  font-size: 1.02rem;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+
+/* Dentro da barra lateral a barrinha de usuário (auth.js) empilha em vez de
+   ficar alinhada à direita -- lá ela vivia numa faixa horizontal no topo da
+   página; aqui é só mais um bloco da coluna. */
+.sidebar .barra-usuario {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 8px 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.sidebar .barra-usuario .usuario-info { margin-right: 0; }
+.sidebar .barra-usuario .botao-falso { text-align: center; }
+
+/* Trilha acima do conteúdo: resposta direta a "fácil saber onde estou" --
+   fica visível mesmo quando a seção não repete o próprio nome no título. */
+.trilha-pagina {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   Itens de navegação da barra lateral (Cadastro / Chamada / Frequência /
+   etc.). Reaproveita variáveis, fonte e raio já definidos acima.
    ========================================================================== */
 
 .tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.tab-btn {
-  background: #fff;
+.tabs-grupo-titulo {
+  margin: 12px 8px 4px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   color: var(--muted);
-  border: 1px solid var(--stroke);
-  box-shadow: none;
 }
+
+.tabs-grupo-titulo:first-of-type { margin-top: 4px; }
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  justify-content: flex-start;
+  text-align: left;
+  background: none;
+  color: var(--ink);
+  border: none;
+  box-shadow: none;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 0.92rem;
+  width: 100%;
+}
+
+.tab-btn-icon { flex: 0 0 auto; color: var(--muted); }
+
+.tab-btn:hover { background: rgba(47, 111, 126, 0.08); }
 
 .tab-btn.active {
   background: var(--accent-2);
   color: #fff;
-  border-color: var(--accent-2);
 }
+
+.tab-btn.active .tab-btn-icon { color: #fff; }
 
 .tab-content[hidden] { display: none; }
 
 .tabs[hidden] { display: none; }
+
+/* Abaixo de 900px a barra lateral vira uma barra horizontal no topo (mesmo
+   comportamento de antes) -- uma coluna fixa de 250px não cabe ao lado do
+   conteúdo em tela de tablet/celular. */
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+    padding: 20px 16px 40px;
+  }
+
+  .sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .sidebar .barra-usuario {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    border-bottom: none;
+    padding: 0 4px 10px;
+  }
+
+  .tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tabs-grupo-titulo {
+    width: 100%;
+    margin: 8px 4px 2px;
+  }
+
+  .tab-btn {
+    width: auto;
+    border: 1px solid var(--stroke);
+  }
+
+  .tab-btn.active { border-color: var(--accent-2); }
+}
 
 /* ==========================================================================
    Sessão: barra de usuário e telas de login / senha.
@@ -1115,10 +1261,12 @@ canvas {
 @media print {
   /* Some com tudo que nao e ficha: barra de acoes e a interface do index */
   .ficha-barra,
+  .sidebar,
   #main-tabs,
   .tabs,
   .tab-content,
   .barra-usuario,
+  .trilha-pagina,
   #header {
     display: none !important;
   }
@@ -1128,6 +1276,14 @@ canvas {
     padding: 0;
     color: var(--ink);
     font-family: Arial, sans-serif;
+  }
+
+  /* Sem a sidebar, .app-shell nao precisa mais do layout em duas colunas. */
+  .app-shell {
+    display: block;
+    max-width: none;
+    padding: 0;
+    gap: 0;
   }
 
   .shell {

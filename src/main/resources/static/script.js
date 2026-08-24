@@ -834,6 +834,20 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 const TABS_PROTEGIDAS = ['chamada', 'frequencia', 'consulta', 'dashboard', 'admin', 'usuarios', 'configuracoes'];
 const TABS_SO_ADMIN = ['admin', 'usuarios', 'configuracoes'];
 
+// Texto da trilha (#trilha-pagina) acima do conteúdo -- o mesmo agrupamento
+// usado nos rótulos da barra lateral, para reforçar "onde eu estou".
+const TRILHA_POR_TAB = {
+  menu: 'Início',
+  cadastro: 'Cadastro',
+  chamada: 'Atendimento / Chamada',
+  frequencia: 'Atendimento / Frequência',
+  consulta: 'Atendimento / Consultar catequisandos',
+  dashboard: 'Atendimento / Turmas e documentos',
+  admin: 'Administração / Turmas e matrículas',
+  usuarios: 'Administração / Usuários',
+  configuracoes: 'Administração / Configurações'
+};
+
 // ---- Estado do cadastro público ----
 // Enquanto não sabemos, assumimos aberto: é o comportamento de sempre, e não
 // faz sentido mostrar "encerradas" por causa de uma consulta que ainda não voltou.
@@ -974,10 +988,11 @@ const switchTab = (tabName) => {
   document.querySelectorAll('.tab-content').forEach((el) => {
     el.hidden = el.dataset.tabContent !== tabName;
   });
-  // Na tela inicial os botões grandes já bastam; a barra de navegação
-  // só aparece depois que o usuário escolhe uma das opções, servindo
-  // de guia (o botão ativo mostra em qual tela ele está).
-  document.getElementById('main-tabs').hidden = tabName === 'menu';
+  // A barra lateral fica sempre visível, inclusive na tela inicial -- é o
+  // mapa permanente do sistema, não um apoio que só aparece depois que a
+  // pessoa já escolheu uma opção (era assim na barra de abas antiga).
+  const trilha = document.getElementById('trilha-pagina');
+  if (trilha) trilha.textContent = TRILHA_POR_TAB[tabName] || '';
   // chamada.js registra esta funcao; a aba e a tela de trabalho do catequista.
   if (tabName === 'chamada' && window.carregarChamada) window.carregarChamada();
   if (tabName === 'frequencia' && window.carregarFrequencia) window.carregarFrequencia();

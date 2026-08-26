@@ -118,4 +118,32 @@ class AgendaPermissaoService(
             TipoUsuario.CATEQUISTA -> listOf(NivelEvento.TURMA)
         }
     }
+
+    /**
+     * Por que este usuario nao consegue cadastrar nada. Null quando consegue.
+     *
+     * Existe porque a lista vazia de niveis, sozinha, produz uma tela que
+     * simplesmente nao reage ao clique -- e "nao acontece nada" e
+     * indistinguivel de tela quebrada. O caso mais comum e o coordenador sem
+     * comunidade vinculada, que e uma pendencia de cadastro e nao um defeito,
+     * mas nao ha como a pessoa adivinhar isso olhando um calendario mudo.
+     */
+    fun motivoNaoPodeCriar(usuario: Usuario? = escopo.usuarioLogado()): String? {
+        if (usuario == null) return "Sessão expirada. Entre de novo para cadastrar eventos."
+
+        if (niveisQuePodeCriar(usuario).isNotEmpty()) return null
+
+        return when (usuario.tipo) {
+            TipoUsuario.COORDENADOR ->
+                "Sua conta ainda não tem uma comunidade definida, então não há em " +
+                    "qual comunidade cadastrar. Peça ao coordenador paroquial para " +
+                    "definir isso na tela de Usuários."
+
+            TipoUsuario.CATEQUISTA ->
+                "Você ainda não está vinculado a nenhuma turma, então não há para " +
+                    "qual turma cadastrar. Peça ao coordenador para vincular você."
+
+            else -> "Sua conta não tem permissão para cadastrar eventos."
+        }
+    }
 }

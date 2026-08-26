@@ -47,7 +47,16 @@ data class OpcoesAgendaDTO(
     val comunidades: List<OpcaoDTO>,
     val turmas: List<OpcaoDTO>,
     val formacoes: List<OpcaoDTO>,
-    val podeCriar: Boolean
+    val podeCriar: Boolean,
+
+    /**
+     * Por que não pode cadastrar. Null quando pode.
+     *
+     * Sem isto a tela só sabe que a lista de níveis veio vazia, e o resultado
+     * é um calendário que não reage ao clique — indistinguível de tela
+     * quebrada. Com o motivo, ela explica.
+     */
+    val motivoNaoPodeCriar: String? = null
 )
 
 data class OpcaoDTO(

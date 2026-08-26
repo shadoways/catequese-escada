@@ -56,6 +56,7 @@
   let mesVisivel = new Date().getMonth();   // 0-11
   let visao = 'mes';                        // 'mes' | 'lista'
   let conflitosPendentes = [];              // o que o backend acusou no ultimo Salvar
+  let falhaNasOpcoes = null;                // por que /opcoes nao carregou
   const filtros = { nivel: null, tipo: null };
 
   const el = (id) => document.getElementById(id);
@@ -129,12 +130,23 @@
     mostrarStatus('agenda-status', 'Carregando a agenda...', 'neutro');
 
     try {
-      // As opcoes so mudam quando muda o cadastro; uma vez por sessao basta.
+      /*
+       * As opcoes so mudam quando muda o cadastro; uma vez por sessao basta.
+       *
+       * Se esta chamada falhar, `opcoes` fica nulo e o calendario nasce sem
+       * nenhuma acao de clique. Antes isso acontecia em silencio -- a tela
+       * mostrava as datas e simplesmente nao reagia, que e indistinguivel de
+       * defeito. Agora a falha e registrada e explicada.
+       */
       if (!opcoes) {
         const respostaOpcoes = await fetch('/api/agenda/opcoes');
         if (respostaOpcoes.ok) {
           opcoes = await respostaOpcoes.json();
+          falhaNasOpcoes = null;
           prepararFormulario();
+        } else {
+          falhaNasOpcoes = `Não foi possível carregar as opções de cadastro `
+            + `(erro ${respostaOpcoes.status}). A agenda está em modo leitura.`;
         }
       }
 
@@ -555,8 +567,7 @@
     const rotulo = el('agenda-mes-rotulo');
     if (rotulo) rotulo.textContent = `${MESES[mesVisivel]} de ${ano}`;
 
-    const dica = el('agenda-dica-clique');
-    if (dica) dica.hidden = !(opcoes && opcoes.podeCriar) || visao !== 'mes';
+    atualizarDicaDeClique();
 
     // Indexa por dia uma vez; varrer a lista inteira dentro de cada celula
     // seria 42 varreduras por mes renderizado.
@@ -610,9 +621,14 @@
         ? ` data-novo="${data}" role="button" tabindex="0"` : '';
       if (podeCriar) classes.push('agenda-cal-dia--clicavel');
 
+      // O "+" so aparece no hover, e so onde o clique faz alguma coisa: e a
+      // pista visual de que a celula e um alvo de cadastro, nao so um numero.
+      const marcaDeAdicionar = podeCriar
+        ? '<span class="agenda-cal-add" aria-hidden="true">+</span>' : '';
+
       celulas.push(`
         <div class="${classes.join(' ')}"${abre}>
-          <span class="agenda-cal-num">${dia}</span>
+          <span class="agenda-cal-num">${dia}</span>${marcaDeAdicionar}
           <div class="agenda-cal-evs">${chips.join('')}</div>
         </div>`);
     }
@@ -653,8 +669,47 @@
     const nav = document.querySelector('.agenda-cal-nav');
     if (nav) nav.style.visibility = nova === 'mes' ? 'visible' : 'hidden';
 
+    atualizarDicaDeClique();
+  };
+
+  /*
+   * Diz o que esta acontecendo com o clique no dia. Sao tres situacoes que
+   * antes produziam a MESMA tela muda:
+   *   - da para cadastrar        -> ensina a clicar
+   *   - /opcoes falhou           -> avisa que e modo leitura, com o erro
+   *   - sem permissao/pendencia  -> explica o porque, vindo do servidor
+   */
+  const atualizarDicaDeClique = () => {
     const dica = el('agenda-dica-clique');
-    if (dica) dica.hidden = nova !== 'mes' || !(opcoes && opcoes.podeCriar);
+    if (!dica) return;
+
+    if (visao !== 'mes') {
+      dica.hidden = true;
+      return;
+    }
+
+    if (falhaNasOpcoes) {
+      dica.textContent = falhaNasOpcoes;
+      dica.className = 'agenda-aviso-leitura';
+      dica.hidden = false;
+      return;
+    }
+
+    if (opcoes && opcoes.podeCriar) {
+      dica.textContent = 'Clique num dia para marcar um evento.';
+      dica.className = 'muted';
+      dica.hidden = false;
+      return;
+    }
+
+    if (opcoes && opcoes.motivoNaoPodeCriar) {
+      dica.textContent = opcoes.motivoNaoPodeCriar;
+      dica.className = 'agenda-aviso-leitura';
+      dica.hidden = false;
+      return;
+    }
+
+    dica.hidden = true;
   };
 
   const andarMes = (passo) => {

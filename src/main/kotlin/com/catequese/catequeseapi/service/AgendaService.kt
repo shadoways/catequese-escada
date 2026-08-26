@@ -188,7 +188,8 @@ class AgendaService(
             comunidades = comunidades,
             turmas = turmas,
             formacoes = formacoes,
-            podeCriar = niveis.isNotEmpty()
+            podeCriar = niveis.isNotEmpty(),
+            motivoNaoPodeCriar = permissao.motivoNaoPodeCriar(usuario)
         )
     }
 

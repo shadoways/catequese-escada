@@ -2654,3 +2654,35 @@ canvas {
 @media print {
   .agenda-visoes, .agenda-dica-clique, .agenda-conflitos { display: none !important; }
 }
+
+/* Aviso de que a agenda está só para leitura, com o motivo. Substituiu o
+   silêncio: antes, sem permissão, o calendário simplesmente não reagia ao
+   clique -- e "não acontece nada" é indistinguível de tela quebrada. */
+.agenda-aviso-leitura {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--warning-border);
+  background: rgba(241, 201, 122, 0.16);
+  border-radius: 10px;
+  color: var(--warning-text);
+  font-size: 0.85rem;
+}
+
+.agenda-aviso-leitura[hidden] { display: none; }
+
+/* Pista de que o dia é clicável. Só no hover para não poluir a grade. */
+.agenda-cal-dia { position: relative; }
+
+.agenda-cal-add {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--accent-2);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.agenda-cal-dia--clicavel:hover .agenda-cal-add,
+.agenda-cal-dia--clicavel:focus-visible .agenda-cal-add { opacity: 1; }

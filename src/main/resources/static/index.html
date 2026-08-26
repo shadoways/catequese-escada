@@ -335,7 +335,33 @@
         </div>
 
         <div id="agenda-status" class="summary"></div>
-        <div id="agenda-lista" class="agenda-lista"></div>
+
+        <!--
+          Duas visões da mesma agenda. O calendário serve para marcar (clicar
+          no dia ja abre o formulario naquela data) e para enxergar o mes
+          cheio; a lista serve para ler os detalhes, que nao cabem na celula
+          de um dia.
+        -->
+        <div class="agenda-visoes">
+          <div class="agenda-cal-nav">
+            <button type="button" class="secondary" id="agenda-mes-anterior"
+                    aria-label="Mês anterior">‹</button>
+            <strong id="agenda-mes-rotulo"></strong>
+            <button type="button" class="secondary" id="agenda-mes-seguinte"
+                    aria-label="Próximo mês">›</button>
+          </div>
+          <div class="agenda-visao-troca">
+            <button type="button" class="agenda-chip ativo" id="agenda-ver-mes">Mês</button>
+            <button type="button" class="agenda-chip" id="agenda-ver-lista">Lista</button>
+          </div>
+        </div>
+
+        <p class="muted" id="agenda-dica-clique" hidden>
+          Clique num dia para marcar um evento.
+        </p>
+
+        <div id="agenda-calendario" class="agenda-calendario"></div>
+        <div id="agenda-lista" class="agenda-lista" hidden></div>
       </section>
 
       <!-- Formulario de evento. Escondido ate alguem clicar em Novo/editar. -->
@@ -407,6 +433,13 @@
             <textarea id="agenda-f-descricao" rows="2"></textarea>
           </label>
         </div>
+
+        <!--
+          Conflito de agenda. Aparece assim que data e alcance estao
+          preenchidos, antes do Salvar: descobrir o choque so depois de tentar
+          gravar e o que torna a regra irritante.
+        -->
+        <div id="agenda-conflitos" class="agenda-conflitos" hidden></div>
 
         <div id="agenda-form-erro" class="summary"></div>
 

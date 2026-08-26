@@ -1,10 +1,12 @@
 package com.catequese.catequeseapi.controller
 
 import com.catequese.catequeseapi.dto.AgendaDTO
+import com.catequese.catequeseapi.dto.ChecagemConflitoDTO
 import com.catequese.catequeseapi.dto.EventoAgendaDTO
 import com.catequese.catequeseapi.dto.EventoFormDTO
 import com.catequese.catequeseapi.dto.OpcoesAgendaDTO
 import com.catequese.catequeseapi.service.AgendaService
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.net.URI
+import java.time.LocalDate
 
 /**
  * A agenda da catequese.
@@ -38,6 +41,24 @@ class AgendaController(private val service: AgendaService) {
     @GetMapping("/eventos/{id}")
     fun porId(@PathVariable id: Long): ResponseEntity<EventoAgendaDTO> =
         ResponseEntity.ok(service.porId(id))
+
+    /**
+     * Ja existe evento disputando este publico nesta data?
+     *
+     * Consultada enquanto a pessoa preenche o formulario, para o aviso
+     * aparecer antes do Salvar -- descobrir o conflito so depois de tentar
+     * gravar e o que torna a regra irritante.
+     */
+    @GetMapping("/conflitos")
+    fun conflitos(
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) data: LocalDate,
+        @RequestParam nivel: String,
+        @RequestParam(required = false) idComunidade: Long?,
+        @RequestParam(required = false) idTurma: Long?,
+        @RequestParam(required = false) ignorarId: Long?
+    ): ResponseEntity<ChecagemConflitoDTO> = ResponseEntity.ok(
+        service.checarConflito(data, nivel, idComunidade, idTurma, ignorarId)
+    )
 
     @PostMapping("/eventos")
     fun criar(@RequestBody form: EventoFormDTO): ResponseEntity<EventoAgendaDTO> {

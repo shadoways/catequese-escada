@@ -2312,6 +2312,11 @@ canvas {
 
 .agenda-lista { display: block; }
 
+/* De novo o display vencendo o atributo hidden -- a lista continuava embaixo
+   do calendario mesmo com visao = 'mes'. Terceira vez neste arquivo: vale a
+   regra de bolso de sempre escrever o par [hidden] junto com o display. */
+.agenda-lista[hidden] { display: none; }
+
 .agenda-mes {
   font-size: 0.73rem;
   text-transform: uppercase;
@@ -2471,4 +2476,181 @@ canvas {
   #agenda-novo {
     display: none !important;
   }
+}
+
+/* ---- Calendário do mês: a visão de marcar ---- */
+
+.agenda-visoes {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agenda-cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agenda-cal-nav strong {
+  font-size: 1.02rem;
+  min-width: 11ch;
+  text-align: center;
+}
+
+/* Setas de mês: quadradas e discretas, não a pílula sólida do botão base. */
+.agenda-cal-nav button {
+  padding: 4px 12px;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  min-width: 38px;
+}
+
+.agenda-visao-troca { display: flex; gap: 6px; }
+
+.agenda-calendario {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.agenda-calendario[hidden] { display: none; }
+
+.agenda-cal-cab {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  text-align: center;
+  padding: 6px 0 2px;
+}
+
+.agenda-cal-dia {
+  min-height: 92px;
+  background: #fff;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+/* Dia do mês anterior/seguinte: mantém a grade alinhada sem fingir ser um dia. */
+.agenda-cal-dia--fora {
+  background: transparent;
+  border-color: transparent;
+}
+
+.agenda-cal-dia--clicavel { cursor: pointer; }
+
+.agenda-cal-dia--clicavel:hover {
+  border-color: var(--accent-2);
+  background: rgba(47, 111, 126, 0.05);
+}
+
+.agenda-cal-dia--clicavel:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+
+.agenda-cal-dia--hoje {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.agenda-cal-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-cal-dia--hoje .agenda-cal-num { color: var(--accent); }
+
+.agenda-cal-evs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* É um <button>: anula a pílula sólida da regra base, senão cada evento do
+   calendário vira um botão de ação pesado. Mesma armadilha de .nome-link. */
+.agenda-cal-ev {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: color-mix(in srgb, var(--tone) 12%, #fff);
+  color: var(--tone);
+  border: none;
+  border-left: 3px solid var(--tone);
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 2px 5px;
+  font: inherit;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.agenda-cal-ev:hover { transform: none; filter: brightness(0.96); }
+
+.agenda-cal-ev--cancelado {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.agenda-cal-mais {
+  font-size: 0.66rem;
+  color: var(--muted);
+  padding-left: 5px;
+}
+
+/* ---- Conflito de agenda ---- */
+
+.agenda-conflitos {
+  border: 1px solid var(--warning-border);
+  background: rgba(241, 201, 122, 0.16);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.agenda-conflitos[hidden] { display: none; }
+
+.agenda-conflitos-tit {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--warning-text);
+}
+
+.agenda-conflitos-lista {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 0.86rem;
+}
+
+.agenda-conflitos-lista li { margin-bottom: 4px; }
+.agenda-conflitos-lista .muted { display: block; font-size: 0.79rem; }
+
+@media (max-width: 700px) {
+  /* Sete colunas de 92px não cabem no celular. A grade vira lista de dias
+     com evento -- dia vazio no telefone não ajuda ninguém. */
+  .agenda-calendario { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .agenda-cal-dia { min-height: 58px; padding: 3px; }
+  .agenda-cal-ev { font-size: 0; padding: 0; height: 4px; border-radius: 2px; border-left: none;
+                   background: var(--tone); }
+  .agenda-cal-mais { font-size: 0.6rem; }
+  .agenda-cal-cab { font-size: 0.6rem; }
+}
+
+@media print {
+  .agenda-visoes, .agenda-dica-clique, .agenda-conflitos { display: none !important; }
 }

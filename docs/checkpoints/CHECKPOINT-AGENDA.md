@@ -1,7 +1,7 @@
 # Checkpoint — Agenda da catequese
 
 **Branch:** `login-e-permissoes`
-**Situação:** backend completo, tela da Agenda completa, **tela de Formação pendente**.
+**Situação:** backend completo, tela da Agenda com calendário clicável e conflito de agenda, **tela de Formação pendente**.
 **Proposta visual:** https://claude.ai/code/artifact/522851d9-ac9a-457d-a8ad-a759d84923d3
 
 ---
@@ -36,6 +36,8 @@ Na tela: a **cor da tarja** é o nível, o **ícone** é o tipo. Codificar os do
 - `model/Formacao.kt` — `Formacao`, `FormacaoInscrito`, `PresencaFormacao`
 - `repository/AgendaRepositories.kt`
 - `service/AgendaPermissaoService.kt` — **o núcleo da feature**
+- `service/ConflitoAgendaService.kt` — regra de sobreposição de público
+- `exception/ConflitoAgendaException.kt` — vira 409, carregando a lista do que bate
 - `service/AgendaService.kt` — listagem e CRUD com permissão
 - `service/FrequenciaFormacaoService.kt` — apuração dos 80%
 - `service/FormacaoService.kt` — trilhas, inscrições e chamada
@@ -49,6 +51,7 @@ Na tela: a **cor da tarja** é o nível, o **ícone** é o tipo. Codificar os do
 - `model/Turma.kt` — `+ idComunidade`
 - `service/ChamadaService.kt` — exclui eventos de formação da chamada de catequisando
 - `config/SecurityConfig.kt` — libera `/api/agenda/**` para catequista autenticado
+- `advice/RestExceptionHandler.kt` — trata o 409 de conflito
 - `controller/EventoController.kt` e `service/EventoService.kt` — **escrita removida** (ver "furos fechados")
 - `dto/UsuarioDTO.kt`, `service/UsuarioAdminService.kt` — `idComunidade`
 - `dto/AdminDTO.kt`, `service/AdminCatequeseService.kt` — comunidade da turma
@@ -58,9 +61,34 @@ Na tela: a **cor da tarja** é o nível, o **ícone** é o tipo. Codificar os do
 
 `sql/agenda/MIGRACAO_AGENDA.sql` — **ainda não foi rodada.** Segura em produção: só cria estrutura e converte o texto livre de `tb_evento.nivel`. Escrita para MariaDB.
 
+### Calendário e conflito de agenda
+
+**Duas visões da mesma agenda**, porque servem a momentos diferentes:
+
+- **Mês** — grade clicável. É a visão de *marcar*: clicar num dia abre o formulário já naquela data. Clicar num chip de evento abre aquele evento (mesma lógica do Outlook: espaço livre cria, evento existente abre).
+- **Lista** — linha do tempo do ano. É a visão de *ler*: local, quem participa e frequência não cabem na célula de um dia.
+
+**Conflito de agenda.** A regra **não** é "um evento por dia" — uma paróquia com quatro comunidades tem várias coisas no mesmo domingo, e travar tudo deixaria o sistema inútil na primeira semana. O que caracteriza conflito é o **público se sobrepor**:
+
+| | conflita? |
+|---|---|
+| paroquial-ou-acima × qualquer coisa | sim (pega todo mundo) |
+| comunidade X × comunidade X | sim |
+| comunidade X × comunidade Y | não |
+| comunidade X × turma da comunidade X | sim |
+| comunidade X × turma de outra | não |
+| turma T × turma T | sim |
+| turma T × turma U | não |
+
+Evento cancelado nunca conflita: continua na agenda para quem olha o mês entender que foi desmarcado, mas não ocupa mais ninguém.
+
+O fluxo tem **dois momentos**: um aviso prévio enquanto a pessoa preenche (`GET /api/agenda/conflitos`), e a recusa no salvar (409 com a lista do que bate). O primeiro Salvar é **sempre** barrado; o botão vira "Marcar assim mesmo" e só o segundo clique manda `confirmarConflito: true`.
+
+> **Por que não é bloqueio absoluto:** existe caso legítimo de dois eventos no mesmo dia para o mesmo público (a missa de manhã e o retiro à tarde). Travar sem saída viraria estorvo e levaria alguém a cadastrar com data errada só para conseguir salvar — o que é pior do que o conflito que se queria evitar. Se você preferir travar de vez, é uma linha: remover o `confirmarConflito` do `AgendaService.exigirAgendaLivre`.
+
 ### Frontend
 
-- `agenda.js` — tela nova, completa
+- `agenda.js` — tela nova, completa (calendário, lista, filtros, formulário, conflito)
 - `index.html` — item "Agenda" na barra lateral, card na tela inicial, painel da agenda, campo de comunidade no formulário de usuário
 - `script.js` — aba registrada (`TABS_PROTEGIDAS`, trilha, `carregarAgenda`)
 - `style.css` — bloco da agenda + `label[hidden]` (ver "bug encontrado")
@@ -106,7 +134,7 @@ A migração cria as colunas, mas os dados são preenchidos por tela:
 
 ### 4. Testes automatizados
 
-Não escrevi teste de unidade para `AgendaPermissaoService`. É a parte que mais merece: são 7 linhas de matriz × 3 papéis. Fica como próximo passo natural.
+Não escrevi teste de unidade para `AgendaPermissaoService` nem para `ConflitoAgendaService`. São as duas partes que mais merecem: a matriz de 7 linhas × 3 papéis, e a tabela de sobreposição de 7 casos. Fica como próximo passo natural — ambas são funções puras, fáceis de testar.
 
 ---
 

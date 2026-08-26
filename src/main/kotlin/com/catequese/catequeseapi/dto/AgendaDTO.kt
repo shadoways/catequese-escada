@@ -68,7 +68,37 @@ data class EventoFormDTO(
     val horaInicio: String? = null,
     val local: String? = null,
     val situacao: String? = null,
-    val motivoCancelamento: String? = null
+    val motivoCancelamento: String? = null,
+
+    /**
+     * O usuário viu os conflitos e quer marcar assim mesmo.
+     *
+     * Existe porque bloquear de vez seria errado: há casos legítimos de dois
+     * eventos no mesmo dia para o mesmo público (a missa de manhã e o retiro
+     * à tarde). O sistema avisa e mostra o que bate; quem decide é quem
+     * conhece a paróquia.
+     */
+    val confirmarConflito: Boolean = false
+)
+
+/** Um evento que já ocupa o mesmo público na mesma data. */
+data class ConflitoDTO(
+    val idEvento: Long,
+    val titulo: String,
+    val tipoRotulo: String,
+    val nivelRotulo: String?,
+
+    /** "toda a paróquia", "comunidade São José", "turma Crisma II". */
+    val alcance: String,
+    val dataInicio: LocalDate?,
+    val horaInicio: String?,
+    val local: String?
+)
+
+/** Resposta da checagem prévia, enquanto a pessoa ainda preenche o formulário. */
+data class ChecagemConflitoDTO(
+    val temConflito: Boolean,
+    val conflitos: List<ConflitoDTO>
 )
 
 /** Frequência de um catequista numa formação. */

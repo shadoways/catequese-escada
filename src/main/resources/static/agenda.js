@@ -1,11 +1,13 @@
 /*
  * Agenda da catequese.
  *
- * A tela e uma linha do tempo agrupada por mes, e nao uma grade de calendario:
- * os eventos da catequese sao esparsos (poucos por mes), e numa grade a maior
- * parte do espaco fica vazia justamente escondendo o que interessa -- local,
- * quem participa e como esta a frequencia. Numa lista isso tudo cabe sem
- * clique.
+ * Duas visoes da mesma agenda, porque servem a momentos diferentes:
+ *
+ *   MES   -- grade de calendario clicavel. E a visao de MARCAR: clicar num dia
+ *            abre o formulario ja naquela data, e da para ver o mes cheio de
+ *            uma vez para escolher onde cabe.
+ *   LISTA -- linha do tempo do ano. E a visao de LER: local, quem participa e
+ *            frequencia nao cabem na celula de um dia.
  *
  * Dois eixos independentes codificados de formas diferentes:
  *   - NIVEL (de quem o evento e)  -> a cor da tarja da esquerda
@@ -51,6 +53,9 @@
   let dados = null;
   let opcoes = null;
   let editando = null;
+  let mesVisivel = new Date().getMonth();   // 0-11
+  let visao = 'mes';                        // 'mes' | 'lista'
+  let conflitosPendentes = [];              // o que o backend acusou no ultimo Salvar
   const filtros = { nivel: null, tipo: null };
 
   const el = (id) => document.getElementById(id);
@@ -104,7 +109,18 @@
       if (ano === atual) opcao.selected = true;
       select.appendChild(opcao);
     }
-    select.addEventListener('change', carregarAgenda);
+
+    select.addEventListener('change', () => {
+      /*
+       * Trocar de ano leva o calendario para janeiro, a nao ser que seja o ano
+       * corrente -- ai volta para o mes de hoje. Sem isto, escolher 2027 em
+       * agosto abriria agosto de 2027, um mes sem relacao nenhuma com o que a
+       * pessoa procura.
+       */
+      const escolhido = anoSelecionado();
+      mesVisivel = escolhido === new Date().getFullYear() ? new Date().getMonth() : 0;
+      carregarAgenda();
+    });
   };
 
   async function carregarAgenda() {
@@ -131,7 +147,12 @@
       dados = await resposta.json();
       mostrarStatus('agenda-status', '');
       renderResumo();
+      renderCalendario();
       renderLista();
+
+      // Aplica a visao corrente: sem isto a navegacao de mes e a lista ficam
+      // no estado do HTML, que nao sabe qual visao esta escolhida.
+      trocarVisao(visao);
     } catch (erro) {
       mostrarStatus('agenda-status', 'Erro de conexão ao carregar a agenda.', 'error');
     }
@@ -216,6 +237,7 @@
             'ativo',
             (outro.dataset.valor || null) === filtros[campo]
           ));
+          renderCalendario();
           renderLista();
         });
         caixa.appendChild(b);
@@ -236,11 +258,7 @@
     const alvo = el('agenda-lista');
     if (!alvo || !dados) return;
 
-    const eventos = (dados.eventos || []).filter((ev) => {
-      if (filtros.nivel && ev.nivel !== filtros.nivel) return false;
-      if (filtros.tipo && ev.tipo !== filtros.tipo) return false;
-      return true;
-    });
+    const eventos = eventosVisiveis();
 
     if (!eventos.length) {
       alvo.innerHTML = `<p class="muted">Nenhum evento ${
@@ -359,6 +377,10 @@
     el('agenda-f-nivel').addEventListener('change', ajustarCamposCondicionais);
     el('agenda-f-tipo').addEventListener('change', ajustarCamposCondicionais);
     el('agenda-f-situacao').addEventListener('change', ajustarCamposCondicionais);
+
+    // Tudo que muda o publico ou a data refaz a checagem de conflito.
+    ['agenda-f-data', 'agenda-f-nivel', 'agenda-f-comunidade', 'agenda-f-turma']
+      .forEach((id) => el(id).addEventListener('change', checarConflito));
   };
 
   /*
@@ -377,8 +399,9 @@
     el('agenda-f-motivo-campo').hidden = situacao !== 'CANCELADO';
   };
 
-  const abrirFormulario = (evento) => {
+  const abrirFormulario = (evento, dataPreDefinida) => {
     editando = evento || null;
+    conflitosPendentes = [];
 
     el('agenda-form-titulo').textContent = evento ? 'Editar evento' : 'Novo evento';
     el('agenda-f-titulo').value = evento ? evento.titulo : '';
@@ -387,7 +410,9 @@
     el('agenda-f-comunidade').value = evento && evento.idComunidade ? String(evento.idComunidade) : '';
     el('agenda-f-turma').value = evento && evento.idTurma ? String(evento.idTurma) : '';
     el('agenda-f-formacao').value = evento && evento.idFormacao ? String(evento.idFormacao) : '';
-    el('agenda-f-data').value = evento && evento.dataInicio ? evento.dataInicio : '';
+    el('agenda-f-data').value = evento
+      ? (evento.dataInicio || '')
+      : (dataPreDefinida || '');
     el('agenda-f-data-fim').value = evento && evento.dataFim ? evento.dataFim : '';
     el('agenda-f-hora').value = evento && evento.horaInicio ? evento.horaInicio : '';
     el('agenda-f-local').value = evento && evento.local ? evento.local : '';
@@ -396,8 +421,11 @@
     el('agenda-f-descricao').value = evento && evento.descricao ? evento.descricao : '';
 
     el('agenda-excluir').hidden = !evento;
+    el('agenda-salvar').textContent = 'Salvar';
     mostrarStatus('agenda-form-erro', '');
+    esconderConflitos();
     ajustarCamposCondicionais();
+    checarConflito();
 
     el('agenda-form-painel').hidden = false;
     el('agenda-form-painel').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -406,6 +434,9 @@
 
   const fecharFormulario = () => {
     editando = null;
+    conflitosPendentes = [];
+    esconderConflitos();
+    el('agenda-salvar').textContent = 'Salvar';
     el('agenda-form-painel').hidden = true;
   };
 
@@ -428,7 +459,11 @@
       local: el('agenda-f-local').value || null,
       situacao: el('agenda-f-situacao').value,
       motivoCancelamento: el('agenda-f-motivo').value || null,
-      descricao: el('agenda-f-descricao').value || null
+      descricao: el('agenda-f-descricao').value || null,
+
+      // So vai true depois de a pessoa ter visto a lista de conflitos e
+      // clicado de novo -- nunca no primeiro Salvar.
+      confirmarConflito: conflitosPendentes.length > 0
     };
   };
 
@@ -449,14 +484,25 @@
       });
 
       if (!resposta.ok) {
+        let corpo = null;
+        try { corpo = await resposta.json(); } catch (ignorado) { /* sem JSON */ }
+
+        // 409: a data esta ocupada. Nao e erro de preenchimento -- mostra o
+        // que bate e transforma o botao em "Marcar assim mesmo", para a
+        // decisao ser de quem conhece a paroquia.
+        if (resposta.status === 409 && corpo && corpo.conflitos) {
+          conflitosPendentes = corpo.conflitos;
+          mostrarConflitos(corpo.conflitos, true);
+          el('agenda-salvar').textContent = 'Marcar assim mesmo';
+          mostrarStatus('agenda-form-erro', corpo.erro || '', 'warning');
+          return;
+        }
+
         // O backend manda a razao em `erro`/`mensagem` -- mostrar isso e melhor
         // do que um "falhou" generico, porque as recusas aqui sao acionaveis
         // ("escolha a comunidade", "esse nivel nao e seu").
-        let detalhe = 'Não foi possível salvar o evento.';
-        try {
-          const corpo = await resposta.json();
-          detalhe = corpo.erro || corpo.mensagem || corpo.message || detalhe;
-        } catch (ignorado) { /* resposta sem corpo JSON */ }
+        const detalhe = (corpo && (corpo.erro || corpo.mensagem || corpo.message))
+          || 'Não foi possível salvar o evento.';
         mostrarStatus('agenda-form-erro', detalhe, 'error');
         return;
       }
@@ -487,6 +533,238 @@
     }
   };
 
+
+  // ------------------------------------------------------------------
+  // Calendario do mes -- a visao de MARCAR
+  // ------------------------------------------------------------------
+
+  const iso = (ano, mes, dia) =>
+    `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+  const eventosVisiveis = () => (dados && dados.eventos ? dados.eventos : []).filter((ev) => {
+    if (filtros.nivel && ev.nivel !== filtros.nivel) return false;
+    if (filtros.tipo && ev.tipo !== filtros.tipo) return false;
+    return true;
+  });
+
+  const renderCalendario = () => {
+    const alvo = el('agenda-calendario');
+    if (!alvo || !dados) return;
+
+    const ano = dados.ano;
+    const rotulo = el('agenda-mes-rotulo');
+    if (rotulo) rotulo.textContent = `${MESES[mesVisivel]} de ${ano}`;
+
+    const dica = el('agenda-dica-clique');
+    if (dica) dica.hidden = !(opcoes && opcoes.podeCriar) || visao !== 'mes';
+
+    // Indexa por dia uma vez; varrer a lista inteira dentro de cada celula
+    // seria 42 varreduras por mes renderizado.
+    const porDia = {};
+    eventosVisiveis().forEach((ev) => {
+      const d = partesDaData(ev.dataInicio);
+      if (!d || d.ano !== ano || d.mes - 1 !== mesVisivel) return;
+      (porDia[d.dia] = porDia[d.dia] || []).push(ev);
+    });
+
+    const primeiro = new Date(ano, mesVisivel, 1).getDay();
+    const diasNoMes = new Date(ano, mesVisivel + 1, 0).getDate();
+    const hoje = new Date();
+    const ehMesDeHoje = hoje.getFullYear() === ano && hoje.getMonth() === mesVisivel;
+    const podeCriar = Boolean(opcoes && opcoes.podeCriar);
+
+    const celulas = DIAS_SEMANA
+      .map((d) => `<div class="agenda-cal-cab">${escapar(d)}</div>`);
+
+    // Dias do mes anterior: celula vazia, so para alinhar a primeira semana.
+    for (let i = 0; i < primeiro; i += 1) {
+      celulas.push('<div class="agenda-cal-dia agenda-cal-dia--fora"></div>');
+    }
+
+    for (let dia = 1; dia <= diasNoMes; dia += 1) {
+      const doDia = porDia[dia] || [];
+      const data = iso(ano, mesVisivel, dia);
+
+      const chips = doDia.slice(0, 3).map((ev) => {
+        const tone = ev.nivel ? `var(--nivel-${ev.nivel.toLowerCase()})` : 'var(--stroke)';
+        const cancelado = ev.situacao === 'CANCELADO' ? ' agenda-cal-ev--cancelado' : '';
+        return `<button type="button" class="agenda-cal-ev${cancelado}"
+                   style="--tone: ${tone}" data-abrir="${ev.idEvento}"
+                   title="${escapar(ev.titulo)}">${escapar(ev.titulo)}</button>`;
+      });
+
+      if (doDia.length > 3) {
+        chips.push(`<span class="agenda-cal-mais">+${doDia.length - 3}</span>`);
+      }
+
+      const classes = ['agenda-cal-dia'];
+      if (ehMesDeHoje && hoje.getDate() === dia) classes.push('agenda-cal-dia--hoje');
+      if (doDia.length) classes.push('agenda-cal-dia--ocupado');
+
+      /*
+       * O dia inteiro e clicavel para marcar, mas so quando a pessoa pode
+       * criar alguma coisa. Para quem nao pode, vira um <div> comum: um botao
+       * que nao faz nada ao ser clicado e pior do que nao ter botao.
+       */
+      const abre = podeCriar
+        ? ` data-novo="${data}" role="button" tabindex="0"` : '';
+      if (podeCriar) classes.push('agenda-cal-dia--clicavel');
+
+      celulas.push(`
+        <div class="${classes.join(' ')}"${abre}>
+          <span class="agenda-cal-num">${dia}</span>
+          <div class="agenda-cal-evs">${chips.join('')}</div>
+        </div>`);
+    }
+
+    alvo.innerHTML = celulas.join('');
+
+    alvo.querySelectorAll('[data-abrir]').forEach((botao) => {
+      botao.addEventListener('click', (evt) => {
+        // Sem isto o clique subiria para a celula e abriria "novo evento"
+        // por cima do evento que a pessoa queria justamente abrir.
+        evt.stopPropagation();
+        const id = Number(botao.dataset.abrir);
+        const evento = (dados.eventos || []).find((e) => e.idEvento === id);
+        if (evento) abrirFormulario(evento);
+      });
+    });
+
+    alvo.querySelectorAll('[data-novo]').forEach((celula) => {
+      const abrir = () => abrirFormulario(null, celula.dataset.novo);
+      celula.addEventListener('click', abrir);
+      celula.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Enter' || evt.key === ' ') {
+          evt.preventDefault();
+          abrir();
+        }
+      });
+    });
+  };
+
+  const trocarVisao = (nova) => {
+    visao = nova;
+    el('agenda-calendario').hidden = nova !== 'mes';
+    el('agenda-lista').hidden = nova !== 'lista';
+    el('agenda-ver-mes').classList.toggle('ativo', nova === 'mes');
+    el('agenda-ver-lista').classList.toggle('ativo', nova === 'lista');
+
+    // A navegacao de mes so faz sentido no calendario: a lista mostra o ano.
+    const nav = document.querySelector('.agenda-cal-nav');
+    if (nav) nav.style.visibility = nova === 'mes' ? 'visible' : 'hidden';
+
+    const dica = el('agenda-dica-clique');
+    if (dica) dica.hidden = nova !== 'mes' || !(opcoes && opcoes.podeCriar);
+  };
+
+  const andarMes = (passo) => {
+    mesVisivel += passo;
+
+    // Virou o ano: acompanha o <select>, senao o calendario mostraria
+    // dezembro/janeiro com os eventos do ano errado.
+    if (mesVisivel < 0 || mesVisivel > 11) {
+      const select = el('agenda-ano');
+      const novoAno = anoSelecionado() + (mesVisivel < 0 ? -1 : 1);
+      const existe = Array.from(select.options).some((o) => o.value === String(novoAno));
+      if (!existe) {
+        mesVisivel = mesVisivel < 0 ? 0 : 11;
+        return;
+      }
+      mesVisivel = mesVisivel < 0 ? 11 : 0;
+      select.value = String(novoAno);
+      carregarAgenda();
+      return;
+    }
+
+    renderCalendario();
+  };
+
+  // ------------------------------------------------------------------
+  // Conflito de agenda
+  // ------------------------------------------------------------------
+
+  const esconderConflitos = () => {
+    const caixa = el('agenda-conflitos');
+    if (caixa) {
+      caixa.hidden = true;
+      caixa.innerHTML = '';
+    }
+  };
+
+  const mostrarConflitos = (lista, bloqueou) => {
+    const caixa = el('agenda-conflitos');
+    if (!caixa) return;
+
+    if (!lista || !lista.length) {
+      esconderConflitos();
+      return;
+    }
+
+    const linhas = lista.map((c) => {
+      const d = partesDaData(c.dataInicio);
+      const quando = d ? `${String(d.dia).padStart(2, '0')}/${String(d.mes).padStart(2, '0')}` : '';
+      const detalhes = [c.alcance, c.horaInicio, c.local].filter(Boolean).map(escapar);
+      return `
+        <li>
+          <strong>${escapar(c.titulo)}</strong>
+          <span class="muted">${quando}${detalhes.length ? ' · ' + detalhes.join(' · ') : ''}</span>
+        </li>`;
+    });
+
+    caixa.innerHTML = `
+      <p class="agenda-conflitos-tit">
+        ${lista.length === 1 ? 'Já existe um evento' : `Já existem ${lista.length} eventos`}
+        neste dia para as mesmas pessoas
+      </p>
+      <ul class="agenda-conflitos-lista">${linhas.join('')}</ul>
+      <p class="muted">${bloqueou
+        ? 'Mude a data, ou clique de novo em salvar para marcar assim mesmo.'
+        : 'Você ainda pode marcar, mas confira se as duas coisas cabem no mesmo dia.'}</p>`;
+    caixa.hidden = false;
+  };
+
+  /*
+   * Consulta o servidor enquanto a pessoa preenche. Descobrir o choque so
+   * depois de clicar em Salvar e o que torna esse tipo de regra irritante.
+   */
+  const checarConflito = async () => {
+    const data = el('agenda-f-data').value;
+    const nivel = el('agenda-f-nivel').value;
+    if (!data || !nivel) {
+      esconderConflitos();
+      return;
+    }
+
+    // Sem o alcance definido a resposta seria sobre o publico errado.
+    if (nivel === 'COMUNIDADE' && !el('agenda-f-comunidade').value) {
+      esconderConflitos();
+      return;
+    }
+    if (nivel === 'TURMA' && !el('agenda-f-turma').value) {
+      esconderConflitos();
+      return;
+    }
+
+    const params = new URLSearchParams({ data, nivel });
+    if (el('agenda-f-comunidade').value) params.set('idComunidade', el('agenda-f-comunidade').value);
+    if (el('agenda-f-turma').value) params.set('idTurma', el('agenda-f-turma').value);
+    if (editando) params.set('ignorarId', String(editando.idEvento));
+
+    try {
+      const resposta = await fetch(`/api/agenda/conflitos?${params}`);
+      if (!resposta.ok) return;
+      const corpo = await resposta.json();
+
+      // O aviso previo NAO arma o "marcar assim mesmo": quem arma e a recusa
+      // do servidor no Salvar. Assim o primeiro clique sempre e barrado, e a
+      // confirmacao e sempre deliberada.
+      mostrarConflitos(corpo.conflitos, false);
+    } catch (erro) {
+      // Sem a checagem previa o Salvar ainda barra: a trava de verdade e no
+      // servidor. Aqui e so conforto.
+    }
+  };
+
   // ------------------------------------------------------------------
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -501,6 +779,18 @@
 
     const excluirBtn = el('agenda-excluir');
     if (excluirBtn) excluirBtn.addEventListener('click', excluir);
+
+    const verMes = el('agenda-ver-mes');
+    if (verMes) verMes.addEventListener('click', () => trocarVisao('mes'));
+
+    const verLista = el('agenda-ver-lista');
+    if (verLista) verLista.addEventListener('click', () => trocarVisao('lista'));
+
+    const anterior = el('agenda-mes-anterior');
+    if (anterior) anterior.addEventListener('click', () => andarMes(-1));
+
+    const seguinte = el('agenda-mes-seguinte');
+    if (seguinte) seguinte.addEventListener('click', () => andarMes(1));
   });
 
   window.carregarAgenda = carregarAgenda;

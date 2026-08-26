@@ -1,6 +1,7 @@
 package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.AgendaDTO
+import com.catequese.catequeseapi.dto.ChecagemConflitoDTO
 import com.catequese.catequeseapi.dto.EventoAgendaDTO
 import com.catequese.catequeseapi.dto.EventoFormDTO
 import com.catequese.catequeseapi.dto.FrequenciaFormacaoDTO
@@ -8,6 +9,7 @@ import com.catequese.catequeseapi.dto.OpcaoDTO
 import com.catequese.catequeseapi.dto.OpcoesAgendaDTO
 import com.catequese.catequeseapi.dto.ResumoAgendaDTO
 import com.catequese.catequeseapi.exception.AcessoNegadoException
+import com.catequese.catequeseapi.exception.ConflitoAgendaException
 import com.catequese.catequeseapi.exception.ResourceNotFoundException
 import com.catequese.catequeseapi.model.Evento
 import com.catequese.catequeseapi.model.NivelEvento
@@ -36,6 +38,7 @@ class AgendaService(
     private val turmaRepository: TurmaRepository,
     private val comunidadeRepository: ComunidadeRepository,
     private val permissao: AgendaPermissaoService,
+    private val conflito: ConflitoAgendaService,
     private val escopo: EscopoAcessoService,
     private val frequenciaFormacao: FrequenciaFormacaoService
 ) {
@@ -76,6 +79,8 @@ class AgendaService(
             throw AcessoNegadoException(mensagemDeRecusa(evento.nivel))
         }
 
+        exigirAgendaLivre(evento, ignorarId = null, confirmou = form.confirmarConflito)
+
         return paraDTO(eventoRepository.save(evento))
     }
 
@@ -102,7 +107,49 @@ class AgendaService(
             throw AcessoNegadoException(mensagemDeRecusa(alterado.nivel))
         }
 
+        exigirAgendaLivre(alterado, ignorarId = id, confirmou = form.confirmarConflito)
+
         return paraDTO(eventoRepository.save(alterado))
+    }
+
+    /** Checagem prévia para a tela avisar antes de a pessoa clicar em Salvar. */
+    fun checarConflito(
+        data: LocalDate,
+        nivel: String,
+        idComunidade: Long?,
+        idTurma: Long?,
+        ignorarId: Long?
+    ): ChecagemConflitoDTO {
+        val nivelEnum = runCatching { NivelEvento.valueOf(nivel) }
+            .getOrElse { throw IllegalArgumentException("Nivel invalido: $nivel") }
+
+        val conflitos = conflito.conflitosPara(data, nivelEnum, idComunidade, idTurma, ignorarId)
+        return ChecagemConflitoDTO(temConflito = conflitos.isNotEmpty(), conflitos = conflitos)
+    }
+
+    /**
+     * Recusa a gravacao quando ja ha evento disputando o mesmo publico, a nao
+     * ser que o usuario tenha visto a lista e confirmado.
+     *
+     * Nao e um bloqueio absoluto de proposito: existe caso legitimo de dois
+     * eventos no mesmo dia para o mesmo publico (a missa de manha e o retiro a
+     * tarde). Travar sem saida transformaria a regra num estorvo e levaria
+     * alguem a cadastrar com data errada so para conseguir salvar -- o que e
+     * pior do que o conflito que se queria evitar.
+     */
+    private fun exigirAgendaLivre(evento: Evento, ignorarId: Long?, confirmou: Boolean) {
+        if (confirmou) return
+
+        val conflitos = conflito.conflitosDe(evento, ignorarId)
+        if (conflitos.isEmpty()) return
+
+        val quantos = if (conflitos.size == 1) "Já existe um evento"
+        else "Já existem ${conflitos.size} eventos"
+
+        throw ConflitoAgendaException(
+            "$quantos marcado(s) para esta data atingindo as mesmas pessoas.",
+            conflitos
+        )
     }
 
     @Transactional

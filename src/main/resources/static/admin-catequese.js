@@ -123,6 +123,14 @@ const admCarregarTurmas = async () => {
 };
 
 const admCartaoTurma = (turma) => {
+  // Comunidade dona da turma: e o que decide qual coordenador pode mexer nos
+  // eventos dela na agenda.
+  const opcoesComunidade = [{ v: '', r: 'Sem comunidade definida' }]
+    .concat(ADM_COMUNIDADES.map((c) => ({ v: String(c.idComunidade), r: c.nome })))
+    .map((c) =>
+      `<option value="${c.v}"${String(turma.idComunidade || '') === c.v ? ' selected' : ''}>${admEscape(c.r)}</option>`
+    ).join('');
+
   const opcoesCategoria = ADM_CATEGORIAS.map((c) =>
     `<option value="${c.valor}"${(turma.categoria || '') === c.valor ? ' selected' : ''}>${admEscape(c.rotulo)}</option>`
   ).join('');
@@ -155,6 +163,10 @@ const admCartaoTurma = (turma) => {
           Ano do percurso
           <select data-etapa="${turma.idTurma}">${opcoesEtapa}</select>
         </label>
+        <label>
+          Comunidade
+          <select data-comunidade="${turma.idTurma}">${opcoesComunidade}</select>
+        </label>
         <button type="button" data-salvar="${turma.idTurma}">Salvar</button>
         <button type="button" class="secondary" data-matriculas="${turma.idTurma}">
           Matrículas
@@ -183,12 +195,16 @@ const admClassificar = async (idTurma) => {
   const categoria = document.querySelector(`[data-categoria="${idTurma}"]`).value || null;
   const etapaBruta = document.querySelector(`[data-etapa="${idTurma}"]`).value;
   const etapa = etapaBruta ? Number(etapaBruta) : null;
+  const comunidadeBruta = document.querySelector(`[data-comunidade="${idTurma}"]`);
+  const idComunidade = comunidadeBruta && comunidadeBruta.value
+    ? Number(comunidadeBruta.value)
+    : null;
 
   try {
     const resposta = await fetch(`/api/admin/turmas/${idTurma}/classificacao`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categoria, etapa })
+      body: JSON.stringify({ categoria, etapa, idComunidade })
     });
     if (!resposta.ok) {
       admAviso('adm-status', await admErro(resposta, 'Não foi possível salvar.'), 'error');
@@ -769,3 +785,26 @@ window.carregarAdminCatequese = () => {
   admTela('turmas');
   admCarregarTurmas();
 };
+
+
+// ---- Comunidades disponiveis -----------------------------------------------
+// Carregadas uma vez e guardadas: cada cartao de turma monta o proprio <select>
+// na hora de renderizar, e buscar a lista por cartao seria uma chamada por
+// turma na tela.
+let ADM_COMUNIDADES = [];
+
+const admCarregarComunidades = async () => {
+  try {
+    const resposta = await fetch('/api/comunidades');
+    if (!resposta.ok) return;
+    const lista = await resposta.json();
+    ADM_COMUNIDADES = lista
+      .filter((c) => c.ativo !== false)
+      .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
+  } catch (err) {
+    // Sem a lista o <select> fica so com "Sem comunidade definida"; o resto da
+    // classificacao (categoria e etapa) continua funcionando normalmente.
+  }
+};
+
+document.addEventListener('DOMContentLoaded', admCarregarComunidades);

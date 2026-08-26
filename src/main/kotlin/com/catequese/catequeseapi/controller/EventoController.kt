@@ -4,16 +4,23 @@ import com.catequese.catequeseapi.exception.ResourceNotFoundException
 import com.catequese.catequeseapi.model.Evento
 import com.catequese.catequeseapi.repository.EventoRepository
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.net.URI
 
+/**
+ * Leitura crua dos eventos.
+ *
+ * As rotas de escrita foram REMOVIDAS daqui de proposito. Elas gravavam o
+ * evento direto pelo repositorio, sem passar pela permissao por nivel -- ou
+ * seja, um coordenador de comunidade podia criar um evento DIOCESANO por esta
+ * rota e contornar inteiramente a regra da agenda. Como nenhuma tela chamava
+ * /api/eventos (o frontend usa /api/agenda e /api/chamada/eventos), tirar foi
+ * mais seguro do que duplicar a checagem em dois lugares.
+ *
+ * Para criar, alterar ou excluir evento: /api/agenda/eventos.
+ */
 @RestController
 @RequestMapping("/api/eventos")
 class EventoController(private val repo: EventoRepository) {
@@ -25,31 +32,4 @@ class EventoController(private val repo: EventoRepository) {
     fun getById(@PathVariable id: Long): ResponseEntity<Evento> = ResponseEntity.ok(
         repo.findById(id).orElseThrow { ResourceNotFoundException("Evento não encontrado") }
     )
-
-    @PostMapping
-    fun create(@RequestBody e: Evento): ResponseEntity<Evento> {
-        val saved = repo.save(e)
-        return ResponseEntity.created(URI("/api/eventos/${saved.idEvento}")).body(saved)
-    }
-
-    @PutMapping("/{id}")
-    fun update(@PathVariable id: Long, @RequestBody e: Evento): ResponseEntity<Evento> {
-        val existing = repo.findById(id).orElseThrow { ResourceNotFoundException("Evento não encontrado") }
-        val updated = existing.copy(
-            titulo = e.titulo,
-            nivel = e.nivel,
-            publicoAlvo = e.publicoAlvo,
-            descricao = e.descricao,
-            dataInicio = e.dataInicio,
-            dataFim = e.dataFim,
-            local = e.local
-        )
-        return ResponseEntity.ok(repo.save(updated))
-    }
-
-    @DeleteMapping("/{id}")
-    fun delete(@PathVariable id: Long): ResponseEntity<Void> {
-        repo.deleteById(id)
-        return ResponseEntity.noContent().build()
-    }
 }

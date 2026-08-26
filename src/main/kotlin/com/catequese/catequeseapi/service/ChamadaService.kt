@@ -18,6 +18,7 @@ import com.catequese.catequeseapi.model.Presenca
 import com.catequese.catequeseapi.model.SituacaoEncontro
 import com.catequese.catequeseapi.model.SituacaoMatricula
 import com.catequese.catequeseapi.model.SituacaoPresenca
+import com.catequese.catequeseapi.model.TipoEvento
 import com.catequese.catequeseapi.model.Turma
 import com.catequese.catequeseapi.repository.EncontroRepository
 import com.catequese.catequeseapi.repository.EventoRepository
@@ -129,6 +130,11 @@ class ChamadaService(
         minhas.forEach { idsDasMinhas.add(it.idTurma) }
 
         return eventoRepository.findAll()
+            // Encontro de formacao fica de fora: la quem tem presenca e o
+            // CATEQUISTA, e a chamada e outra (tb_presenca_formacao). Sem este
+            // filtro, a Escola Diocesana apareceria aqui pedindo a lista de
+            // catequisandos da turma, que nao tem nada a ver com ela.
+            .filter { it.tipo != TipoEvento.FORMACAO }
             .filter { evento ->
                 val inicio = evento.dataInicio
                 val fim = evento.dataFim

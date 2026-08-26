@@ -147,6 +147,9 @@ const usrAbrirFormulario = (id) => {
   document.getElementById('usuario-telefone').value = (usuario && usuario.telefone) || '';
   document.getElementById('usuario-tipo').value = usuario ? usuario.tipo : 'CATEQUISTA';
   document.getElementById('usuario-ativo').value = usuario ? String(usuario.ativo) : 'true';
+  document.getElementById('usuario-comunidade').value =
+    usuario && usuario.idComunidade ? String(usuario.idComunidade) : '';
+  usrAjustarCampoComunidade();
 
   // O login identifica o usuario e nao muda depois de criado.
   document.getElementById('usuario-username').disabled = Boolean(usuario);
@@ -171,7 +174,8 @@ const usrSalvar = async () => {
     nome: document.getElementById('usuario-nome').value.trim(),
     email: document.getElementById('usuario-email').value.trim() || null,
     telefone: document.getElementById('usuario-telefone').value.trim() || null,
-    tipo: document.getElementById('usuario-tipo').value
+    tipo: document.getElementById('usuario-tipo').value,
+    idComunidade: usrComunidadeEscolhida()
   };
 
   if (!corpo.nome) {
@@ -298,4 +302,58 @@ usrLigar('btn-copiar-senha', 'click', async () => {
     // Sem permissão de área de transferência: a senha continua visível na tela.
     usrStatus('Não foi possível copiar. Selecione e copie manualmente.', 'warning');
   }
+});
+
+
+// ---- Comunidade do usuario -------------------------------------------------
+// Alimenta o <select> de comunidade e decide quando ele aparece.
+
+const usrComunidadeEscolhida = () => {
+  const valor = document.getElementById('usuario-comunidade').value;
+  return valor ? Number(valor) : null;
+};
+
+/*
+ * O campo so faz sentido para COORDENADOR. O coordenador paroquial cuida da
+ * paroquia inteira, e o catequista e limitado pelas turmas em que atua -- em
+ * nenhum dos dois a comunidade muda coisa alguma, e mostrar o campo daria a
+ * entender que muda.
+ */
+const usrAjustarCampoComunidade = () => {
+  const tipo = document.getElementById('usuario-tipo').value;
+  const campo = document.getElementById('campo-usuario-comunidade');
+  if (campo) campo.hidden = tipo !== 'COORDENADOR';
+};
+
+const usrCarregarComunidades = async () => {
+  const select = document.getElementById('usuario-comunidade');
+  if (!select || select.dataset.pronto) return;
+
+  try {
+    const resposta = await fetch('/api/comunidades');
+    if (!resposta.ok) return;
+    const lista = await resposta.json();
+
+    lista
+      .filter((c) => c.ativo !== false)
+      .sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'pt-BR'))
+      .forEach((c) => {
+        const opcao = document.createElement('option');
+        opcao.value = String(c.idComunidade);
+        opcao.textContent = c.nome;
+        select.appendChild(opcao);
+      });
+
+    select.dataset.pronto = '1';
+  } catch (erro) {
+    // Sem a lista o campo fica so com "Toda a paroquia": o cadastro do usuario
+    // continua funcionando, que e o que importa nesta tela.
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const tipo = document.getElementById('usuario-tipo');
+  if (tipo) tipo.addEventListener('change', usrAjustarCampoComunidade);
+  usrCarregarComunidades();
+  usrAjustarCampoComunidade();
 });

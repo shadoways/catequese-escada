@@ -63,6 +63,7 @@ class UsuarioAdminService(
                 tipo = dto.tipo,
                 idCatequista = dto.idCatequista,
                 idCoordenador = dto.idCoordenador,
+                idComunidade = dto.idComunidade,
                 senhaProvisoria = true,
                 ativo = true,
                 dataCriacao = LocalDateTime.now()
@@ -89,7 +90,8 @@ class UsuarioAdminService(
                 tipo = dto.tipo,
                 ativo = dto.ativo,
                 idCatequista = dto.idCatequista,
-                idCoordenador = dto.idCoordenador
+                idCoordenador = dto.idCoordenador,
+                idComunidade = dto.idComunidade
             )
         )
 

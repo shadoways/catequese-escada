@@ -49,6 +49,13 @@
           </svg>
           Chamada
         </button>
+        <button type="button" class="tab-btn somente-logado" data-tab="agenda">
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" />
+            <path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
+          </svg>
+          Agenda
+        </button>
         <button type="button" class="tab-btn somente-logado" data-tab="frequencia">
           <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" />
@@ -125,6 +132,18 @@
           <h3>Chamada</h3>
           <p>Marcar presença do encontro de hoje e acompanhar a frequência da turma.</p>
           <span class="menu-card-cta">Fazer chamada →</span>
+        </button>
+        <button type="button" class="menu-card somente-logado" data-tab="agenda">
+          <span class="menu-card-icon menu-card-icon--agenda" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="17" rx="2" />
+              <path d="M8 2v4M16 2v4M3 10h18" />
+              <path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
+            </svg>
+          </span>
+          <h3>Agenda</h3>
+          <p>Formações, sacramentos e ritos da paróquia, da comunidade e das suas turmas.</p>
+          <span class="menu-card-cta">Ver agenda →</span>
         </button>
         <button type="button" class="menu-card somente-logado" data-tab="frequencia">
           <span class="menu-card-icon menu-card-icon--frequencia" aria-hidden="true">
@@ -282,6 +301,119 @@
             Depois de encerrada, a lista não pode mais ser alterada. Se precisar
             corrigir algo, peça ao coordenador paroquial para reabrir o encontro.
           </p>
+        </div>
+      </section>
+    </div>
+
+    <!--
+      Agenda. Formacoes, sacramentos e ritos, agrupados por mes.
+      A cor da tarja de cada linha e o NIVEL do evento (de quem ele e) e o
+      icone e o TIPO (o que ele e) -- sao dois eixos independentes, e e por
+      isso que a linha nao tenta codificar os dois na mesma cor.
+    -->
+    <div class="tab-content" id="tab-agenda" data-tab-content="agenda" hidden>
+
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Agenda</h2>
+          <div class="row" style="gap: 8px;">
+            <label style="margin: 0;">
+              <span class="sr-only">Ano</span>
+              <select id="agenda-ano" aria-label="Ano da agenda"></select>
+            </label>
+            <button type="button" id="agenda-novo" hidden>Novo evento</button>
+          </div>
+        </div>
+
+        <div id="agenda-resumo" class="agenda-resumo"></div>
+
+        <div class="agenda-filtros" id="agenda-filtros-nivel">
+          <span class="agenda-filtro-rot">Nível</span>
+        </div>
+        <div class="agenda-filtros" id="agenda-filtros-tipo">
+          <span class="agenda-filtro-rot">Tipo</span>
+        </div>
+
+        <div id="agenda-status" class="summary"></div>
+        <div id="agenda-lista" class="agenda-lista"></div>
+      </section>
+
+      <!-- Formulario de evento. Escondido ate alguem clicar em Novo/editar. -->
+      <section class="panel" id="agenda-form-painel" hidden>
+        <div class="row" style="justify-content: space-between;">
+          <h2 id="agenda-form-titulo">Novo evento</h2>
+        </div>
+
+        <div class="grid">
+          <label style="grid-column: 1 / -1;">
+            Título
+            <input id="agenda-f-titulo" type="text" placeholder="Ex.: Formação paroquial — encontro 3" />
+          </label>
+
+          <label>
+            Nível
+            <select id="agenda-f-nivel"></select>
+          </label>
+          <label>
+            Tipo
+            <select id="agenda-f-tipo"></select>
+          </label>
+
+          <label id="agenda-f-comunidade-campo" hidden>
+            Comunidade
+            <select id="agenda-f-comunidade"></select>
+          </label>
+          <label id="agenda-f-turma-campo" hidden>
+            Turma
+            <select id="agenda-f-turma"></select>
+          </label>
+          <label id="agenda-f-formacao-campo" hidden>
+            Formação
+            <select id="agenda-f-formacao"></select>
+          </label>
+
+          <label>
+            Data
+            <input id="agenda-f-data" type="date" />
+          </label>
+          <label>
+            Termina em (opcional)
+            <input id="agenda-f-data-fim" type="date" />
+          </label>
+          <label>
+            Horário (opcional)
+            <input id="agenda-f-hora" type="text" placeholder="19h30" />
+          </label>
+          <label>
+            Local
+            <input id="agenda-f-local" type="text" placeholder="Salão paroquial" />
+          </label>
+
+          <label>
+            Situação
+            <select id="agenda-f-situacao">
+              <option value="PREVISTO">Previsto</option>
+              <option value="REALIZADO">Realizado</option>
+              <option value="CANCELADO">Cancelado</option>
+            </select>
+          </label>
+          <label id="agenda-f-motivo-campo" hidden>
+            Motivo do cancelamento
+            <input id="agenda-f-motivo" type="text" placeholder="Chuva forte" />
+          </label>
+
+          <label style="grid-column: 1 / -1;">
+            Observações (opcional)
+            <textarea id="agenda-f-descricao" rows="2"></textarea>
+          </label>
+        </div>
+
+        <div id="agenda-form-erro" class="summary"></div>
+
+        <div class="row">
+          <button type="button" id="agenda-salvar">Salvar</button>
+          <button type="button" class="secondary" id="agenda-cancelar">Cancelar</button>
+          <button type="button" class="secondary" id="agenda-excluir" hidden>Excluir</button>
         </div>
       </section>
     </div>
@@ -757,6 +889,21 @@
               <option value="COORDENADOR_PAROQUIAL">Coordenador paroquial — administrador</option>
             </select>
           </label>
+          <!--
+            Comunidade do coordenador. O campo existia no banco desde sempre,
+            mas nenhuma tela o preenchia: na pratica todo coordenador ficava
+            sem comunidade, e coordenador sem comunidade nao consegue cadastrar
+            evento de comunidade na agenda.
+          -->
+          <label id="campo-usuario-comunidade">
+            Comunidade
+            <select id="usuario-comunidade">
+              <option value="">Toda a paróquia</option>
+            </select>
+            <span class="muted" id="dica-usuario-comunidade">
+              Define de qual comunidade o coordenador cuida na agenda.
+            </span>
+          </label>
           <label id="campo-usuario-ativo">
             Situação
             <select id="usuario-ativo">
@@ -870,6 +1017,7 @@
 
   <script src="auth.js"></script>
   <script src="script.js"></script>
+  <script src="agenda.js"></script>
   <script src="chamada.js"></script>
   <script src="frequencia.js"></script>
   <script src="ficha-catequisando.js"></script>

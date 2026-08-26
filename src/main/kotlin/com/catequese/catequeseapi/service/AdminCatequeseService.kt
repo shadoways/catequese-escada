@@ -13,6 +13,7 @@ import com.catequese.catequeseapi.model.Matricula
 import com.catequese.catequeseapi.model.SituacaoMatricula
 import com.catequese.catequeseapi.model.Turma
 import com.catequese.catequeseapi.repository.CatequisandoRepository
+import com.catequese.catequeseapi.repository.ComunidadeRepository
 import com.catequese.catequeseapi.repository.MatriculaRepository
 import com.catequese.catequeseapi.repository.TurmaRepository
 import org.slf4j.LoggerFactory
@@ -37,6 +38,7 @@ class AdminCatequeseService(
     private val turmaRepository: TurmaRepository,
     private val matriculaRepository: MatriculaRepository,
     private val catequisandoRepository: CatequisandoRepository,
+    private val comunidadeRepository: ComunidadeRepository,
     private val escopo: EscopoAcessoService
 ) {
     private val log = LoggerFactory.getLogger(AdminCatequeseService::class.java)
@@ -77,7 +79,13 @@ class AdminCatequeseService(
         // quantos anos o percurso tem.
         val etapaFinal = if (categoria == null) null else etapa
 
-        val salva = turmaRepository.save(turma.copy(categoria = categoria, etapa = etapaFinal))
+        val salva = turmaRepository.save(
+            turma.copy(
+                categoria = categoria,
+                etapa = etapaFinal,
+                idComunidade = dto.idComunidade
+            )
+        )
         log.info(
             "Turma {} classificada como {} (etapa {}) por '{}'",
             salva.nome, categoria?.name ?: "SEM CATEGORIA", etapaFinal ?: "-", quem()
@@ -253,6 +261,9 @@ class AdminCatequeseService(
             nomeCatequista = turma.catequista?.nome,
             matriculadosNoAno = matriculaRepository.findByTurmaAndAno(turma, ano)
                 .count { it.situacao != SituacaoMatricula.DESISTENTE },
+            idComunidade = turma.idComunidade,
+            nomeComunidade = turma.idComunidade
+                ?.let { comunidadeRepository.findById(it).orElse(null)?.nome },
             pendenteDeClassificacao = categoria == null
         )
     }

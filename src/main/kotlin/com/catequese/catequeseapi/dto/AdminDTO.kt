@@ -20,6 +20,14 @@ data class TurmaAdminDTO(
     val etapa: Int?,
     val nomeCatequista: String?,
     val matriculadosNoAno: Int,
+
+    /**
+     * Comunidade dona da turma. Decide qual coordenador pode mexer nos eventos
+     * dela na agenda -- antes deste campo a comunidade era deduzida dos
+     * catequisandos matriculados, e turma vazia nao pertencia a ninguem.
+     */
+    val idComunidade: Long?,
+    val nomeComunidade: String?,
     /**
      * Turma sem categoria nao tem frequencia apurada. E o aviso que faz o
      * administrador entender por que a tela de frequencia esta vazia.
@@ -30,7 +38,8 @@ data class TurmaAdminDTO(
 /** Define a regra de frequencia da turma. `categoria` nula volta a nao apurar. */
 data class ClassificacaoTurmaDTO(
     val categoria: CategoriaTurma? = null,
-    val etapa: Int? = null
+    val etapa: Int? = null,
+    val idComunidade: Long? = null
 )
 
 data class MatriculaAdminDTO(

@@ -5,28 +5,18 @@ import com.catequese.catequeseapi.model.Evento
 import com.catequese.catequeseapi.repository.EventoRepository
 import org.springframework.stereotype.Service
 
+/**
+ * Leitura de eventos.
+ *
+ * As operacoes de escrita sairam daqui junto com as rotas de /api/eventos:
+ * gravavam sem checar a permissao por nivel. Quem cria e altera evento agora e
+ * o AgendaService, que consulta o AgendaPermissaoService antes de salvar.
+ */
 @Service
 class EventoService(private val repo: EventoRepository) {
 
     fun findAll(): List<Evento> = repo.findAll()
 
-    fun findById(id: Long): Evento = repo.findById(id).orElseThrow { ResourceNotFoundException("Evento não encontrado") }
-
-    fun create(e: Evento): Evento = repo.save(e)
-
-    fun update(id: Long, e: Evento): Evento {
-        val existing = repo.findById(id).orElseThrow { ResourceNotFoundException("Evento não encontrado") }
-        val updated = existing.copy(
-            titulo = e.titulo,
-            nivel = e.nivel,
-            publicoAlvo = e.publicoAlvo,
-            descricao = e.descricao,
-            dataInicio = e.dataInicio,
-            dataFim = e.dataFim,
-            local = e.local
-        )
-        return repo.save(updated)
-    }
-
-    fun remove(id: Long) = repo.deleteById(id)
+    fun findById(id: Long): Evento = repo.findById(id)
+        .orElseThrow { ResourceNotFoundException("Evento não encontrado") }
 }

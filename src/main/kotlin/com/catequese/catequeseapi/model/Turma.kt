@@ -1,6 +1,7 @@
 package com.catequese.catequeseapi.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -32,6 +33,21 @@ data class Turma(
 
     /** 1 = primeiro ano (Crisma I), 2 = segundo ano (Crisma II). */
     val etapa: Int? = null,
+
+    /**
+     * Comunidade dona da turma.
+     *
+     * Antes disso a comunidade da turma era deduzida da comunidade dos
+     * catequisandos matriculados -- o que fazia turma vazia nao pertencer a
+     * lugar nenhum e turma com gente de duas comunidades aparecer para dois
+     * coordenadores. Com o campo, a turma diz de quem ela e.
+     *
+     * Anulavel porque as turmas que ja existem nao tem como ser classificadas
+     * sozinhas: o coordenador paroquial preenche uma vez, e ate la a turma se
+     * comporta como antes.
+     */
+    @Column(name = "id_comunidade")
+    val idComunidade: Long? = null,
 
     @ManyToOne
     @JoinColumn(name = "id_catequista")

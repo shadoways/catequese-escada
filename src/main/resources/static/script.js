@@ -831,7 +831,7 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 
 // ---- Navegação por abas ----
 // Cadastro e a tela publica; consulta e painel sao de uso interno.
-const TABS_PROTEGIDAS = ['chamada', 'frequencia', 'consulta', 'dashboard', 'admin', 'usuarios', 'configuracoes'];
+const TABS_PROTEGIDAS = ['chamada', 'agenda', 'frequencia', 'consulta', 'dashboard', 'admin', 'usuarios', 'configuracoes'];
 const TABS_SO_ADMIN = ['admin', 'usuarios', 'configuracoes'];
 
 // Texto da trilha (#trilha-pagina) acima do conteúdo -- o mesmo agrupamento
@@ -840,6 +840,7 @@ const TRILHA_POR_TAB = {
   menu: 'Início',
   cadastro: 'Cadastro',
   chamada: 'Atendimento / Chamada',
+  agenda: 'Atendimento / Agenda',
   frequencia: 'Atendimento / Frequência',
   consulta: 'Atendimento / Consultar catequisandos',
   dashboard: 'Atendimento / Turmas e documentos',
@@ -995,6 +996,8 @@ const switchTab = (tabName) => {
   if (trilha) trilha.textContent = TRILHA_POR_TAB[tabName] || '';
   // chamada.js registra esta funcao; a aba e a tela de trabalho do catequista.
   if (tabName === 'chamada' && window.carregarChamada) window.carregarChamada();
+  // agenda.js registra esta funcao.
+  if (tabName === 'agenda' && window.carregarAgenda) window.carregarAgenda();
   if (tabName === 'frequencia' && window.carregarFrequencia) window.carregarFrequencia();
   if (tabName === 'admin' && window.carregarAdminCatequese) window.carregarAdminCatequese();
   if (tabName === 'consulta') carregarConsulta();

@@ -40,7 +40,15 @@ class TurmaController(private val repo: TurmaRepository) {
             descricao = turma.descricao,
             ano = turma.ano,
             nivel = turma.nivel,
-            catequista = turma.catequista
+            catequista = turma.catequista,
+
+            /*
+             * Comunidade da turma: decide qual coordenador pode mexer nos
+             * eventos daquela turma na agenda. Antes de existir este campo a
+             * comunidade era deduzida dos catequisandos matriculados, e uma
+             * turma vazia nao pertencia a ninguem.
+             */
+            idComunidade = turma.idComunidade
         )
         return ResponseEntity.ok(repo.save(updated))
     }

@@ -22,7 +22,15 @@ data class UsuarioDTO(
     val ultimoLogin: LocalDateTime?,
     val dataCriacao: LocalDateTime?,
     val idCatequista: Long?,
-    val idCoordenador: Long?
+    val idCoordenador: Long?,
+
+    /**
+     * Comunidade do coordenador. Existia na entidade mas nunca saia nem
+     * entrava por DTO nenhum -- ou seja, nao havia como preencher pela tela, e
+     * o campo ficava nulo para todo mundo. Coordenador sem comunidade nao
+     * consegue cadastrar evento de comunidade na agenda.
+     */
+    val idComunidade: Long?
 ) {
     companion object {
         fun de(usuario: Usuario) = UsuarioDTO(
@@ -39,7 +47,8 @@ data class UsuarioDTO(
             ultimoLogin = usuario.ultimoLogin,
             dataCriacao = usuario.dataCriacao,
             idCatequista = usuario.idCatequista,
-            idCoordenador = usuario.idCoordenador
+            idCoordenador = usuario.idCoordenador,
+            idComunidade = usuario.idComunidade
         )
     }
 }
@@ -52,7 +61,8 @@ data class CriarUsuarioDTO(
     val telefone: String? = null,
     val tipo: TipoUsuario = TipoUsuario.CATEQUISTA,
     val idCatequista: Long? = null,
-    val idCoordenador: Long? = null
+    val idCoordenador: Long? = null,
+    val idComunidade: Long? = null
 )
 
 /** Edicao de usuario. Tambem nao mexe em senha. */
@@ -63,7 +73,8 @@ data class AtualizarUsuarioDTO(
     val tipo: TipoUsuario = TipoUsuario.CATEQUISTA,
     val ativo: Boolean = true,
     val idCatequista: Long? = null,
-    val idCoordenador: Long? = null
+    val idCoordenador: Long? = null,
+    val idComunidade: Long? = null
 )
 
 /**

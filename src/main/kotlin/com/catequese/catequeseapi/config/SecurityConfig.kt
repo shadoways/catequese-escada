@@ -127,6 +127,13 @@ class SecurityConfig(
                 // ChamadaService.
                 .requestMatchers("/api/chamada/**").authenticated()
 
+                // Agenda: mesma situacao da chamada. O catequista precisa criar
+                // e alterar eventos das turmas dele, e cairia na regra geral de
+                // escrita mais abaixo, que exige coordenador. Quem decide o que
+                // cada um pode e o AgendaPermissaoService, evento por evento --
+                // aqui so se libera a rota.
+                .requestMatchers("/api/agenda/**").authenticated()
+
                 // Trocar a propria senha vale para QUALQUER tipo logado.
                 // Sem esta linha o catequista cairia na regra de escrita mais
                 // abaixo e nao conseguiria trocar a propria senha.

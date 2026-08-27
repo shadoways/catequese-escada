@@ -57,6 +57,7 @@
   let visao = 'mes';                        // 'mes' | 'lista'
   let conflitosPendentes = [];              // o que o backend acusou no ultimo Salvar
   let falhaNasOpcoes = null;                // por que /opcoes nao carregou
+  let diaSelecionado = null;                // ISO do dia aberto na lista, ou null
   const filtros = { nivel: null, tipo: null };
 
   const el = (id) => document.getElementById(id);
@@ -161,6 +162,10 @@
       renderResumo();
       renderCalendario();
       renderLista();
+
+      // A lista do dia continua aberta depois de salvar ou excluir, ja com os
+      // dados novos -- e comum mexer em mais de um evento do mesmo dia.
+      if (diaSelecionado) renderDia();
 
       // Aplica a visao corrente: sem isto a navegacao de mes e a lista ficam
       // no estado do HTML, que nao sabe qual visao esta escolhida.
@@ -306,7 +311,13 @@
     });
   };
 
-  const linhaDeEvento = (ev, d) => {
+  /**
+   * @param comExcluir true na lista do dia, onde a pessoa esta justamente
+   *   administrando aquela data. Na linha do tempo do ano o Excluir fica de
+   *   fora: ali a leitura e corrida, e um botao destrutivo em cada linha e
+   *   convite a clique errado.
+   */
+  const linhaDeEvento = (ev, d, comExcluir) => {
     const tone = ev.nivel ? `var(--nivel-${ev.nivel.toLowerCase()})` : 'var(--stroke)';
     const icone = ICONES[ev.tipo] || ICONES.ENCONTRO;
 
@@ -334,10 +345,17 @@
           · mínimo ${f.percentualMinimo}%</p>`;
     }
 
-    const lapis = ev.podeEditar
-      ? `<button type="button" class="agenda-editar" data-editar="${ev.idEvento}"
-           title="Editar ${escapar(ev.titulo)}">Editar</button>`
-      : '';
+    const acoes = [];
+    if (ev.podeEditar) {
+      acoes.push(`<button type="button" class="agenda-editar" data-editar="${ev.idEvento}"
+           title="Editar ${escapar(ev.titulo)}">Editar</button>`);
+      if (comExcluir) {
+        acoes.push(`<button type="button" class="agenda-excluir" data-excluir="${ev.idEvento}"
+             title="Excluir ${escapar(ev.titulo)}">Excluir</button>`);
+      }
+    }
+    const lapis = acoes.length
+      ? `<div class="agenda-ev-acoes">${acoes.join('')}</div>` : '';
 
     return `
       <div class="agenda-ev" style="--tone: ${tone}">
@@ -528,20 +546,29 @@
     }
   };
 
-  const excluir = async () => {
-    if (!editando) return;
-    if (!window.confirm(`Excluir "${editando.titulo}" da agenda?`)) return;
+  /*
+   * Exclusao por id, e nao pelo `editando`: a lista do dia exclui sem abrir o
+   * formulario, e o formulario tambem usa esta mesma funcao -- assim a
+   * confirmacao e o tratamento de erro nao existem em duas versoes.
+   */
+  const excluirEvento = async (evento) => {
+    if (!evento) return;
+    if (!window.confirm(`Excluir "${evento.titulo}" da agenda?`)) return;
+
+    const ondeAvisar = el('agenda-form-painel').hidden ? 'agenda-status' : 'agenda-form-erro';
 
     try {
-      const resposta = await fetch(`/api/agenda/eventos/${editando.idEvento}`, { method: 'DELETE' });
+      const resposta = await fetch(`/api/agenda/eventos/${evento.idEvento}`, { method: 'DELETE' });
       if (!resposta.ok) {
-        mostrarStatus('agenda-form-erro', 'Não foi possível excluir o evento.', 'error');
+        mostrarStatus(ondeAvisar, 'Não foi possível excluir o evento.', 'error');
         return;
       }
-      fecharFormulario();
+
+      // Se o formulario estava aberto neste evento, ele perdeu o assunto.
+      if (editando && editando.idEvento === evento.idEvento) fecharFormulario();
       await carregarAgenda();
     } catch (erro) {
-      mostrarStatus('agenda-form-erro', 'Erro de conexão ao excluir.', 'error');
+      mostrarStatus(ondeAvisar, 'Erro de conexão ao excluir.', 'error');
     }
   };
 
@@ -596,12 +623,17 @@
       const doDia = porDia[dia] || [];
       const data = iso(ano, mesVisivel, dia);
 
+      /*
+       * Os eventos na celula sao <span>, e nao <button>: o clique de todos
+       * eles e o mesmo clique da celula -- abrir a lista do dia. Botao dentro
+       * de elemento clicavel seria alvo aninhado sem necessidade, e ainda
+       * daria dois comportamentos diferentes dentro do mesmo quadradinho.
+       */
       const chips = doDia.slice(0, 3).map((ev) => {
         const tone = ev.nivel ? `var(--nivel-${ev.nivel.toLowerCase()})` : 'var(--stroke)';
         const cancelado = ev.situacao === 'CANCELADO' ? ' agenda-cal-ev--cancelado' : '';
-        return `<button type="button" class="agenda-cal-ev${cancelado}"
-                   style="--tone: ${tone}" data-abrir="${ev.idEvento}"
-                   title="${escapar(ev.titulo)}">${escapar(ev.titulo)}</button>`;
+        return `<span class="agenda-cal-ev${cancelado}" style="--tone: ${tone}"
+                  title="${escapar(ev.titulo)}">${escapar(ev.titulo)}</span>`;
       });
 
       if (doDia.length > 3) {
@@ -613,21 +645,44 @@
       if (doDia.length) classes.push('agenda-cal-dia--ocupado');
 
       /*
-       * O dia inteiro e clicavel para marcar, mas so quando a pessoa pode
-       * criar alguma coisa. Para quem nao pode, vira um <div> comum: um botao
-       * que nao faz nada ao ser clicado e pior do que nao ter botao.
+       * O que o clique no dia faz depende de o dia ter evento ou nao:
+       *
+       *   dia VAZIO -> abre o formulario ja naquela data (nada a mostrar antes)
+       *   dia COM EVENTO -> abre a LISTA daquele dia, para ver/editar/excluir
+       *
+       * Quem clica num dia cheio quase sempre quer ver o que ja esta marcado,
+       * nao cadastrar por cima. Para acrescentar mais um evento no mesmo dia
+       * existe o "+".
+       *
+       * Dia vazio continua clicavel so para quem pode criar: botao que nao faz
+       * nada ao ser clicado e pior do que nao ter botao. Dia COM evento e
+       * clicavel para todos, inclusive para quem so tem permissao de ver.
        */
-      const abre = podeCriar
-        ? ` data-novo="${data}" role="button" tabindex="0"` : '';
-      if (podeCriar) classes.push('agenda-cal-dia--clicavel');
+      const temEvento = doDia.length > 0;
+      let atributos = '';
+      if (temEvento) {
+        atributos = ` data-dia="${data}" role="button" tabindex="0"`;
+        classes.push('agenda-cal-dia--clicavel');
+      } else if (podeCriar) {
+        atributos = ` data-novo="${data}" role="button" tabindex="0"`;
+        classes.push('agenda-cal-dia--clicavel');
+      }
 
-      // O "+" so aparece no hover, e so onde o clique faz alguma coisa: e a
-      // pista visual de que a celula e um alvo de cadastro, nao so um numero.
+      /*
+       * O "+" e o caminho para marcar mais um evento num dia que ja tem algum.
+       * Nos dias com evento ele fica SEMPRE visivel, porque ali virou a unica
+       * forma de cadastrar -- deixar so no hover esconderia a acao. Nos dias
+       * vazios continua aparecendo so no hover, ja que ali o clique em
+       * qualquer lugar da celula tambem cadastra.
+       */
       const marcaDeAdicionar = podeCriar
-        ? '<span class="agenda-cal-add" aria-hidden="true">+</span>' : '';
+        ? `<button type="button" class="agenda-cal-add${temEvento ? ' agenda-cal-add--fixo' : ''}"
+             data-novo-dia="${data}" title="Marcar evento em ${dia}"
+             aria-label="Marcar evento em ${dia}">+</button>`
+        : '';
 
       celulas.push(`
-        <div class="${classes.join(' ')}"${abre}>
+        <div class="${classes.join(' ')}"${atributos}>
           <span class="agenda-cal-num">${dia}</span>${marcaDeAdicionar}
           <div class="agenda-cal-evs">${chips.join('')}</div>
         </div>`);
@@ -635,30 +690,118 @@
 
     alvo.innerHTML = celulas.join('');
 
-    alvo.querySelectorAll('[data-abrir]').forEach((botao) => {
+    const ligarTecla = (elemento, acao) => {
+      elemento.addEventListener('click', acao);
+      elemento.addEventListener('keydown', (evt) => {
+        if (evt.key === 'Enter' || evt.key === ' ') {
+          evt.preventDefault();
+          acao();
+        }
+      });
+    };
+
+    // Dia com evento: mostra a lista daquele dia.
+    alvo.querySelectorAll('[data-dia]').forEach((celula) => {
+      ligarTecla(celula, () => abrirDia(celula.dataset.dia));
+    });
+
+    // Dia vazio: vai direto ao formulario.
+    alvo.querySelectorAll('[data-novo]').forEach((celula) => {
+      ligarTecla(celula, () => abrirFormulario(null, celula.dataset.novo));
+    });
+
+    // O "+": marca mais um evento no dia. Precisa parar a propagacao, senao o
+    // clique subiria para a celula e abriria a lista por cima do formulario.
+    alvo.querySelectorAll('[data-novo-dia]').forEach((botao) => {
       botao.addEventListener('click', (evt) => {
-        // Sem isto o clique subiria para a celula e abriria "novo evento"
-        // por cima do evento que a pessoa queria justamente abrir.
         evt.stopPropagation();
-        const id = Number(botao.dataset.abrir);
+        abrirFormulario(null, botao.dataset.novoDia);
+      });
+    });
+
+    marcarDiaSelecionado();
+  };
+
+  // ------------------------------------------------------------------
+  // Lista de eventos de um dia
+  // ------------------------------------------------------------------
+
+  const marcarDiaSelecionado = () => {
+    const alvo = el('agenda-calendario');
+    if (!alvo) return;
+    alvo.querySelectorAll('.agenda-cal-dia').forEach((c) => {
+      c.classList.toggle('agenda-cal-dia--aberto', c.dataset.dia === diaSelecionado);
+    });
+  };
+
+  const eventosDoDia = (isoData) =>
+    eventosVisiveis().filter((ev) => ev.dataInicio === isoData);
+
+  const abrirDia = (isoData) => {
+    diaSelecionado = isoData;
+    renderDia();
+    marcarDiaSelecionado();
+
+    const painel = el('agenda-dia-painel');
+    if (painel) painel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const fecharDia = () => {
+    diaSelecionado = null;
+    const painel = el('agenda-dia-painel');
+    if (painel) painel.hidden = true;
+    marcarDiaSelecionado();
+  };
+
+  const renderDia = () => {
+    const painel = el('agenda-dia-painel');
+    const alvo = el('agenda-dia-lista');
+    if (!painel || !alvo || !diaSelecionado) return;
+
+    const doDia = eventosDoDia(diaSelecionado);
+
+    // Excluiu o ultimo evento do dia: nao ha lista para mostrar.
+    if (!doDia.length) {
+      fecharDia();
+      return;
+    }
+
+    const d = partesDaData(diaSelecionado);
+    const titulo = el('agenda-dia-titulo');
+    if (titulo && d) {
+      titulo.textContent =
+        `Eventos de ${d.dia} de ${MESES[d.mes - 1].toLowerCase()} de ${d.ano}`;
+    }
+
+    alvo.innerHTML = doDia.map((ev) => linhaDeEvento(ev, d, true)).join('');
+
+    alvo.querySelectorAll('[data-editar]').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const id = Number(botao.dataset.editar);
         const evento = (dados.eventos || []).find((e) => e.idEvento === id);
         if (evento) abrirFormulario(evento);
       });
     });
 
-    alvo.querySelectorAll('[data-novo]').forEach((celula) => {
-      const abrir = () => abrirFormulario(null, celula.dataset.novo);
-      celula.addEventListener('click', abrir);
-      celula.addEventListener('keydown', (evt) => {
-        if (evt.key === 'Enter' || evt.key === ' ') {
-          evt.preventDefault();
-          abrir();
-        }
+    alvo.querySelectorAll('[data-excluir]').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const id = Number(botao.dataset.excluir);
+        const evento = (dados.eventos || []).find((e) => e.idEvento === id);
+        if (evento) excluirEvento(evento);
       });
     });
+
+    const botaoNovo = el('agenda-dia-novo');
+    if (botaoNovo) botaoNovo.hidden = !(opcoes && opcoes.podeCriar);
+
+    painel.hidden = false;
   };
 
   const trocarVisao = (nova) => {
+    // A lista do dia pertence ao calendario; na visao de lista ela nao faz
+    // sentido e ficaria orfa no meio da tela.
+    if (nova !== 'mes') fecharDia();
+
     visao = nova;
     el('agenda-calendario').hidden = nova !== 'mes';
     el('agenda-lista').hidden = nova !== 'lista';
@@ -696,14 +839,21 @@
     }
 
     if (opcoes && opcoes.podeCriar) {
-      dica.textContent = 'Clique num dia para marcar um evento.';
+      // O texto precisa cobrir os DOIS comportamentos, senao quem clica num
+      // dia cheio esperando o formulario acha que a tela travou.
+      dica.textContent =
+        'Clique num dia vazio para marcar um evento. Num dia que já tem evento, '
+        + 'o clique mostra a lista — use o + para marcar mais um.';
       dica.className = 'muted';
       dica.hidden = false;
       return;
     }
 
     if (opcoes && opcoes.motivoNaoPodeCriar) {
-      dica.textContent = opcoes.motivoNaoPodeCriar;
+      // Continua podendo clicar num dia para VER o que ha nele -- so nao
+      // cadastra. Dizer as duas coisas evita a leitura de "nada funciona".
+      dica.textContent =
+        `${opcoes.motivoNaoPodeCriar} Você ainda pode clicar num dia para ver os eventos dele.`;
       dica.className = 'agenda-aviso-leitura';
       dica.hidden = false;
       return;
@@ -713,6 +863,9 @@
   };
 
   const andarMes = (passo) => {
+    // O dia aberto e de outro mes agora: manter a lista aberta mostraria
+    // eventos de um mes que nao esta mais na tela.
+    fecharDia();
     mesVisivel += passo;
 
     // Virou o ano: acompanha o <select>, senao o calendario mostraria
@@ -833,7 +986,13 @@
     if (cancelar) cancelar.addEventListener('click', fecharFormulario);
 
     const excluirBtn = el('agenda-excluir');
-    if (excluirBtn) excluirBtn.addEventListener('click', excluir);
+    if (excluirBtn) excluirBtn.addEventListener('click', () => excluirEvento(editando));
+
+    const diaFechar = el('agenda-dia-fechar');
+    if (diaFechar) diaFechar.addEventListener('click', fecharDia);
+
+    const diaNovo = el('agenda-dia-novo');
+    if (diaNovo) diaNovo.addEventListener('click', () => abrirFormulario(null, diaSelecionado));
 
     const verMes = el('agenda-ver-mes');
     if (verMes) verMes.addEventListener('click', () => trocarVisao('mes'));

@@ -364,6 +364,24 @@
         <div id="agenda-lista" class="agenda-lista" hidden></div>
       </section>
 
+      <!--
+        Eventos do dia clicado. Clicar num dia que JA TEM evento mostra o que
+        existe ali, em vez de pular direto para o cadastro: quem clica num dia
+        cheio quase sempre quer ver ou corrigir o que ja esta marcado. Para
+        acrescentar mais um evento naquele mesmo dia existe o "+" da celula e o
+        botao no rodape desta lista.
+      -->
+      <section class="panel" id="agenda-dia-painel" hidden>
+        <div class="row" style="justify-content: space-between;">
+          <h2 id="agenda-dia-titulo">Eventos do dia</h2>
+          <button type="button" class="secondary" id="agenda-dia-fechar">Fechar</button>
+        </div>
+        <div id="agenda-dia-lista" class="agenda-lista"></div>
+        <div class="row">
+          <button type="button" id="agenda-dia-novo">Novo evento neste dia</button>
+        </div>
+      </section>
+
       <!-- Formulario de evento. Escondido ate alguem clicar em Novo/editar. -->
       <section class="panel" id="agenda-form-painel" hidden>
         <div class="row" style="justify-content: space-between;">

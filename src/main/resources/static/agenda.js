@@ -705,9 +705,16 @@
       ligarTecla(celula, () => abrirDia(celula.dataset.dia));
     });
 
-    // Dia vazio: vai direto ao formulario.
+    /*
+     * Dia vazio: vai direto ao formulario, e fecha a lista que estivesse
+     * aberta de outro dia -- senao ficaria a lista do dia 15 por cima de um
+     * formulario do dia 16.
+     */
     alvo.querySelectorAll('[data-novo]').forEach((celula) => {
-      ligarTecla(celula, () => abrirFormulario(null, celula.dataset.novo));
+      ligarTecla(celula, () => {
+        fecharDia();
+        abrirFormulario(null, celula.dataset.novo);
+      });
     });
 
     // O "+": marca mais um evento no dia. Precisa parar a propagacao, senao o
@@ -738,6 +745,18 @@
     eventosVisiveis().filter((ev) => ev.dataInicio === isoData);
 
   const abrirDia = (isoData) => {
+    /*
+     * Trocar de dia fecha o formulario aberto. Cada dia tem a sua lista e o
+     * seu cadastro: deixar o formulario do dia 15 aberto embaixo da lista do
+     * dia 22 mistura os dois -- a pessoa ve a data antiga no campo, o rascunho
+     * antigo no titulo e o aviso de conflito do outro dia, tudo sob um titulo
+     * que diz outra data.
+     *
+     * So fecha quando o dia MUDA: reclicar o mesmo dia nao pode descartar o
+     * que a pessoa ja estava preenchendo ali.
+     */
+    if (diaSelecionado !== isoData) fecharFormulario();
+
     diaSelecionado = isoData;
     renderDia();
     marcarDiaSelecionado();
@@ -976,8 +995,13 @@
   // ------------------------------------------------------------------
 
   document.addEventListener('DOMContentLoaded', () => {
+    // "Novo evento" do topo nao pertence a dia nenhum: fecha a lista do dia
+    // para o formulario sem data nao aparecer sob o titulo de uma data.
     const novo = el('agenda-novo');
-    if (novo) novo.addEventListener('click', () => abrirFormulario(null));
+    if (novo) novo.addEventListener('click', () => {
+      fecharDia();
+      abrirFormulario(null);
+    });
 
     const salvarBtn = el('agenda-salvar');
     if (salvarBtn) salvarBtn.addEventListener('click', salvar);

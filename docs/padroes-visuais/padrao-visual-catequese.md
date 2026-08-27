@@ -107,25 +107,49 @@ O espaçamento entre painéis é **24px em toda a aplicação**, esteja o painel
 :root { --gap-paineis: 24px; }
 ```
 
-Usado por `.shell`, `.layout`, `.tab-content` e `.chamada-layout`. Se um dia ficar apertado ou folgado demais, muda num lugar e vale para tudo.
+Usado por `.shell`, `.layout` e `.chamada-layout` como `gap`, e por `.tab-content` como `margin-top` do painel (ver abaixo por que a diferença importa). Se um dia ficar apertado ou folgado demais, muda num lugar e vale para tudo.
 
-### A rede de segurança
+### NUNCA mexa no `display` de um container que é escondido por `[hidden]`
 
-Depender de lembrar de estilizar cada container novo é frágil — foi assim que `.tab-content` passou tanto tempo deixando painel encostado em painel. Por isso existe também:
+Esta regra nasceu de um bug que eu mesmo causei e que derrubou a navegação inteira.
+
+Tentando garantir o respiro em qualquer container futuro, escrevi:
 
 ```css
+/* NÃO FAÇA ISSO */
 :is(div, section, main, form, aside):has(> .panel + .panel) {
   display: grid;
   gap: var(--gap-paineis);
-  align-content: start;
 }
 ```
 
-Isso pega **qualquer** container que empilhe dois painéis, inclusive um `<div>` novo que ninguém lembrou de estilizar. O `> .panel + .panel` garante que ele só age quando há dois painéis **irmãos diretos** — container com um painel só não é tocado.
+O que aconteceu: quem esconde a aba inativa é `.tab-content[hidden] { display: none }`, com especificidade (0,1,1). A regra acima também dá (0,1,1) — `:has()` herda a especificidade do seu argumento, `.panel + .panel`. **Empate.** E como ela vinha depois no arquivo, ganhou: `display: grid` sobrepôs `display: none` e **todas as abas com dois ou mais painéis apareceram ao mesmo tempo**, empilhadas numa página só. As abas de um painel só continuaram escondidas — o que tornou o sintoma ainda mais confuso.
 
-### Por que gap e não `margin-top` no painel
+A regra que fica:
 
-`margin-top` no próprio `.panel` parece mais simples, mas **soma** ao `gap` do container: painel dentro de `.tab-content` ficaria com 24+10 = 34px, e painel solto com 10px. Duas distâncias diferentes para a mesma relação — exatamente a inconsistência que este guia existe para evitar. `gap` substitui, não soma.
+- Para dar respiro entre irmãos dentro de um container que pode ser escondido, use **`margin` no filho**, não `display` + `gap` no pai. Margem não tem como reativar um container oculto.
+- Se precisar mesmo mexer em `display`, escreva a regra **antes** de `[hidden]` no arquivo e confira a especificidade dos dois.
+
+A solução em uso hoje:
+
+```css
+.tab-content:not(.chamada-layout) > .panel + .panel {
+  margin-top: var(--gap-paineis);
+}
+```
+
+O `:not(.chamada-layout)` existe porque Chamada, Frequência e Admin carregam aquela classe junto, e ela já define `gap: 24px` — sem a exceção ficariam com 24 de gap + 24 de margem.
+
+### O teste que faltava
+
+O bug passou porque minha bateria media *estouro* e *espaçamento*, mas nunca verificou o invariante mais básico da tela: **só uma aba visível por vez**. Verificar a propriedade em que se está pensando não basta; é preciso verificar também a que se pode quebrar sem perceber.
+
+```js
+// Para cada aba clicada, isto tem que ser verdade:
+[...document.querySelectorAll('.tab-content')]
+  .filter(t => getComputedStyle(t).display !== 'none')
+  .length === 1
+```
 
 ## 3d. Piso de espaçamento no celular
 

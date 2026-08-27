@@ -593,45 +593,28 @@ canvas {
 
 .tab-btn.active .tab-btn-icon { color: #fff; }
 
-/*
- * Um .tab-content quase sempre tem mais de um .panel dentro (Cadastro tem 4,
- * Usuarios 3, Agenda e Configuracoes 2). Sem display/gap proprios ele era um
- * <div> comum e os paineis empilhavam ENCOSTADOS, sem nenhum respiro entre
- * eles -- Chamada, Frequencia e Admin escapavam so porque carregam a classe
- * .chamada-layout junto, que ja define o proprio gap.
- *
- * O gap de 24px e o mesmo do .shell, para o espaco entre paineis ser igual em
- * toda a aplicacao, esteja o painel dentro de uma aba ou nao.
- */
-.tab-content {
-  display: grid;
-  gap: var(--gap-paineis);
-  align-content: start;
-}
-
 .tab-content[hidden] { display: none; }
 
 /*
- * REDE DE SEGURANCA do respiro entre paineis.
+ * Respiro entre paineis dentro de uma aba.
  *
- * As regras acima cobrem os containers que existem hoje (.shell, .layout,
- * .tab-content, .chamada-layout). Esta pega QUALQUER container que empilhe
- * dois paineis -- inclusive um <div> novo que alguem criar amanha e esquecer
- * de estilizar, que foi exatamente como .tab-content passou tanto tempo
- * deixando os paineis encostados.
+ * Um .tab-content quase sempre tem mais de um .panel dentro (Cadastro tem 4,
+ * Usuarios 3, Agenda e Configuracoes 2), e ele e um <div> comum -- os paineis
+ * empilhavam ENCOSTADOS.
  *
- * `:has(> .panel + .panel)` casa so quando ha dois paineis IRMAOS DIRETOS:
- * container com um painel so nao e tocado.
+ * A solucao e MARGEM no painel, e nao display:grid + gap no container. Mexer
+ * no `display` de .tab-content e perigoso: quem esconde a aba inativa e
+ * `.tab-content[hidden] { display: none }`, e qualquer regra que ponha
+ * `display` de volta com especificidade igual ou maior faz TODAS as abas
+ * aparecerem ao mesmo tempo, empilhadas numa pagina so. Margem nao toca em
+ * `display`, entao nao tem como causar isso.
  *
- * Usa gap, e nao margin-top no proprio painel, de proposito: margin SOMA ao
- * gap do container, entao painel dentro de container que ja tem gap ficaria
- * com 24+10 = 34px e painel solto com 10px -- justamente a inconsistencia que
- * o guia de padrao visual existe para evitar. Gap substitui, nao soma.
+ * O :not(.chamada-layout) existe porque Chamada, Frequencia e Admin carregam
+ * aquela classe junto, e ela JA define gap de 24px -- sem a excecao elas
+ * ficariam com 24 de gap + 24 de margem = 48px.
  */
-:is(div, section, main, form, aside):has(> .panel + .panel) {
-  display: grid;
-  gap: var(--gap-paineis);
-  align-content: start;
+.tab-content:not(.chamada-layout) > .panel + .panel {
+  margin-top: var(--gap-paineis);
 }
 
 .tabs[hidden] { display: none; }

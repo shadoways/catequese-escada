@@ -11,6 +11,10 @@
   --shadow: 0 18px 55px rgba(33, 28, 20, 0.18);
   --radius: 18px;
 
+  /* Respiro entre paineis irmaos. Um valor so, num lugar so: se ficar
+     apertado ou folgado demais, muda aqui e vale para a aplicacao inteira. */
+  --gap-paineis: 24px;
+
   /* Texto sobre fundo tintado (.status warning/error e afins). São --accent e
      --highlight escurecidos até dar contraste de texto em fundo claro — por
      isso não são "cores novas", mas precisam de nome próprio: repetir o hex
@@ -40,7 +44,7 @@ body {
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--gap-paineis);
 }
 
 header {
@@ -90,7 +94,7 @@ h1 {
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--gap-paineis);
 }
 
 .panel {
@@ -136,15 +140,56 @@ input, textarea, select {
   padding: 10px 12px;
   background: #fff;
   color: var(--ink);
+
+  /*
+   * O trio que impede o campo de estourar a coluna.
+   *
+   * `min-width: 0` e o essencial: item de grid/flex nasce com `min-width:
+   * auto`, ou seja, se recusa a encolher abaixo do proprio conteudo. Num
+   * <select> o "conteudo" e a MAIOR opcao da lista -- entao uma formacao de
+   * nome comprido esticava o campo para fora da celula e por cima do campo
+   * vizinho. O mesmo vale para input[type=date], que tem largura intrinseca
+   * por causa do seletor de calendario.
+   *
+   * `width: 100%` faz o campo ocupar a coluna toda em vez de se dimensionar
+   * pelo conteudo, e `max-width: 100%` e o cinto de seguranca para quem tiver
+   * largura fixa em style inline.
+   */
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Texto de opcao longa some com reticencias em vez de ser cortado no meio. */
+select {
+  text-overflow: ellipsis;
 }
 
 textarea { min-height: 90px; resize: vertical; }
 
+/*
+ * Caixas de selecao nao seguem a regra acima: elas tem tamanho proprio (18px,
+ * definido mais abaixo) e width:100% as esticaria pela linha inteira.
+ */
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+}
+
 .grid {
   display: grid;
-  gap: 12px;
+  gap: 14px 16px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
+
+/*
+ * Sem isto, a coluna do grid tambem se recusa a encolher e o campo continua
+ * empurrando o vizinho mesmo com min-width no <select>. Precisa ser nos DOIS:
+ * no campo e na celula que o contem.
+ */
+.grid > * { min-width: 0; }
+
+label { min-width: 0; }
 
 .row {
   display: flex;
@@ -152,6 +197,9 @@ textarea { min-height: 90px; resize: vertical; }
   gap: 12px;
   align-items: center;
 }
+
+/* Campo dentro de .row encolhe; botao nao, para o rotulo nao quebrar. */
+.row > label { min-width: 0; }
 
 input[type="checkbox"],
 input[type="radio"] {
@@ -296,12 +344,12 @@ canvas {
   }
 
   .panel {
-    padding: 16px 16px;
-    gap: 12px;
+    padding: 18px 16px;
+    gap: 14px;
   }
 
   .grid {
-    gap: 10px;
+    gap: 12px;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
@@ -363,12 +411,17 @@ canvas {
   }
 
   .panel {
-    padding: 12px 12px;
-    gap: 10px;
+    padding: 16px 14px;
+    gap: 12px;
   }
 
+  /*
+   * Piso de 12px mesmo no celular. Espaco VERTICAL nao e escasso numa tela
+   * pequena -- o que falta e largura. Espremer o vertical nao ganha nada e
+   * amontoa os alvos de toque, que e justamente onde o dedo erra.
+   */
   .grid {
-    gap: 8px;
+    gap: 12px;
     grid-template-columns: 1fr;
   }
 
@@ -392,7 +445,7 @@ canvas {
   }
 
   .row {
-    gap: 8px;
+    gap: 10px;
   }
 
   canvas {
@@ -540,7 +593,46 @@ canvas {
 
 .tab-btn.active .tab-btn-icon { color: #fff; }
 
+/*
+ * Um .tab-content quase sempre tem mais de um .panel dentro (Cadastro tem 4,
+ * Usuarios 3, Agenda e Configuracoes 2). Sem display/gap proprios ele era um
+ * <div> comum e os paineis empilhavam ENCOSTADOS, sem nenhum respiro entre
+ * eles -- Chamada, Frequencia e Admin escapavam so porque carregam a classe
+ * .chamada-layout junto, que ja define o proprio gap.
+ *
+ * O gap de 24px e o mesmo do .shell, para o espaco entre paineis ser igual em
+ * toda a aplicacao, esteja o painel dentro de uma aba ou nao.
+ */
+.tab-content {
+  display: grid;
+  gap: var(--gap-paineis);
+  align-content: start;
+}
+
 .tab-content[hidden] { display: none; }
+
+/*
+ * REDE DE SEGURANCA do respiro entre paineis.
+ *
+ * As regras acima cobrem os containers que existem hoje (.shell, .layout,
+ * .tab-content, .chamada-layout). Esta pega QUALQUER container que empilhe
+ * dois paineis -- inclusive um <div> novo que alguem criar amanha e esquecer
+ * de estilizar, que foi exatamente como .tab-content passou tanto tempo
+ * deixando os paineis encostados.
+ *
+ * `:has(> .panel + .panel)` casa so quando ha dois paineis IRMAOS DIRETOS:
+ * container com um painel so nao e tocado.
+ *
+ * Usa gap, e nao margin-top no proprio painel, de proposito: margin SOMA ao
+ * gap do container, entao painel dentro de container que ja tem gap ficaria
+ * com 24+10 = 34px e painel solto com 10px -- justamente a inconsistencia que
+ * o guia de padrao visual existe para evitar. Gap substitui, nao soma.
+ */
+:is(div, section, main, form, aside):has(> .panel + .panel) {
+  display: grid;
+  gap: var(--gap-paineis);
+  align-content: start;
+}
 
 .tabs[hidden] { display: none; }
 
@@ -571,7 +663,7 @@ canvas {
   .tabs {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
 
   .tabs-grupo-titulo {
@@ -1406,17 +1498,18 @@ canvas {
   }
 
   .panel {
-    padding: 10px;
-    gap: 8px;
+    padding: 14px 12px;
+    gap: 12px;
   }
 
+  /* Mesmo piso de 12px do bloco de 600px: ver a nota la em cima. */
   .grid {
-    gap: 6px;
+    gap: 12px;
   }
 
   label {
     font-size: 0.8rem;
-    gap: 3px;
+    gap: 5px;
   }
 
   input, textarea, select, button {
@@ -1438,8 +1531,12 @@ canvas {
     width: 100%;
   }
 
+  /*
+   * Aqui os botoes viram width:100% e empilham. Com 6px, dois botoes
+   * cheios ficavam praticamente colados -- e um deles e "Excluir".
+   */
   .row {
-    gap: 6px;
+    gap: 10px;
     flex-direction: column;
     align-items: stretch;
   }
@@ -1655,7 +1752,7 @@ canvas {
    O teto de 900px evita a linha longa demais em monitor grande. */
 .chamada-layout {
   display: grid;
-  gap: 24px;
+  gap: var(--gap-paineis);
   max-width: 900px;
 }
 
@@ -2262,7 +2359,7 @@ canvas {
 .agenda-filtros {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -2508,7 +2605,7 @@ canvas {
   min-width: 38px;
 }
 
-.agenda-visao-troca { display: flex; gap: 6px; }
+.agenda-visao-troca { display: flex; gap: 8px; }
 
 .agenda-calendario {
   display: grid;

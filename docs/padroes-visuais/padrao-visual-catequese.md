@@ -58,6 +58,91 @@ Não criar um novo tamanho de fonte "no olho" para um título — reusar `h2` (s
 - **Escala de raio usada hoje** (documentando para não crescer mais): `8px` e `10px` em inputs pequenos/badges, `12px`–`14px` em cards internos e inputs, `18px` (`--radius`) em painéis, `999px` em pílulas (botões, chips). Ao criar um componente novo, escolher o raio da família mais próxima em vez de inventar um valor — por exemplo, um card dentro de um painel deve usar `12px`, não `13px` ou `15px`.
 - **Sombra**: `var(--shadow)` para painéis; elementos internos (botão, card pequeno) não devem ter sombra própria a menos que sejam clicáveis e precisem indicar elevação — nesse caso, uma sombra mais leve e na cor do próprio elemento (ver `button` base: `0 10px 22px rgba(192, 95, 60, 0.25)`), nunca a sombra genérica de painel.
 
+
+## 3b. Campos que não podem estourar a coluna
+
+Esta é a armadilha que mais estragou tela neste projeto, e ela não é óbvia olhando o CSS.
+
+Todo item de grid ou flex nasce com `min-width: auto`, ou seja: **ele se recusa a encolher abaixo do próprio conteúdo**. Num `<select>`, o "conteúdo" é a **maior opção da lista** — então basta alguém cadastrar uma formação de nome comprido para o campo esticar para fora da célula e passar por cima do campo vizinho. `input[type="date"]` tem o mesmo problema, por causa da largura intrínseca do seletor de calendário.
+
+A correção precisa estar nos **dois** lados — no campo e na célula que o contém:
+
+```css
+input, textarea, select {
+  min-width: 0;      /* deixa encolher */
+  width: 100%;       /* ocupa a coluna em vez de se medir pelo conteúdo */
+  max-width: 100%;   /* cinto de segurança contra largura inline */
+}
+
+select { text-overflow: ellipsis; }   /* opção longa some com reticências */
+
+.grid > * { min-width: 0; }
+label { min-width: 0; }
+```
+
+Caixas de seleção ficam de fora: elas têm tamanho próprio, e `width: 100%` as esticaria pela linha inteira.
+
+```css
+input[type="checkbox"], input[type="radio"] { width: auto; }
+```
+
+**Como verificar:** abra a tela com o texto mais longo que o banco pode conter (não com "Teste 1") e confira se a página rola na horizontal. Se rolar, algum campo está estourando. Um jeito rápido de achar o culpado no console:
+
+```js
+document.querySelectorAll('*').forEach(el => {
+  const r = el.getBoundingClientRect(), p = el.parentElement?.getBoundingClientRect();
+  if (p && r.width && r.right > p.right + 1.5) console.log(el);
+});
+```
+
+## 3c. Todo container que empilha precisa de gap próprio
+
+`.tab-content` era um `<div>` sem `display` nem `gap`. Como quase toda aba tem mais de um `.panel` dentro (Cadastro tem 4, Usuários 3), os painéis empilhavam **encostados**. As abas de Chamada e Frequência escapavam por acidente: elas carregam `.chamada-layout` junto, que já define o próprio `gap`.
+
+A regra: **se um elemento pode conter mais de um filho empilhado, ele declara `display: grid` e `gap`.** Não conte com margem dos filhos — margem colapsa, `gap` não.
+
+O espaçamento entre painéis é **24px em toda a aplicação**, esteja o painel dentro de uma aba ou solto no `.shell`. O valor mora num token só:
+
+```css
+:root { --gap-paineis: 24px; }
+```
+
+Usado por `.shell`, `.layout`, `.tab-content` e `.chamada-layout`. Se um dia ficar apertado ou folgado demais, muda num lugar e vale para tudo.
+
+### A rede de segurança
+
+Depender de lembrar de estilizar cada container novo é frágil — foi assim que `.tab-content` passou tanto tempo deixando painel encostado em painel. Por isso existe também:
+
+```css
+:is(div, section, main, form, aside):has(> .panel + .panel) {
+  display: grid;
+  gap: var(--gap-paineis);
+  align-content: start;
+}
+```
+
+Isso pega **qualquer** container que empilhe dois painéis, inclusive um `<div>` novo que ninguém lembrou de estilizar. O `> .panel + .panel` garante que ele só age quando há dois painéis **irmãos diretos** — container com um painel só não é tocado.
+
+### Por que gap e não `margin-top` no painel
+
+`margin-top` no próprio `.panel` parece mais simples, mas **soma** ao `gap` do container: painel dentro de `.tab-content` ficaria com 24+10 = 34px, e painel solto com 10px. Duas distâncias diferentes para a mesma relação — exatamente a inconsistência que este guia existe para evitar. `gap` substitui, não soma.
+
+## 3d. Piso de espaçamento no celular
+
+A cascata de media queries vinha encolhendo os espaços a cada quebra: 14px → 12px → 8px → 6px. No fim, dois botões de largura cheia ficavam a 6px um do outro — e um deles era "Excluir".
+
+**Espaço vertical não é escasso numa tela pequena; o que falta é largura.** Espremer o vertical não ganha nada e amontoa os alvos de toque, que é justamente onde o dedo erra. O piso adotado:
+
+| | desktop | ≤768px | ≤600px | ≤480px |
+|---|---|---|---|---|
+| `.panel` padding | 22/24 | 18/16 | 16/14 | 14/12 |
+| `.panel` gap | 16 | 14 | 12 | 12 |
+| `.grid` gap | 14/16 | 12 | 12 | 12 |
+| `.row` gap | 12 | 12 | 10 | 10 |
+| `label` gap | 6 | 6 | 6 | 5 |
+
+**Nada abaixo de 10px entre dois controles clicáveis.** Gaps menores (2px na lista da barra lateral, 4px nas células do calendário, 3–5px na tipografia interna de um cartão) são deliberados — são elementos de uma mesma unidade visual, não controles independentes.
+
 ## 4. Padrão de botões — o cuidado principal
 
 A base global de `button` no CSS é "botão-pílula" cheio:
@@ -132,3 +217,7 @@ Antes de considerar uma tela pronta, conferir:
 5. Badge de status usa uma das quatro variantes (`ok`/`warning`/`error`/`neutro`) — não um estilo ad-hoc.
 6. Título de seção é `h2` (1.5rem); legenda é `.muted` (0.9rem) — nenhum tamanho de fonte novo inventado.
 7. Espaçamento entre painéis é `24px`; dentro do painel, `16px` de gap e `22px 24px` de padding.
+8. Nenhum campo estoura a coluna: `min-width: 0` no campo **e** na célula do grid (seção 3b).
+9. Todo container que empilha filhos declara `display: grid` e `gap` — não confie em margem (seção 3c).
+10. Nada abaixo de 10px entre dois controles clicáveis, inclusive no celular (seção 3d).
+11. Testado com o texto mais longo que o banco aceita, não com "Teste 1" — e conferido se a página rola na horizontal.

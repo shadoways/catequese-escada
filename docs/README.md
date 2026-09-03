@@ -12,4 +12,12 @@
   python3 docs/regressao.py                     # só uma aba visível por vez
   python3 docs/regressao-agenda-dia.py          # lista do dia da agenda
   python3 docs/regressao-agenda-transicoes.py   # trocar de dia limpa o estado
+  python3 docs/regressao-indicadores.py         # comparação, filtro e o caso sem base
+  ```
+
+  Os scripts leem a tela a partir de `/tmp/audit/`. Antes de rodar, copie os estáticos
+  para lá:
+
+  ```bash
+  mkdir -p /tmp/audit && cp src/main/resources/static/* /tmp/audit/
   ```

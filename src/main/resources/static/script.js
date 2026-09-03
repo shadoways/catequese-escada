@@ -831,8 +831,10 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 
 // ---- Navegação por abas ----
 // Cadastro e a tela publica; consulta e painel sao de uso interno.
-const TABS_PROTEGIDAS = ['chamada', 'agenda', 'frequencia', 'consulta', 'dashboard', 'admin', 'usuarios', 'configuracoes'];
-const TABS_SO_ADMIN = ['admin', 'usuarios', 'configuracoes'];
+const TABS_PROTEGIDAS = ['chamada', 'agenda', 'frequencia', 'consulta', 'dashboard', 'indicadores', 'admin', 'usuarios', 'configuracoes'];
+// Indicadores e o relatorio da paroquia inteira: entra aqui para nao abrir nem
+// forcando index.html?tab=indicadores. O backend barra de novo em /api/indicadores.
+const TABS_SO_ADMIN = ['indicadores', 'admin', 'usuarios', 'configuracoes'];
 
 // Texto da trilha (#trilha-pagina) acima do conteúdo -- o mesmo agrupamento
 // usado nos rótulos da barra lateral, para reforçar "onde eu estou".
@@ -844,6 +846,7 @@ const TRILHA_POR_TAB = {
   frequencia: 'Atendimento / Frequência',
   consulta: 'Atendimento / Consultar catequisandos',
   dashboard: 'Atendimento / Turmas e documentos',
+  indicadores: 'Administração / Indicadores',
   admin: 'Administração / Turmas e matrículas',
   usuarios: 'Administração / Usuários',
   configuracoes: 'Administração / Configurações'
@@ -1003,6 +1006,8 @@ const switchTab = (tabName) => {
   if (tabName === 'consulta') carregarConsulta();
   if (tabName === 'dashboard') carregarDashboard();
   // usuarios.js registra esta função; só existe para quem carrega aquela tela.
+  // indicadores.js registra esta funcao.
+  if (tabName === 'indicadores' && window.carregarIndicadores) window.carregarIndicadores();
   if (tabName === 'usuarios' && window.carregarUsuarios) window.carregarUsuarios();
   if (tabName === 'configuracoes' && window.carregarConfiguracoes) window.carregarConfiguracoes();
   if (tabName === 'cadastro') aplicarEstadoCadastro();

@@ -2819,3 +2819,411 @@ canvas {
 
 /* Na célula, o evento virou <span>: o clique é o da célula inteira. */
 span.agenda-cal-ev { cursor: inherit; }
+
+/* ==========================================================================
+   INDICADORES — o relatório da catequese
+   ==========================================================================
+
+   Tela de LEITURA, não de operação: nenhum controle além de ano e comunidade.
+   Todo gráfico vem acompanhado da tabela, porque quem não lê gráfico lê a
+   tabela — e é a tabela que a impressão leva.
+   ========================================================================== */
+
+:root {
+  /* Paleta categórica de GRÁFICO, validada (banda de luminosidade, croma,
+     separação protan/deutan/tritan e contraste) contra o bege do painel E
+     contra o branco do papel.
+
+     Os tons --nivel-* acima NÃO servem aqui: diocesano e regional ficam a
+     ΔE 6,2 em visão normal, indistinguíveis lado a lado numa barra. Como chip
+     eles funcionam porque cada um tem o rótulo colado. */
+  --graf-1: #c05f3c;
+  --graf-2: #0f7ba8;
+  --graf-3: #8f7c00;
+  --graf-4: #6d54b5;
+
+  --ind-melhor: #2f6f4f;
+  --ind-pior: #9f2c0b;
+}
+
+/* O container do relatório não é escondido por [hidden], mas o respiro entre
+   os painéis vem de MARGIN no filho mesmo assim: mexer no display de um pai
+   que pode ser ocultado foi o que já derrubou a navegação inteira uma vez. */
+#ind-conteudo { margin-top: var(--gap-paineis); }
+#ind-conteudo > .panel + .panel { margin-top: var(--gap-paineis); }
+
+/* ---- Filtro aplicado ---- */
+
+.ind-fichas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* display vence o atributo hidden: o par é obrigatório. */
+.ind-fichas[hidden] { display: none; }
+
+.ind-ficha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 999px;
+  background: rgba(47, 111, 126, 0.14);
+  color: var(--accent-2);
+  font-size: 0.9rem;
+}
+
+button.ind-ficha-x {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0 4px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  width: auto;
+  color: var(--accent-2);
+  cursor: pointer;
+}
+
+button.ind-ficha-x:hover { background: rgba(47, 111, 126, 0.22); transform: none; }
+
+button.ind-limpar-tudo {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  font: inherit;
+  font-size: 0.9rem;
+  width: auto;
+  color: var(--accent-2);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+button.ind-limpar-tudo:hover { background: none; transform: none; }
+
+/* ---- Cartões ---- */
+
+.ind-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.ind-cartoes[hidden] { display: none; }
+
+.ind-cartao {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ind-cartao[hidden] { display: none; }
+
+.ind-cartao.destaque { border-color: var(--accent-2); }
+
+.ind-cartao-rotulo {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.ind-cartao-valor {
+  font-size: clamp(1.7rem, 3.4vw, 2.3rem);
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.ind-cartao-detalhe {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* A variação nunca é só cor: leva a seta e o número escrito junto. */
+.ind-var { font-size: 0.9rem; font-weight: 600; }
+.ind-var.melhor { color: var(--ind-melhor); }
+.ind-var.pior { color: var(--ind-pior); }
+.ind-var.neutra { color: var(--muted); font-weight: 400; }
+
+.ind-base {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.ind-sub {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ind-vazio { margin: 4px 0; }
+
+.ind-dois { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+
+/* Cada evolução na sua moldura. Sem isso os dois gráficos ficavam lado a lado
+   sem separação e liam-se como UM gráfico de oito colunas — e, como cada um tem
+   a sua escala, a coluna de 34 catequistas aparecia da mesma altura que a de
+   312 catequisandos. É o erro do eixo duplo por outro caminho. */
+.ind-faceta {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ind-faceta[hidden] { display: none; }
+
+.ind-escala {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.ind-reservado {
+  padding: 16px;
+  border: 1px dashed var(--stroke);
+  border-radius: 12px;
+  background: rgba(91, 90, 82, 0.05);
+}
+
+.ind-reservado p { margin: 0 0 6px; }
+.ind-reservado p:last-child { margin-bottom: 0; }
+
+/* ---- Gráficos (HTML e CSS, sem SVG e sem biblioteca) ----
+
+   Foi SVG na primeira versão e voltou para HTML por dois motivos concretos que
+   a regressão pegou: o rótulo no fim da barra passava da largura do pai (76
+   elementos estourando a 400px), e o texto crescia junto com a largura da tela,
+   porque `font-size` em unidade de usuário escala com o viewBox. Barra em HTML
+   não tem nenhum dos dois — e imprime melhor. */
+
+.ind-barras,
+.ind-diverge {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.ind-barras[hidden],
+.ind-diverge[hidden] { display: none; }
+
+.ind-barra-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ind-barra-linha[hidden] { display: none; }
+
+.ind-barra-rotulo {
+  min-width: 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ind-barra-trilho {
+  display: block;
+  min-width: 0;
+  height: 16px;
+  border-radius: 4px;
+  background: rgba(91, 90, 82, 0.08);
+}
+
+.ind-barra-trilho[hidden] { display: none; }
+
+.ind-barra-preenche {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--graf-1);
+}
+
+.ind-barra-valor {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+/* Clicar numa comunidade filtra por ela — o cursor e o realce são o que
+   torna isso descobrível, junto com a legenda escrita no painel. */
+.ind-clicavel { cursor: pointer; }
+.ind-clicavel:hover .ind-barra-preenche,
+.ind-clicavel:focus-visible .ind-barra-preenche { background: var(--accent-2); }
+.ind-clicavel:hover .ind-barra-rotulo { color: var(--accent-2); }
+
+/* Divergente: entraram para a direita, saíram para a esquerda, do mesmo
+   centro. A pergunta é de polaridade — ganhou ou perdeu gente no ano. */
+.ind-diverge-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ind-diverge-linha[hidden] { display: none; }
+
+.ind-diverge-lado {
+  display: flex;
+  min-width: 0;
+  height: 16px;
+  background: rgba(91, 90, 82, 0.08);
+}
+
+.ind-diverge-lado[hidden] { display: none; }
+.ind-diverge-lado.esquerda { justify-content: flex-end; border-radius: 4px 0 0 4px; }
+.ind-diverge-lado.direita { justify-content: flex-start; border-radius: 0 4px 4px 0; }
+.ind-diverge-lado.esquerda .ind-barra-preenche { border-radius: 4px 0 0 4px; }
+.ind-diverge-lado.direita .ind-barra-preenche { border-radius: 0 4px 4px 0; }
+
+/* Colunas da evolução: um ano por coluna. Coluna e não linha porque os pontos
+   são discretos — não existe meio-termo entre 31/12 e 1º/01. */
+.ind-colunas {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.ind-colunas[hidden] { display: none; }
+
+.ind-coluna {
+  display: grid;
+  grid-template-rows: auto 120px auto;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
+}
+
+.ind-coluna[hidden] { display: none; }
+
+.ind-coluna-valor {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.ind-coluna-trilho {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 120px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.ind-coluna-trilho[hidden] { display: none; }
+
+.ind-coluna-preenche {
+  display: block;
+  width: 60%;
+  max-width: 46px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--graf-1);
+}
+
+.ind-coluna-ano {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ---- Tabelas ---- */
+
+.ind-tabela-rolagem {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ind-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.ind-tabela th,
+.ind-tabela td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--stroke);
+  vertical-align: top;
+}
+
+.ind-tabela th {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ind-tabela td.num { white-space: nowrap; }
+
+.ind-tabela tbody tr:last-child td { border-bottom: none; }
+
+@media (max-width: 600px) {
+  .ind-cartoes { gap: 12px; }
+  .ind-fichas { gap: 10px; }
+  .ind-tabela { font-size: 0.88rem; }
+
+  /* No celular o que falta é largura, não altura. Com o rótulo na mesma linha,
+     "Nossa Senhora Aparecida do Perpétuo Socorro" quebrava em cinco linhas e
+     espremia a barra a quase nada. Rótulo em cima, barra inteira embaixo. */
+  .ind-barra-linha { grid-template-columns: minmax(0, 1fr) auto; }
+  .ind-barra-rotulo { grid-column: 1 / -1; }
+  .ind-diverge-linha { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .ind-diverge-linha .ind-barra-rotulo { grid-column: 1 / -1; }
+  .ind-coluna { grid-template-rows: auto 90px auto; }
+  .ind-coluna-trilho { height: 90px; }
+}
+
+/* ---- Impressão ----
+   O papel precisa do período no cabeçalho: sem ele o relatório vira um número
+   sem contexto. E as tabelas vão junto, porque é nelas que os valores exatos
+   estão. */
+@media print {
+  /* A regra de impressão da ficha (bem acima) esconde `.tab-content` inteiro
+     com !important — sem isto aqui, imprimir a tela de Indicadores sairia em
+     branco. A Frequência resolveu o mesmo problema pondo o relatório FORA da
+     aba; aqui a tela inteira é o relatório, então a aba precisa voltar.
+
+     O `:not([hidden])` não é enfeite: é ele que impede esta regra de
+     ressuscitar uma aba fechada. Mexer no display de um container escondido
+     por [hidden] já derrubou a navegação inteira uma vez. */
+  #tab-indicadores:not([hidden]) { display: block !important; }
+
+  .ind-nao-imprime { display: none !important; }
+
+  #ind-conteudo > .panel,
+  #tab-indicadores > .panel {
+    box-shadow: none;
+    border: 1px solid var(--stroke);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .ind-cartao { border-color: #999; }
+  .ind-tabela-rolagem { overflow: visible; }
+  .ind-tabela th, .ind-tabela td { border-bottom: 1px solid #bbb; }
+}

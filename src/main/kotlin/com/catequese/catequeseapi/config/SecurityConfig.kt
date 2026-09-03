@@ -91,6 +91,7 @@ class SecurityConfig(
                 it.requestMatchers(HttpMethod.GET, "/api/chaves/validar").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                    .requestMatchers("/api/indicadores/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers(HttpMethod.PUT, "/api/config/**")
                     .hasRole("COORDENADOR_PAROQUIAL")
@@ -160,6 +161,9 @@ class SecurityConfig(
                 // usuario logado leria a area de administracao.
                 .requestMatchers("/api/admin/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers("/api/usuarios/**").hasRole("COORDENADOR_PAROQUIAL")
+                // O relatorio da paroquia inteira: catequista e coordenador de
+                // comunidade nao entram, nem escondendo o botao na tela.
+                .requestMatchers("/api/indicadores/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers(HttpMethod.PUT, "/api/config/**").hasRole("COORDENADOR_PAROQUIAL")
 

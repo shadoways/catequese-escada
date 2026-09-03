@@ -11,7 +11,11 @@ import org.springframework.web.bind.annotation.RestController
 
 /**
  * O relatorio da catequese. Exclusivo do coordenador paroquial -- a regra esta
- * no SecurityConfig (`/api/indicadores/**`) e de novo no servico.
+ * no SecurityConfig, no matcher de `/api/indicadores`, e de novo no servico.
+ *
+ * (Sem o curinga escrito aqui de proposito: comentario de bloco em Kotlin
+ * ANINHA, entao a sequencia barra-asterisco-asterisco dentro de um KDoc abre
+ * um comentario novo e o arquivo inteiro deixa de fechar.)
  *
  * Uma rota so devolve o relatorio inteiro, de proposito. Um endpoint por bloco
  * faria os numeros chegarem em ordem aleatoria, cada um com o seu "carregando",

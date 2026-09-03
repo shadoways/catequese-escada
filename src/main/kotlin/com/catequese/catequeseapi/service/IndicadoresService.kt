@@ -44,8 +44,8 @@ import java.time.format.DateTimeFormatter
  * compoe FrequenciaService e os repositorios e devolve tudo ja comparado.
  *
  * Regra de acesso: so coordenador paroquial. A restricao esta no SecurityConfig
- * (`/api/indicadores/**`), e conferida de novo aqui -- permissao e de dados, nao
- * de tela, e este servico pode acabar sendo chamado de outro lugar.
+ * (no matcher de `/api/indicadores`), e conferida de novo aqui -- permissao e de
+ * dados, nao de tela, e este servico pode acabar sendo chamado de outro lugar.
  */
 @Service
 class IndicadoresService(

@@ -60,6 +60,12 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   pela MAIOR opção e estoura a coluna. Precisa de `min-width: 0` no campo **e** na célula.
 - **Coordenador sem comunidade**: `EscopoAcessoService` trata nulo como "vê todas" —
   regra de leitura. Em escrita isso é o oposto do desejado; ali a regra fecha.
+- **Comentário de bloco em Kotlin ANINHA** (diferente de Java e C). Escrever uma rota
+  com curinga dentro de um KDoc — `/api/indicadores/` seguido de dois asteriscos — abre
+  um comentário novo, e o arquivo inteiro vira comentário. O compilador só reclama na
+  ÚLTIMA linha (`Unclosed comment`) e num import que está correto, então nenhum dos
+  dois erros aponta o problema. Não escreva o curinga em KDoc; use `//` ou cite a rota
+  sem ele.
 
 ---
 
@@ -71,10 +77,15 @@ localmente com `./gradlew compileKotlin` antes de subir.
 O frontend tem verificação automatizada em `docs/`:
 
 ```bash
+python3 docs/kt_comentario_check.py           # KDoc que não fecha (o Gradle não roda aqui)
 python3 docs/regressao.py                     # só uma aba visível por vez
 python3 docs/regressao-agenda-dia.py          # lista do dia: abrir, editar, excluir
 python3 docs/regressao-agenda-transicoes.py   # trocar de dia limpa o estado anterior
+python3 docs/regressao-indicadores.py         # comparação, filtro e o caso sem base
 ```
+
+Os scripts de tela leem de `/tmp/audit/`; copie os estáticos antes:
+`mkdir -p /tmp/audit && cp src/main/resources/static/* /tmp/audit/`
 
 Ao mexer em CSS ou layout, verifique também em **1280 / 760 / 400px**: nenhum elemento
 pode estourar o pai, e a página não pode rolar na horizontal.

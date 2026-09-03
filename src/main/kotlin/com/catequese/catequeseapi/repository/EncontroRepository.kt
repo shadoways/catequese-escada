@@ -24,6 +24,15 @@ interface EncontroRepository : JpaRepository<Encontro, Long> {
         fim: LocalDate
     ): List<Encontro>
 
+    /**
+     * Encontros amarrados a um evento da agenda.
+     *
+     * E por aqui que a tela de Eventos sabe quem participou: o evento em si nao
+     * guarda presenca de catequisando -- quem guarda e o encontro que alguem
+     * abriu a partir dele.
+     */
+    fun findByIdEvento(idEvento: Long): List<Encontro>
+
     /** Alimenta o fechamento automatico: abertos de dias anteriores. */
     fun findAllBySituacaoAndDataBefore(
         situacao: SituacaoEncontro,

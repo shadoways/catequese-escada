@@ -150,31 +150,17 @@ data class LinhaFormacaoDTO(
     val minimo: Int
 )
 
-data class FrequenciaIndicadorDTO(
-    val media: IndicadorDTO,
-    val abaixoDoMinimo: IndicadorDTO,
-    val emRisco: IndicadorDTO,
-    val turmasApuradas: Int,
-    val turmasSemApuracao: Int,
-    val turmasNaoSeAplica: Int,
-    val minimo: Int
-)
-
-data class EventosIndicadorDTO(
-    val total: IndicadorDTO,
-    val realizados: IndicadorDTO,
-    val cancelados: IndicadorDTO,
-    val porTipo: List<FatiaDTO>
-)
-
-/** As opcoes da barra: dois controles, so. Relatorio nao e painel de controle. */
-data class OpcoesIndicadoresDTO(
-    val anos: List<Int>,
-    val comunidades: List<ItemSimplesDTO>
-)
 
 data class ItemSimplesDTO(val id: Long, val nome: String)
 
+/**
+ * O resumo geral: a tela de entrada do relatorio.
+ *
+ * Enxuto de proposito. Frequencia, matriculas, formacao e eventos ganharam tela
+ * propria com filtros proprios, e a apuracao de frequencia -- que percorre
+ * turma a turma, em dois anos -- e justamente a mais cara. Deixa-la fora daqui
+ * e o que mantem a pagina de entrada rapida.
+ */
 data class IndicadoresDTO(
     val ano: Int,
     val anoBase: Int?,
@@ -193,12 +179,10 @@ data class IndicadoresDTO(
     val catequisandos: IndicadorDTO,
     val pessoasDistintas: IndicadorDTO?,
     val catequistas: IndicadorDTO,
+    val formacoesNoAno: IndicadorDTO,
+    val eventosNoAno: IndicadorDTO,
     val evolucaoCatequisandos: List<PontoAnoDTO>,
     val evolucaoCatequistas: List<PontoAnoDTO>,
     val movimento: MovimentoDTO,
-    val situacaoMatriculas: List<FatiaDTO>,
-    val porComunidade: List<LinhaComunidadeDTO>,
-    val formacoes: List<LinhaFormacaoDTO>,
-    val frequencia: FrequenciaIndicadorDTO,
-    val eventos: EventosIndicadorDTO
+    val porComunidade: List<LinhaComunidadeDTO>
 )

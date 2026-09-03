@@ -149,20 +149,30 @@ Não há method security no projeto (nenhum `@PreAuthorize`); seguir o que já e
 
 | Método e rota | Para quê | Quem pode |
 |---|---|---|
-| `GET /api/indicadores/opcoes` | Anos disponíveis e comunidades | coordenador paroquial |
-| `GET /api/indicadores?ano=&idComunidade=` | O relatório inteiro, já com a comparação | coordenador paroquial |
+| `GET /api/indicadores/opcoes` | Anos, comunidades, turmas, catequistas, situações, tipos e níveis — tudo que as cinco barras de filtro precisam | coordenador paroquial |
+| `GET /api/indicadores` | Resumo geral | coordenador paroquial |
+| `GET /api/indicadores/matriculas` | `ano`, `idComunidade`, `idTurma`, `situacao` | coordenador paroquial |
+| `GET /api/indicadores/frequencia` | `ano`, `idComunidade`, `idTurma` | coordenador paroquial |
+| `GET /api/indicadores/formacao` | `ano`, `nivel`, `idComunidade`, `idCatequista` | coordenador paroquial |
+| `GET /api/indicadores/eventos` | `ano`, `tipo`, `nivel`, `idComunidade` | coordenador paroquial |
 
-**Um endpoint só.** Oito requisições fariam os números aparecerem em ordem aleatória,
-cada um com seu "carregando". Um payload só também garante que todos os blocos falam do
-**mesmo instante** do banco — num relatório, números de instantes diferentes é defeito.
+**Uma rota por TELA** — nem uma rota por bloco, nem uma rota só para tudo.
+
+Uma rota só para tudo obrigaria a apurar frequência de turma, ranking de catequista e
+lista de evento a cada troca de filtro, mesmo com a pessoa olhando outra coisa; e a
+apuração de frequência, que percorre turma a turma em dois anos, é justamente a mais
+cara. Uma rota por bloco faria os números de uma mesma tela chegarem em ordem aleatória
+e — pior — falarem de instantes diferentes do banco. A tela é a unidade certa: é o
+recorte que a pessoa lê junto.
 
 **O servidor devolve o par, não o número solto.** Cada indicador vem como
 `{ valor, base, variacao, variacaoPercentual, direcao, comparavel }`. A tela **não
 calcula variação** — regra de comparação duplicada em JS é regra que vai divergir do
 que for impresso.
 
-**Serviço novo:** `IndicadoresService`, compondo `FrequenciaService`,
-`FrequenciaFormacaoService` e `EscopoAcessoService` em vez de reimplementar regra.
+**Dois serviços:** `IndicadoresService` guarda só o resumo geral;
+`IndicadoresDetalheService` guarda as quatro telas de detalhe. Ambos compõem
+`FrequenciaService` e `EscopoAcessoService` em vez de reimplementar regra.
 
 > **Desempenho.** `CatequisandoRepository` e `TurmaRepository` são `JpaRepository`
 > vazios e não há nenhum `GROUP BY` no projeto — hoje tudo é filtrado em memória. Como
@@ -188,51 +198,82 @@ de Turmas e Usuários.
 
 ## 6. Componentes
 
-### Layout, de cima para baixo
+### Cinco telas, uma pergunta cada
 
-**Cabeçalho do relatório** — "Catequese em 2026 · comparado com 2025 · até 3 de
-setembro · paróquia inteira". Uma linha, em texto. É ela que vai no papel.
+A primeira versão punha nove blocos e dois filtros numa página só: para saber quem
+faltou na formação, a pessoa tinha de ler matrícula, frequência e evento no caminho.
+Agora há uma sub-navegação dentro da aba, e **cada tela tem os filtros da pergunta
+dela**.
 
-**1. Os cinco números do ano** — fila de cartões, cada um com valor, comparação escrita
-e uma minilinha dos últimos anos:
+| Tela | A pergunta | Filtros |
+|---|---|---|
+| **Resumo geral** | Como o ano está indo? | ano, comunidade |
+| **Matrículas** | Quantos estão cursando e quantos desistiram — neste ano e nos anteriores? | ano, comunidade, turma, situação |
+| **Frequência** | Quem está perto do limite, e onde? | ano, comunidade, turma |
+| **Formação** | Quem foi e quem não foi às formações? | ano, nível, comunidade, catequista |
+| **Eventos** | O que aconteceu, e quem participou de cada coisa? | ano, tipo, nível, comunidade |
 
-| Cartão | O que compara |
-|---|---|
-| Catequisandos | matrículas ativas, contra o ano anterior |
-| Catequistas | ativos, contra o ano anterior |
-| Entraram | novos no ano |
-| Saíram | separando concluíram de abandonaram |
-| Retenção | % que permaneceu, descontando quem concluiu |
+**O filtro de uma tela não vaza para a outra — só o ano viaja.** "Turma" da Frequência
+não quer dizer nada em Formação, e filtro herdado invisível é a pior forma de ler um
+número errado. Quem estava em 2025 continua em 2025; o resto começa limpo.
 
-**2. Evolução** — colunas dos últimos 5 anos, catequisandos e catequistas. Duas séries,
-duas escalas muito diferentes → **dois gráficos**, nunca dois eixos y no mesmo. Eixo
-duplo é a forma mais fácil de fazer duas curvas "se cruzarem" sem que isso signifique
-nada.
+**Trocar de comunidade limpa turma e catequista.** Manter um vínculo que não pertence
+mais ao recorte devolveria uma tela vazia sem explicação. As listas de turma e de
+catequista também **encolhem** para a comunidade escolhida: um select com todas as
+turmas da paróquia não é filtro, é obstáculo.
 
-Coluna e não linha porque os pontos são discretos: não existe meio-termo entre 31/12 e
-1º/01. E **cada gráfico tem moldura própria com o topo da escala escrito** — lado a
-lado sem separação, os dois liam-se como um gráfico só de oito colunas, e a coluna de
-34 catequistas aparecia da mesma altura que a de 312 catequisandos. Era o erro do eixo
-duplo por outro caminho.
+#### Resumo geral
 
-**3. Movimento do ano** — entraram acima da linha, saíram abaixo, saldo ao lado. Barra
-divergente, porque a pergunta é de polaridade: ganhou ou perdeu.
+Cabeçalho do período em uma linha ("Catequese em 2026 · comparado com 2025 · até 03/09
+nos dois anos · paróquia inteira") — é ele que vai impresso.
 
-**4. Por comunidade** — barras horizontais (nome de comunidade é longo; barra
-horizontal deixa ler sem virar a cabeça). Catequisandos e catequistas, cada um com a
-variação contra o ano anterior ao lado. **Sequencial de um tom só** — a identidade está
-no rótulo, não na cor.
+1. **Resumo geral** — catequisandos · pessoas distintas · catequistas · retenção ·
+   formações · eventos. Cada um com a base do ano anterior escrita ao lado.
+2. **Crescimento ano a ano** — *a catequese está crescendo ou encolhendo?* Colunas dos
+   últimos anos, catequisandos e catequistas em **dois gráficos separados**, cada um na
+   sua moldura e com o topo da escala escrito. Nunca dois eixos y no mesmo gráfico; e
+   sem a moldura os dois liam-se como um só, com a coluna de 34 catequistas na mesma
+   altura da de 312 catequisandos.
+3. **Quem entrou e quem saiu** — entradas para a direita, saídas para a esquerda; quem
+   concluiu separado de quem abandonou; saldo e retenção.
+4. **Onde está a catequese** — *como catequisandos e catequistas se distribuem entre as
+   comunidades, e qual delas cresceu ou encolheu.* É o mapa da paróquia: responde "de
+   onde vem a nossa gente" e "qual comunidade precisa de atenção". Clicar numa barra
+   filtra por ela.
+5. **Ver em detalhe** — atalhos para as quatro telas.
+6. **Fundos da catequese** — reservado, ver §7.
 
-**5. Formações** — por nível, o funil `inscritos → participaram → atingiram o mínimo`,
-com a taxa de participação como medidor. Três linhas nomeadas, uma tabela ao lado.
+#### Matrículas
 
-**6. Frequência** — média da paróquia contra o ano anterior, e quantas turmas estão
-abaixo do mínimo. `PRE_CATEQUESE` e `PERSEVERANCA` como "não se aplica".
+Cartões do ano (total, cursando, concluíram, desistentes) · **Ano a ano**, para responder
+se a evasão deste ano é fora do normal ou é o padrão da paróquia · **Por turma**, para
+ver onde as desistências se concentram.
 
-**7. Eventos e sacramentos** — total no ano contra o anterior, por tipo (`FORMACAO`,
-`SACRAMENTO`, `RITO_RICA`, `ENCONTRO`) e por situação, com cancelados à parte.
+#### Frequência
 
-**8. Fundos da catequese** — cartão reservado, ver §7.
+Aproveitamento médio, regulares, **perto do limite** (entre o percentual de alerta e o
+mínimo — quem ainda dá tempo de recuperar) e abaixo do mínimo · tabela por turma, da
+pior média para a melhor · e, **com uma turma escolhida**, a lista catequisando a
+catequisando com percentual, presenças, faltas e justificadas.
+
+A lista pessoa a pessoa só aparece com turma escolhida: a paróquia inteira seriam
+centenas de linhas que ninguém lê, e cada uma tem custo de apuração.
+
+#### Formação
+
+Inscritos → participaram → atingiram o mínimo · por nível · **catequista a catequista**,
+do mais presente para o menos (é a resposta de "quem foi e quem não foi") · e por
+comunidade, para ver qual mandou mais gente.
+
+#### Eventos
+
+Total, realizados e cancelados · por tipo **e** por nível, em gráficos separados, porque
+são perguntas independentes (tipo é o que o evento é; nível é de quem ele é) · e a lista
+de cada evento com o público, a data e **quantos participaram**.
+
+Presença vem de duas fontes diferentes: catequista, da chamada da formação; catequisando,
+do encontro que alguém abriu a partir do evento. Onde não houve chamada, a coluna mostra
+travessão e **não zero** — "ninguém foi" e "ninguém marcou" são coisas diferentes.
 
 ### Gráficos
 
@@ -361,6 +402,11 @@ Além da definição de pronto global (`ESPECIFICACAO-GLOBAL.md` §9):
       preenchido
 - [ ] `PRE_CATEQUESE` aparece como "não se aplica", nunca 0%
 - [x] Clicar numa comunidade filtra; remover a ficha volta ao estado anterior
+- [x] Cada tela mostra os filtros dela, e só os dela
+- [x] O filtro de uma tela não vaza para a outra; só o ano viaja
+- [x] Trocar de comunidade limpa turma e catequista, e encolhe as listas
+- [x] Escolher uma turma na Frequência desce ao catequisando
+- [x] Presença não registrada aparece como travessão, não zero
 - [x] A impressão sai sem menu, com o período no cabeçalho e com as tabelas visíveis
 - [x] Nenhum gráfico tem dois eixos y
 - [x] A paleta passa no validador contra o bege **e** contra o branco do papel

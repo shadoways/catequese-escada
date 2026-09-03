@@ -60,6 +60,10 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   pela MAIOR opção e estoura a coluna. Precisa de `min-width: 0` no campo **e** na célula.
 - **Coordenador sem comunidade**: `EscopoAcessoService` trata nulo como "vê todas" —
   regra de leitura. Em escrita isso é o oposto do desejado; ali a regra fecha.
+- **`flex-basis: 100%` em container `flex-direction: column`** não é largura, é
+  ALTURA. Em `≤600px` o `.row` vira coluna, e um filtro com `flex: 1 1 100%` estourava
+  a altura da linha e quebrava para uma SEGUNDA COLUNA, saindo pela direita da tela.
+  Ali largura cheia já vem do `align-items: stretch`.
 - **Comentário de bloco em Kotlin ANINHA** (diferente de Java e C). Escrever uma rota
   com curinga dentro de um KDoc — `/api/indicadores/` seguido de dois asteriscos — abre
   um comentário novo, e o arquivo inteiro vira comentário. O compilador só reclama na

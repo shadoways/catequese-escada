@@ -2852,6 +2852,106 @@ span.agenda-cal-ev { cursor: inherit; }
 #ind-conteudo { margin-top: var(--gap-paineis); }
 #ind-conteudo > .panel + .panel { margin-top: var(--gap-paineis); }
 
+/* ---- Sub-navegação: uma pergunta por tela ---- */
+
+.ind-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 2px;
+  border-bottom: 1px solid var(--stroke);
+}
+
+.ind-subnav[hidden] { display: none; }
+
+/* <button> estilizado como aba precisa anular a pílula terracota da regra
+   base, senão vira um botão de ação sólido — a armadilha nº 1 deste CSS. */
+button.ind-subnav-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  box-shadow: none;
+  border-radius: 8px 8px 0 0;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  width: auto;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+button.ind-subnav-btn:hover {
+  background: rgba(47, 111, 126, 0.08);
+  color: var(--accent-2);
+  transform: none;
+}
+
+button.ind-subnav-btn.active {
+  color: var(--accent-2);
+  border-bottom-color: var(--accent-2);
+  font-weight: 600;
+}
+
+/* ---- Filtros da tela ---- */
+
+.ind-filtro {
+  min-width: 0;
+  flex: 1 1 190px;
+  max-width: 320px;
+}
+
+.ind-filtro[hidden] { display: none; }
+
+/* ---- Atalhos para as telas de detalhe ---- */
+
+.ind-atalhos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.ind-atalhos[hidden] { display: none; }
+
+/* Card clicável: mesma armadilha do botão-pílula. Cor e fundo explícitos. */
+button.ind-atalho {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  box-shadow: none;
+  padding: 14px 16px;
+  font: inherit;
+  width: auto;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button.ind-atalho[hidden] { display: none; }
+
+button.ind-atalho:hover {
+  border-color: var(--accent-2);
+  background: #fff;
+  transform: none;
+}
+
+.ind-atalho .muted { font-size: 0.85rem; }
+
+.ind-atalho-seta {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+/* A pergunta que o painel responde. É ela que faz um bloco de números deixar
+   de ser "um monte de número" e virar resposta. */
+.ind-pergunta {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 /* ---- Filtro aplicado ---- */
 
 .ind-fichas {
@@ -3184,6 +3284,16 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
 
 @media (max-width: 600px) {
   .ind-cartoes { gap: 12px; }
+  .ind-subnav { gap: 6px; }
+  /* Piso de 10px entre alvos de toque continua valendo: o gap menor aqui é
+     entre abas de uma mesma unidade visual, com padding próprio de 8px. */
+  button.ind-subnav-btn { padding: 8px 10px; font-size: 0.9rem; }
+  /* `flex: 1 1 100%` aqui seria um bug: neste tamanho `.row` vira
+     `flex-direction: column`, e nesse eixo `flex-basis: 100%` e ALTURA, nao
+     largura -- o item estourava a altura da linha e quebrava para uma SEGUNDA
+     COLUNA ao lado, saindo pela direita da tela. Com `align-items: stretch` do
+     proprio `.row`, largura cheia ja e o comportamento natural. */
+  .ind-filtro { flex: 0 0 auto; max-width: none; }
   .ind-fichas { gap: 10px; }
   .ind-tabela { font-size: 0.88rem; }
 
@@ -3223,7 +3333,8 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
     page-break-inside: avoid;
   }
 
-  .ind-cartao { border-color: #999; }
+  .ind-cartao, .ind-faceta, button.ind-atalho { border-color: #999; }
+  .ind-atalhos { display: none !important; }
   .ind-tabela-rolagem { overflow: visible; }
   .ind-tabela th, .ind-tabela td { border-bottom: 1px solid #bbb; }
 }

@@ -929,26 +929,26 @@
       <section class="panel">
         <div class="row" style="justify-content: space-between; align-items: flex-start;">
           <div>
-            <h2>Indicadores</h2>
+            <h2 id="ind-titulo">Indicadores</h2>
             <p class="muted" id="ind-cabecalho">Apurando…</p>
           </div>
           <button type="button" id="ind-imprimir" class="secondary ind-nao-imprime">Imprimir</button>
         </div>
 
-        <div class="row ind-nao-imprime">
-          <label style="min-width: 150px;">
-            Ano
-            <select id="ind-ano"></select>
-          </label>
-          <label style="min-width: 220px;">
-            Comunidade
-            <select id="ind-comunidade">
-              <option value="">Paróquia inteira</option>
-            </select>
-          </label>
-        </div>
+        <!--
+          Uma pergunta por tela. Cada uma tem os filtros dela, montados por
+          indicadores.js: "turma" não quer dizer nada em Formação, e filtro
+          herdado invisível é a pior forma de ler um número errado.
+        -->
+        <nav class="ind-subnav ind-nao-imprime" aria-label="Telas do relatório">
+          <button type="button" class="ind-subnav-btn active" data-vista="resumo">Resumo geral</button>
+          <button type="button" class="ind-subnav-btn" data-vista="matriculas">Matrículas</button>
+          <button type="button" class="ind-subnav-btn" data-vista="frequencia">Frequência</button>
+          <button type="button" class="ind-subnav-btn" data-vista="formacao">Formação</button>
+          <button type="button" class="ind-subnav-btn" data-vista="eventos">Eventos</button>
+        </nav>
 
-        <div id="ind-fichas" class="ind-fichas ind-nao-imprime" hidden></div>
+        <div id="ind-filtros" class="row ind-nao-imprime"></div>
         <div id="ind-avisos"></div>
       </section>
 

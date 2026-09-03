@@ -1,33 +1,20 @@
 package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.DirecaoBoa
-import com.catequese.catequeseapi.dto.EventosIndicadorDTO
-import com.catequese.catequeseapi.dto.FatiaDTO
-import com.catequese.catequeseapi.dto.FrequenciaIndicadorDTO
 import com.catequese.catequeseapi.dto.IndicadorDTO
 import com.catequese.catequeseapi.dto.IndicadoresDTO
-import com.catequese.catequeseapi.dto.ItemSimplesDTO
 import com.catequese.catequeseapi.dto.LinhaComunidadeDTO
-import com.catequese.catequeseapi.dto.LinhaFormacaoDTO
 import com.catequese.catequeseapi.dto.MovimentoDTO
-import com.catequese.catequeseapi.dto.OpcoesIndicadoresDTO
 import com.catequese.catequeseapi.dto.PontoAnoDTO
 import com.catequese.catequeseapi.exception.AcessoNegadoException
 import com.catequese.catequeseapi.model.Comunidade
-import com.catequese.catequeseapi.model.Formacao
 import com.catequese.catequeseapi.model.Matricula
-import com.catequese.catequeseapi.model.NivelEvento
-import com.catequese.catequeseapi.model.SituacaoEvento
 import com.catequese.catequeseapi.model.SituacaoMatricula
-import com.catequese.catequeseapi.model.SituacaoPresenca
-import com.catequese.catequeseapi.model.TipoEvento
 import com.catequese.catequeseapi.model.Turma
 import com.catequese.catequeseapi.repository.ComunidadeRepository
 import com.catequese.catequeseapi.repository.EventoRepository
-import com.catequese.catequeseapi.repository.FormacaoInscritoRepository
 import com.catequese.catequeseapi.repository.FormacaoRepository
 import com.catequese.catequeseapi.repository.MatriculaRepository
-import com.catequese.catequeseapi.repository.PresencaFormacaoRepository
 import com.catequese.catequeseapi.repository.TurmaCatequistaRepository
 import com.catequese.catequeseapi.repository.TurmaRepository
 import org.springframework.stereotype.Service
@@ -40,8 +27,12 @@ import java.time.format.DateTimeFormatter
  *
  * Nao confundir com as telas de gestao. Ali o coordenador OPERA (corrige
  * chamada, classifica turma); aqui ele so LE, para reuniao e prestacao de
- * contas. Por isso este servico nao escreve nada e nao decide nada -- ele
- * compoe FrequenciaService e os repositorios e devolve tudo ja comparado.
+ * contas. Por isso este servico nao escreve nada e nao decide nada.
+ *
+ * Guarda so o RESUMO GERAL. Matriculas, frequencia, formacao e eventos ganharam
+ * tela propria, com filtros proprios, no IndicadoresDetalheService -- e a
+ * apuracao de frequencia, que percorre turma a turma em dois anos, e justamente
+ * a mais cara. Mante-la fora daqui e o que deixa a pagina de entrada rapida.
  *
  * Regra de acesso: so coordenador paroquial. A restricao esta no SecurityConfig
  * (no matcher de `/api/indicadores`), e conferida de novo aqui -- permissao e de
@@ -55,9 +46,6 @@ class IndicadoresService(
     private val turmaCatequistaRepository: TurmaCatequistaRepository,
     private val eventoRepository: EventoRepository,
     private val formacaoRepository: FormacaoRepository,
-    private val formacaoInscritoRepository: FormacaoInscritoRepository,
-    private val presencaFormacaoRepository: PresencaFormacaoRepository,
-    private val frequenciaService: FrequenciaService,
     private val escopo: EscopoAcessoService
 ) {
 
@@ -82,23 +70,6 @@ class IndicadoresService(
     ) {
         val ativas: List<Matricula>
             get() = matriculas.filter { it.situacao == SituacaoMatricula.CURSANDO }
-    }
-
-    fun opcoes(): OpcoesIndicadoresDTO {
-        exigirCoordenadorParoquial()
-        val anos = matriculaRepository.findAll()
-            .map { it.ano }
-            .filter { it > 0 }
-            .distinct()
-            .sortedDescending()
-        val hoje = LocalDate.now().year
-        return OpcoesIndicadoresDTO(
-            anos = (if (anos.contains(hoje)) anos else listOf(hoje) + anos),
-            comunidades = comunidadeRepository.findAll()
-                .filter { it.ativo }
-                .sortedBy { it.nome }
-                .map { ItemSimplesDTO(it.idComunidade, it.nome) }
-        )
     }
 
     @Transactional(readOnly = true)
@@ -143,6 +114,19 @@ class IndicadoresService(
             "Catequistas", atual.catequistas.size, base?.catequistas?.size, DirecaoBoa.MAIOR
         )
 
+        // Duas contagens baratas (uma consulta cada) que valem como manchete:
+        // dizem se o ano teve movimento, e levam para as telas de detalhe.
+        val formacoesNoAno = IndicadorDTO.de(
+            "Formações", formacaoRepository.findByAnoOrderByNomeAsc(ano).size,
+            anoBase?.let { formacaoRepository.findByAnoOrderByNomeAsc(it).size },
+            DirecaoBoa.NEUTRA, detalhe = "trilhas de formação de catequista"
+        )
+        val eventosNoAno = IndicadorDTO.de(
+            "Eventos", eventosDoAno(ano, corte, idComunidade),
+            anoBase?.let { eventosDoAno(it, corteEquivalente(it, corte), idComunidade) },
+            DirecaoBoa.NEUTRA, detalhe = "na agenda, até a data"
+        )
+
         return IndicadoresDTO(
             ano = ano,
             anoBase = anoBase,
@@ -155,14 +139,12 @@ class IndicadoresService(
             catequisandos = catequisandos,
             pessoasDistintas = pessoasDistintas,
             catequistas = catequistas,
+            formacoesNoAno = formacoesNoAno,
+            eventosNoAno = eventosNoAno,
             evolucaoCatequisandos = evolucao(anosComDado, ano, todas, turmas, idComunidade) { it.ativas.size },
             evolucaoCatequistas = evolucao(anosComDado, ano, todas, turmas, idComunidade) { it.catequistas.size },
             movimento = movimento(ano, anoBase, corte, todas, turmas, idComunidade),
-            situacaoMatriculas = situacoes(atual, base),
-            porComunidade = porComunidade(atual, base, comunidades),
-            formacoes = formacoes(ano, anoBase, corte),
-            frequencia = frequencia(atual, base),
-            eventos = eventos(ano, anoBase, corte, idComunidade)
+            porComunidade = porComunidade(atual, base, comunidades)
         )
     }
 
@@ -357,16 +339,6 @@ class IndicadoresService(
         )
     }
 
-    private fun situacoes(atual: Recorte, base: Recorte?): List<FatiaDTO> =
-        SituacaoMatricula.entries.map { s ->
-            FatiaDTO(
-                chave = s.name,
-                rotulo = rotuloSituacao(s),
-                valor = atual.matriculas.count { it.situacao == s }.toDouble(),
-                base = base?.matriculas?.count { it.situacao == s }?.toDouble()
-            )
-        }
-
     private fun porComunidade(
         atual: Recorte,
         base: Recorte?,
@@ -399,211 +371,10 @@ class IndicadoresService(
     private fun comunidadeDeRecorte(m: Matricula, r: Recorte): Long? =
         m.turma?.idTurma?.let { r.turmasPorId[it]?.idComunidade }
 
-    private fun formacoes(ano: Int, anoBase: Int?, corte: LocalDate): List<LinhaFormacaoDTO> {
-        val niveis = listOf(NivelEvento.DIOCESANO, NivelEvento.REGIONAL, NivelEvento.PAROQUIAL)
-        val doAno = formacaoRepository.findByAnoOrderByNomeAsc(ano)
-        val doBase = anoBase?.let {
-            formacaoRepository.findByAnoOrderByNomeAsc(it)
-        }.orEmpty()
-
-        return niveis.map { nivel ->
-            val atual = apurarFormacoes(doAno.filter { it.nivel == nivel }, corte)
-            val base =
-                if (anoBase == null) null
-                else apurarFormacoes(doBase.filter { it.nivel == nivel }, corteEquivalente(anoBase, corte))
-
-            LinhaFormacaoDTO(
-                nivel = nivel,
-                rotulo = nivel.rotulo,
-                formacoes = atual.formacoes,
-                encontrosRealizados = atual.encontros,
-                inscritos = IndicadorDTO.de("Inscritos", atual.inscritos, base?.inscritos, DirecaoBoa.MAIOR),
-                participaram = IndicadorDTO.de(
-                    "Participaram", atual.participaram, base?.participaram, DirecaoBoa.MAIOR,
-                    detalhe = "com ao menos uma presença"
-                ),
-                atingiramMinimo = IndicadorDTO.de(
-                    "Atingiram o mínimo", atual.atingiram, base?.atingiram, DirecaoBoa.MAIOR
-                ),
-                taxaParticipacao = IndicadorDTO.de(
-                    "Participação", atual.taxa ?: 0.0, base?.taxa, DirecaoBoa.MAIOR, percentual = true
-                ),
-                minimo = atual.minimo
-            )
-        }
-    }
-
-    private data class ApuracaoFormacao(
-        val formacoes: Int,
-        val encontros: Int,
-        val inscritos: Int,
-        val participaram: Int,
-        val atingiram: Int,
-        val taxa: Double?,
-        val minimo: Int
-    )
-
-    private fun apurarFormacoes(
-        formacoes: List<Formacao>,
-        corte: LocalDate
-    ): ApuracaoFormacao {
-        val inscritos = mutableSetOf<Long>()
-        val participaram = mutableSetOf<Long>()
-        val atingiram = mutableSetOf<Long>()
-        var encontros = 0
-        var minimo = CalculoFrequencia.MINIMO_PADRAO
-
-        formacoes.forEach { f ->
-            minimo = f.percentualMinimo
-            val daFormacao = formacaoInscritoRepository.findByIdFormacao(f.idFormacao)
-                .map { it.idCatequista }
-            inscritos.addAll(daFormacao)
-
-            // So encontro REALIZADO conta -- mesma regra do encontro fechado da
-            // turma. Previsto do resto do ano nao pode virar falta de ninguem.
-            val realizados = eventoRepository.findByIdFormacaoOrderByDataInicioAsc(f.idFormacao)
-                .filter {
-                    it.situacao == SituacaoEvento.REALIZADO &&
-                        it.dataInicio != null &&
-                        !it.dataInicio!!.isAfter(corte)
-                }
-            encontros += realizados.size
-            if (realizados.isEmpty()) return@forEach
-
-            val presencas = presencaFormacaoRepository
-                .findByIdEventoIn(realizados.map { it.idEvento })
-                .filter { it.situacao == SituacaoPresenca.PRESENTE }
-
-            val porCatequista = presencas.groupBy { it.idCatequista }
-            porCatequista.forEach { (idCatequista, lista) ->
-                participaram.add(idCatequista)
-                val percentual = lista.size.toDouble() / realizados.size * 100.0
-                if (percentual >= f.percentualMinimo) atingiram.add(idCatequista)
-            }
-        }
-
-        return ApuracaoFormacao(
-            formacoes = formacoes.size,
-            encontros = encontros,
-            inscritos = inscritos.size,
-            participaram = participaram.size,
-            atingiram = atingiram.size,
-            taxa = if (inscritos.isEmpty()) null else participaram.size.toDouble() / inscritos.size * 100.0,
-            minimo = minimo
-        )
-    }
-
-    private fun frequencia(atual: Recorte, base: Recorte?): FrequenciaIndicadorDTO {
-        val a = apurarFrequencia(atual)
-        val b = base?.let { apurarFrequencia(it) }
-        return FrequenciaIndicadorDTO(
-            media = IndicadorDTO.de("Frequência média", a.media ?: 0.0, b?.media, DirecaoBoa.MAIOR, percentual = true),
-            abaixoDoMinimo = IndicadorDTO.de("Abaixo do mínimo", a.abaixo, b?.abaixo, DirecaoBoa.MENOR),
-            emRisco = IndicadorDTO.de("Em risco", a.emRisco, b?.emRisco, DirecaoBoa.MENOR),
-            turmasApuradas = a.apuradas,
-            turmasSemApuracao = a.semApuracao,
-            turmasNaoSeAplica = a.naoSeAplica,
-            minimo = CalculoFrequencia.MINIMO_PADRAO
-        )
-    }
-
-    private data class ApuracaoFrequencia(
-        val media: Double?,
-        val abaixo: Int,
-        val emRisco: Int,
-        val apuradas: Int,
-        val semApuracao: Int,
-        val naoSeAplica: Int
-    )
-
-    /**
-     * Percorre turma a turma reusando o FrequenciaService. As cinco regras de
-     * contagem vivem la (so encontro fechado conta, cancelado nao entra,
-     * justificada sai da conta, realizado sem marcacao e falta, e sem encontro
-     * apurado o percentual e NULO, nao zero). Recalcular aqui seria duplicar
-     * regra que um dia divergiria da tela de Frequencia.
-     *
-     * Custo: uma apuracao por turma, vezes dois anos. Se passar de ~1s, o
-     * caminho e @Query com GROUP BY no repositorio -- nunca cache no navegador,
-     * porque relatorio com numero velho e pior que relatorio lento.
-     */
-    private fun apurarFrequencia(r: Recorte): ApuracaoFrequencia {
-        var soma = 0.0
-        var quantos = 0
-        var abaixo = 0
-        var emRisco = 0
-        var apuradas = 0
-        var semApuracao = 0
-        var naoSeAplica = 0
-
-        r.turmasPorId.values.forEach { turma ->
-            if (turma.categoria != null && !turma.categoria!!.exigeFrequencia) {
-                naoSeAplica++
-                return@forEach
-            }
-            val dto = runCatching { frequenciaService.daTurma(turma.idTurma, r.ano) }.getOrNull()
-                ?: return@forEach
-
-            abaixo += dto.resumo.abaixoDoMinimo
-            emRisco += dto.resumo.emRisco
-
-            val percentuais = dto.linhas.mapNotNull { it.percentualAtual }
-            if (percentuais.isEmpty()) {
-                semApuracao++
-            } else {
-                apuradas++
-                soma += percentuais.sum()
-                quantos += percentuais.size
-            }
-        }
-
-        return ApuracaoFrequencia(
-            media = if (quantos == 0) null else soma / quantos,
-            abaixo = abaixo,
-            emRisco = emRisco,
-            apuradas = apuradas,
-            semApuracao = semApuracao,
-            naoSeAplica = naoSeAplica
-        )
-    }
-
-    private fun eventos(
-        ano: Int,
-        anoBase: Int?,
-        corte: LocalDate,
-        idComunidade: Long?
-    ): EventosIndicadorDTO {
-        fun doAno(a: Int, ate: LocalDate) =
-            eventoRepository.findNoPeriodo(LocalDate.of(a, 1, 1), ate)
-                .filter { idComunidade == null || it.idComunidade == idComunidade }
-
-        val atual = doAno(ano, corte)
-        val base = anoBase?.let { doAno(it, corteEquivalente(it, corte)) }
-
-        return EventosIndicadorDTO(
-            total = IndicadorDTO.de("Eventos", atual.size, base?.size, DirecaoBoa.NEUTRA),
-            realizados = IndicadorDTO.de(
-                "Realizados",
-                atual.count { it.situacao == SituacaoEvento.REALIZADO },
-                base?.count { it.situacao == SituacaoEvento.REALIZADO },
-                DirecaoBoa.NEUTRA
-            ),
-            cancelados = IndicadorDTO.de(
-                "Cancelados",
-                atual.count { it.situacao == SituacaoEvento.CANCELADO },
-                base?.count { it.situacao == SituacaoEvento.CANCELADO },
-                DirecaoBoa.MENOR
-            ),
-            porTipo = TipoEvento.entries.map { t ->
-                FatiaDTO(
-                    chave = t.name,
-                    rotulo = t.rotulo,
-                    valor = atual.count { it.tipo == t }.toDouble(),
-                    base = base?.count { it.tipo == t }?.toDouble()
-                )
-            }
-        )
-    }
+    /** Contagem simples de eventos do periodo -- o detalhe vive na tela de Eventos. */
+    private fun eventosDoAno(ano: Int, ate: LocalDate, idComunidade: Long?): Int =
+        eventoRepository.findNoPeriodo(LocalDate.of(ano, 1, 1), ate)
+            .count { idComunidade == null || it.idComunidade == idComunidade }
 
     // ------------------------------------------------------------------
     // Texto
@@ -654,14 +425,6 @@ class IndicadoresService(
         }
 
         return avisos
-    }
-
-    private fun rotuloSituacao(s: SituacaoMatricula): String = when (s) {
-        SituacaoMatricula.CURSANDO -> "Cursando"
-        SituacaoMatricula.CONCLUIDO -> "Concluiu"
-        SituacaoMatricula.NAO_CONCLUIDO -> "Não concluiu"
-        SituacaoMatricula.TRANSFERIDO -> "Transferido"
-        SituacaoMatricula.DESISTENTE -> "Desistente"
     }
 
     /**

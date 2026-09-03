@@ -5,9 +5,11 @@
   ser preenchido **antes** do código. O ponto de entrada de tudo é o `CLAUDE.md` da raiz.
 - **checkpoints/** — snapshots de progresso de cada etapa (o que foi feito, o que falta, decisões tomadas no momento).
 - **padroes-visuais/** — guia de padrão de UI (paleta, tipografia, espaçamento, componentes) para manter as telas consistentes entre si.
-- **kt_comentario_check.py** — acha KDoc que não fecha. Comentário de bloco em Kotlin
-  aninha, e o compilador só acusa na última linha do arquivo. Vale rodar sempre que o
-  Gradle não estiver à mão.
+- **kt_*_check.py** — a conferência de Kotlin possível sem Gradle. `kt_comentario_check`
+  acha KDoc que não fecha (comentário de bloco em Kotlin aninha, e o compilador só acusa
+  na última linha do arquivo); `kt_nomes_check` acha tipo declarado duas vezes no mesmo
+  pacote; `kt_argumentos_check` acha argumento nomeado inexistente e obrigatório
+  faltando. Os três nasceram de erros que custaram uma ida e volta cada.
 - **regressao*.py** — verificações de tela com Playwright. Rodar antes de dar uma
   mudança de frontend por encerrada:
 

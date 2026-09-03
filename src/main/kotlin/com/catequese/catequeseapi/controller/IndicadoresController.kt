@@ -1,10 +1,10 @@
 package com.catequese.catequeseapi.controller
 
-import com.catequese.catequeseapi.dto.EventosDetalheDTO
-import com.catequese.catequeseapi.dto.FormacaoDetalheDTO
-import com.catequese.catequeseapi.dto.FrequenciaDetalheDTO
+import com.catequese.catequeseapi.dto.IndicadoresEventosDTO
+import com.catequese.catequeseapi.dto.IndicadoresFormacaoDTO
+import com.catequese.catequeseapi.dto.IndicadoresFrequenciaDTO
 import com.catequese.catequeseapi.dto.IndicadoresDTO
-import com.catequese.catequeseapi.dto.MatriculasDetalheDTO
+import com.catequese.catequeseapi.dto.IndicadoresMatriculasDTO
 import com.catequese.catequeseapi.dto.OpcoesIndicadoresCompletasDTO
 import com.catequese.catequeseapi.model.NivelEvento
 import com.catequese.catequeseapi.model.SituacaoMatricula
@@ -59,7 +59,7 @@ class IndicadoresController(
         @RequestParam(required = false) idComunidade: Long?,
         @RequestParam(required = false) idTurma: Long?,
         @RequestParam(required = false) situacao: SituacaoMatricula?
-    ): ResponseEntity<MatriculasDetalheDTO> =
+    ): ResponseEntity<IndicadoresMatriculasDTO> =
         ResponseEntity.ok(detalhe.matriculas(ano, idComunidade, idTurma, situacao))
 
     @GetMapping("/frequencia")
@@ -67,7 +67,7 @@ class IndicadoresController(
         @RequestParam(required = false) ano: Int?,
         @RequestParam(required = false) idComunidade: Long?,
         @RequestParam(required = false) idTurma: Long?
-    ): ResponseEntity<FrequenciaDetalheDTO> =
+    ): ResponseEntity<IndicadoresFrequenciaDTO> =
         ResponseEntity.ok(detalhe.frequencia(ano, idComunidade, idTurma))
 
     @GetMapping("/formacao")
@@ -76,7 +76,7 @@ class IndicadoresController(
         @RequestParam(required = false) nivel: NivelEvento?,
         @RequestParam(required = false) idComunidade: Long?,
         @RequestParam(required = false) idCatequista: Long?
-    ): ResponseEntity<FormacaoDetalheDTO> =
+    ): ResponseEntity<IndicadoresFormacaoDTO> =
         ResponseEntity.ok(detalhe.formacao(ano, nivel, idComunidade, idCatequista))
 
     @GetMapping("/eventos")
@@ -85,6 +85,6 @@ class IndicadoresController(
         @RequestParam(required = false) tipo: TipoEvento?,
         @RequestParam(required = false) nivel: NivelEvento?,
         @RequestParam(required = false) idComunidade: Long?
-    ): ResponseEntity<EventosDetalheDTO> =
+    ): ResponseEntity<IndicadoresEventosDTO> =
         ResponseEntity.ok(detalhe.eventos(ano, tipo, nivel, idComunidade))
 }

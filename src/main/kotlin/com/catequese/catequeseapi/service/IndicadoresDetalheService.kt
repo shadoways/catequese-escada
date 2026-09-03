@@ -1,10 +1,10 @@
 package com.catequese.catequeseapi.service
 
 import com.catequese.catequeseapi.dto.DirecaoBoa
-import com.catequese.catequeseapi.dto.EventosDetalheDTO
+import com.catequese.catequeseapi.dto.IndicadoresEventosDTO
 import com.catequese.catequeseapi.dto.FatiaDTO
-import com.catequese.catequeseapi.dto.FormacaoDetalheDTO
-import com.catequese.catequeseapi.dto.FrequenciaDetalheDTO
+import com.catequese.catequeseapi.dto.IndicadoresFormacaoDTO
+import com.catequese.catequeseapi.dto.IndicadoresFrequenciaDTO
 import com.catequese.catequeseapi.dto.IndicadorDTO
 import com.catequese.catequeseapi.dto.ItemSimplesDTO
 import com.catequese.catequeseapi.dto.LinhaAnoSituacaoDTO
@@ -16,7 +16,7 @@ import com.catequese.catequeseapi.dto.LinhaFormacaoDTO
 import com.catequese.catequeseapi.dto.LinhaFormacaoItemDTO
 import com.catequese.catequeseapi.dto.LinhaTurmaFrequenciaDTO
 import com.catequese.catequeseapi.dto.LinhaTurmaMatriculaDTO
-import com.catequese.catequeseapi.dto.MatriculasDetalheDTO
+import com.catequese.catequeseapi.dto.IndicadoresMatriculasDTO
 import com.catequese.catequeseapi.dto.OpcaoCatequistaDTO
 import com.catequese.catequeseapi.dto.OpcaoDTO
 import com.catequese.catequeseapi.dto.OpcaoTurmaDTO
@@ -115,7 +115,7 @@ class IndicadoresDetalheService(
         idComunidade: Long?,
         idTurma: Long?,
         situacao: SituacaoMatricula?
-    ): MatriculasDetalheDTO {
+    ): IndicadoresMatriculasDTO {
         exigir()
         val hoje = LocalDate.now()
         val anoAlvo = ano ?: hoje.year
@@ -172,7 +172,7 @@ class IndicadoresDetalheService(
             avisos += "$semComunidade matrícula(s) em turma sem comunidade definida."
         }
 
-        return MatriculasDetalheDTO(
+        return IndicadoresMatriculasDTO(
             cabecalho = cabecalho(
                 "Matrículas", anoAlvo, anoBase,
                 nomeComunidade(idComunidade, comunidades).takeIf { idComunidade != null },
@@ -201,7 +201,7 @@ class IndicadoresDetalheService(
     // -------------------------------------------------------------- frequencia
 
     @Transactional(readOnly = true)
-    fun frequencia(ano: Int?, idComunidade: Long?, idTurma: Long?): FrequenciaDetalheDTO {
+    fun frequencia(ano: Int?, idComunidade: Long?, idTurma: Long?): IndicadoresFrequenciaDTO {
         exigir()
         val anoAlvo = ano ?: LocalDate.now().year
         val turmas = turmaRepository.findAll().associateBy { it.idTurma }
@@ -311,7 +311,7 @@ class IndicadoresDetalheService(
             avisos += "Escolha uma turma para ver a frequência de cada catequisando."
         }
 
-        return FrequenciaDetalheDTO(
+        return IndicadoresFrequenciaDTO(
             cabecalho = cabecalho(
                 "Frequência", anoAlvo, anoBase,
                 nomeComunidade(idComunidade, comunidades).takeIf { idComunidade != null },
@@ -345,7 +345,7 @@ class IndicadoresDetalheService(
         nivel: NivelEvento?,
         idComunidade: Long?,
         idCatequista: Long?
-    ): FormacaoDetalheDTO {
+    ): IndicadoresFormacaoDTO {
         exigir()
         val anoAlvo = ano ?: LocalDate.now().year
         val comunidades = comunidadeRepository.findAll().associateBy { it.idComunidade }
@@ -445,7 +445,7 @@ class IndicadoresDetalheService(
                 "quem está inscrito nelas aparece com 0% até o primeiro encontro acontecer."
         }
 
-        return FormacaoDetalheDTO(
+        return IndicadoresFormacaoDTO(
             cabecalho = cabecalho(
                 "Formação de catequistas", anoAlvo, null,
                 nomeComunidade(idComunidade, comunidades).takeIf { idComunidade != null },
@@ -499,7 +499,7 @@ class IndicadoresDetalheService(
         tipo: TipoEvento?,
         nivel: NivelEvento?,
         idComunidade: Long?
-    ): EventosDetalheDTO {
+    ): IndicadoresEventosDTO {
         exigir()
         val hoje = LocalDate.now()
         val anoAlvo = ano ?: hoje.year
@@ -548,7 +548,7 @@ class IndicadoresDetalheService(
                 "não dá para dizer quem participou."
         }
 
-        return EventosDetalheDTO(
+        return IndicadoresEventosDTO(
             cabecalho = cabecalho(
                 "Eventos", anoAlvo, anoBase,
                 nomeComunidade(idComunidade, comunidades).takeIf { idComunidade != null },

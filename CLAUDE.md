@@ -60,6 +60,10 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   pela MAIOR opção e estoura a coluna. Precisa de `min-width: 0` no campo **e** na célula.
 - **Coordenador sem comunidade**: `EscopoAcessoService` trata nulo como "vê todas" —
   regra de leitura. Em escrita isso é o oposto do desejado; ali a regra fecha.
+- **Nome de tipo colide dentro do pacote.** `FormacaoDetalheDTO` já existia como
+  "detalhe de uma formação" quando criei outro com o mesmo nome. O compilador escolhe
+  um dos dois, e o erro seguinte fala de **parâmetro inexistente** num arquivo que está
+  correto. DTO de tela leva o prefixo da tela (`IndicadoresFormacaoDTO`).
 - **`flex-basis: 100%` em container `flex-direction: column`** não é largura, é
   ALTURA. Em `≤600px` o `.row` vira coluna, e um filtro com `flex: 1 1 100%` estourava
   a altura da linha e quebrava para uma SEGUNDA COLUNA, saindo pela direita da tela.
@@ -81,7 +85,10 @@ localmente com `./gradlew compileKotlin` antes de subir.
 O frontend tem verificação automatizada em `docs/`:
 
 ```bash
-python3 docs/kt_comentario_check.py           # KDoc que não fecha (o Gradle não roda aqui)
+# O Gradle não roda aqui; estes três são a conferência de Kotlin possível deste lado:
+python3 docs/kt_comentario_check.py           # KDoc que não fecha
+python3 docs/kt_nomes_check.py                # tipo declarado duas vezes no mesmo pacote
+python3 docs/kt_argumentos_check.py           # argumento nomeado que não existe, obrigatório faltando
 python3 docs/regressao.py                     # só uma aba visível por vez
 python3 docs/regressao-agenda-dia.py          # lista do dia: abrir, editar, excluir
 python3 docs/regressao-agenda-transicoes.py   # trocar de dia limpa o estado anterior

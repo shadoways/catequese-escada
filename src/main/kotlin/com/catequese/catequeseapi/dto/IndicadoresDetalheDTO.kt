@@ -15,6 +15,13 @@ import java.time.LocalDate
  * A regra da comparacao continua valendo em todas: numero sem base nao e
  * indicador. Onde a comparacao nao faz sentido (uma lista, um ranking), o
  * numero vem cru e a tela nao finge que ha variacao.
+ *
+ * NOME COM PREFIXO `Indicadores`, e nao sufixo `Detalhe`. A primeira versao
+ * chamava este de `FormacaoDetalheDTO` -- nome que JA EXISTIA em AgendaDTO.kt
+ * como "o detalhe de UMA formacao". Mesmo pacote, mesmo nome, e o compilador
+ * escolhe uma das duas: o erro seguinte nem fala de nome, fala de "parametro
+ * inexistente" em quem usava a outra, e manda procurar erro de digitacao num
+ * arquivo que estava certo. O prefixo amarra o tipo a tela dona dele.
  */
 
 // ---------------------------------------------------------------- matriculas
@@ -40,7 +47,7 @@ data class LinhaTurmaMatriculaDTO(
     val total: Int
 )
 
-data class MatriculasDetalheDTO(
+data class IndicadoresMatriculasDTO(
     val cabecalho: String,
     val total: IndicadorDTO,
     val cursando: IndicadorDTO,
@@ -82,7 +89,7 @@ data class LinhaCatequisandoFrequenciaDTO(
     val encontros: Int
 )
 
-data class FrequenciaDetalheDTO(
+data class IndicadoresFrequenciaDTO(
     val cabecalho: String,
     /** Media dos percentuais apurados. Nulo quando nada foi apurado ainda. */
     val aproveitamento: IndicadorDTO,
@@ -131,7 +138,7 @@ data class LinhaFormacaoItemDTO(
     val minimo: Int
 )
 
-data class FormacaoDetalheDTO(
+data class IndicadoresFormacaoDTO(
     val cabecalho: String,
     val inscritos: IndicadorDTO,
     val participaram: IndicadorDTO,
@@ -166,7 +173,7 @@ data class LinhaEventoDTO(
     val catequisandosPresentes: Int?
 )
 
-data class EventosDetalheDTO(
+data class IndicadoresEventosDTO(
     val cabecalho: String,
     val total: IndicadorDTO,
     val realizados: IndicadorDTO,

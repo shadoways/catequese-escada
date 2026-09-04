@@ -49,6 +49,16 @@ data class Matricula(
 
     val observacao: String? = null,
 
+    /**
+     * Para qual paroquia a pessoa foi, quando saiu desta.
+     *
+     * Preenchido so na transferencia externa. Sem ele, "TRANSFERIDO" nao
+     * responde a pergunta que sempre vem depois -- "para onde?" -- e a
+     * secretaria acaba anotando em papel.
+     */
+    @Column(name = "paroquia_destino")
+    val paroquiaDestino: String? = null,
+
     @Column(name = "criado_em")
     val criadoEm: LocalDateTime? = null,
 

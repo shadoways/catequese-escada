@@ -7,7 +7,13 @@ Organizados por finalidade, não por data. Ao criar um script novo, ver se ele s
 - **documentos/** — migração e correção do schema de `tb_documento`/`tb_documentos`.
 - **matriculas/** — backfill de dados (não é migração de schema — insere registros).
 
-- **dados-dev/** — massa de teste do banco de desenvolvimento. `MASSA_DEV.sql` e
+- **dados-dev/** — massa de teste do banco de desenvolvimento. Rode
+  `DIAGNOSTICO.sql` antes: ele confere se as tabelas e colunas das migracoes
+  posteriores existem e quais comunidades ja estao cadastradas. `MASSA_DEV.sql` e
   **gerado** por `docs/gerar_massa_dev.py` (semente fixa); edite o gerador, nunca o SQL.
   Todo id comeca em 900000, entao o bloco COMO DESFAZER apaga exatamente o que ele criou.
   **Nao rode em producao.**
+
+- **movimentacao/** — `MIGRACAO_MOVIMENTACAO.sql`: a coluna `paroquia_destino` de
+  `tb_matricula`. As regras de idade, fase e catecumenato sao de codigo e nao pedem
+  estrutura nova.

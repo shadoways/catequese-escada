@@ -8,12 +8,15 @@ import com.catequese.catequeseapi.dto.TransferenciaDTO
 import com.catequese.catequeseapi.dto.TurmaAdminDTO
 import com.catequese.catequeseapi.exception.AcessoNegadoException
 import com.catequese.catequeseapi.exception.ResourceNotFoundException
+import com.catequese.catequeseapi.model.Catequisando
+import com.catequese.catequeseapi.model.EtapaCatecumenato
 import com.catequese.catequeseapi.model.JanelaApuracao
 import com.catequese.catequeseapi.model.Matricula
 import com.catequese.catequeseapi.model.SituacaoMatricula
 import com.catequese.catequeseapi.model.Turma
 import com.catequese.catequeseapi.repository.CatequisandoRepository
 import com.catequese.catequeseapi.repository.ComunidadeRepository
+import com.catequese.catequeseapi.repository.EtapaCatecumenoRepository
 import com.catequese.catequeseapi.repository.MatriculaRepository
 import com.catequese.catequeseapi.repository.TurmaRepository
 import org.slf4j.LoggerFactory
@@ -39,6 +42,7 @@ class AdminCatequeseService(
     private val matriculaRepository: MatriculaRepository,
     private val catequisandoRepository: CatequisandoRepository,
     private val comunidadeRepository: ComunidadeRepository,
+    private val etapaCatecumenoRepository: EtapaCatecumenoRepository,
     private val escopo: EscopoAcessoService
 ) {
     private val log = LoggerFactory.getLogger(AdminCatequeseService::class.java)
@@ -180,43 +184,100 @@ class AdminCatequeseService(
      * de destino cobraria encontros de quando ela ainda nem estava la.
      */
     @Transactional
+    /**
+     * Move a inscricao: para outra turma da paroquia, ou para fora dela.
+     *
+     * As regras de "pode ir para onde" vivem em RegrasDeMovimentacao, que e um
+     * objeto puro. Aqui fica so o que precisa do banco: buscar, conferir a
+     * permissao e gravar as duas pontas.
+     *
+     * Transferencia para OUTRA PAROQUIA nao cria inscricao nova: a inscricao
+     * dele passa a ser de outro lugar. Guarda-se o nome da paroquia para que
+     * "transferido" continue respondendo "para onde".
+     */
     fun transferir(idMatricula: Long, dto: TransferenciaDTO): List<MatriculaAdminDTO> {
         exigirAdmin()
         val origem = exigirMatricula(idMatricula)
-        val destino = exigirTurma(dto.idTurmaDestino)
         val catequisando = origem.catequisando
-            ?: throw OperacaoInvalidaException("Esta matricula nao tem catequisando vinculado.")
+            ?: throw OperacaoInvalidaException("Esta inscricao nao tem catequisando vinculado.")
 
-        if (origem.turma?.idTurma == destino.idTurma) {
-            throw OperacaoInvalidaException("A turma de destino e a mesma de origem.")
-        }
         if (origem.situacao == SituacaoMatricula.TRANSFERIDO) {
-            throw OperacaoInvalidaException("Esta matricula ja foi transferida.")
+            throw OperacaoInvalidaException("Esta inscricao ja foi transferida.")
         }
 
         val ano = origem.ano
         val data = dto.data ?: LocalDate.now()
         if (data.year != ano) {
             throw OperacaoInvalidaException(
-                "A data da transferencia ($data) precisa ser do mesmo ano da matricula ($ano)."
-            )
-        }
-        if (matriculaRepository.existsByCatequisandoAndTurmaAndAno(catequisando, destino, ano)) {
-            throw OperacaoInvalidaException(
-                "${catequisando.nome} ja tem matricula em ${destino.nome} em $ano."
+                "A data da transferencia ($data) precisa ser do mesmo ano da inscricao ($ano)."
             )
         }
 
+        val paroquia = dto.paroquiaDestino?.trim()?.ifBlank { null }
         val motivo = dto.motivo?.trim()?.ifBlank { null }
         val agora = LocalDateTime.now().withNano(0)
+
+        // Os dois destinos sao exclusivos. Aceitar os dois deixaria a pessoa
+        // com inscricao aqui E registrada como tendo saido.
+        if (paroquia != null && dto.idTurmaDestino != null) {
+            throw OperacaoInvalidaException(
+                "Escolha um destino so: outra turma daqui, ou outra paroquia."
+            )
+        }
+
+        // ---- saida para outra paroquia ------------------------------------
+        if (paroquia != null) {
+            val encerrada = matriculaRepository.save(
+                origem.copy(
+                    situacao = SituacaoMatricula.TRANSFERIDO,
+                    paroquiaDestino = paroquia,
+                    observacao = juntar(
+                        origem.observacao,
+                        "Transferido para a paroquia $paroquia em $data" +
+                            (motivo?.let { ": $it" } ?: "")
+                    ),
+                    atualizadoEm = agora,
+                    atualizadoPor = quem()
+                )
+            )
+            log.info(
+                "{} transferido para a paroquia '{}' em {} por '{}'",
+                catequisando.nome, paroquia, data, quem()
+            )
+            return listOf(paraDTO(encerrada))
+        }
+
+        // ---- mudanca de turma dentro da paroquia --------------------------
+        val idDestino = dto.idTurmaDestino
+            ?: throw OperacaoInvalidaException(
+                "Informe a turma de destino, ou o nome da paroquia para onde a pessoa foi."
+            )
+        val destino = exigirTurma(idDestino)
+
+        if (matriculaRepository.existsByCatequisandoAndTurmaAndAno(catequisando, destino, ano)) {
+            throw OperacaoInvalidaException(
+                "${catequisando.nome} ja tem inscricao em ${destino.nome} em $ano."
+            )
+        }
+
+        val veredito = RegrasDeMovimentacao.podeMover(
+            origem = percursoDe(origem.turma),
+            destino = percursoDe(destino),
+            nascimento = catequisando.dataNascimento,
+            dataMovimentacao = data,
+            etapasDoCatecumenatoConcluidas = etapasConcluidasDe(catequisando)
+        )
+        if (!veredito.permitido) {
+            throw OperacaoInvalidaException(veredito.motivo ?: "Movimentacao nao permitida.")
+        }
 
         val encerrada = matriculaRepository.save(
             origem.copy(
                 situacao = SituacaoMatricula.TRANSFERIDO,
-                observacao = listOfNotNull(
+                observacao = juntar(
                     origem.observacao,
                     "Transferido para ${destino.nome} em $data" + (motivo?.let { ": $it" } ?: "")
-                ).joinToString(" | "),
+                ),
                 atualizadoEm = agora,
                 atualizadoPor = quem()
             )
@@ -243,6 +304,25 @@ class AdminCatequeseService(
         )
         return listOf(paraDTO(encerrada), paraDTO(nova))
     }
+
+    /** Turma no formato que as regras entendem, sem arrastar a entidade. */
+    private fun percursoDe(turma: Turma?): RegrasDeMovimentacao.Percurso =
+        RegrasDeMovimentacao.Percurso(
+            idTurma = turma?.idTurma ?: 0,
+            nome = turma?.nome ?: "turma removida",
+            categoria = turma?.categoria,
+            etapa = turma?.etapa,
+            idComunidade = turma?.idComunidade
+        )
+
+    /** Etapas do catecumenato que a pessoa ja FECHOU (tem data de fim). */
+    private fun etapasConcluidasDe(catequisando: Catequisando): List<EtapaCatecumenato> =
+        etapaCatecumenoRepository.findByCatequisandoOrderByDataInicioAsc(catequisando)
+            .filter { it.dataFim != null }
+            .map { it.etapa }
+
+    private fun juntar(anterior: String?, novo: String): String =
+        listOfNotNull(anterior, novo).joinToString(" | ")
 
     // ---- Apoio -------------------------------------------------------------
 

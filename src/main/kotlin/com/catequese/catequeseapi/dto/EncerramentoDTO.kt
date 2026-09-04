@@ -30,6 +30,15 @@ data class PreviaEncerramentoDTO(
     val anosPrevistos: Int?,
     /** True quando este ano fecha o percurso inteiro da categoria. */
     val concluiPercurso: Boolean,
+    /**
+     * A fase do percurso para a qual esta pessoa vai no ano que vem.
+     *
+     * Nula quando o percurso termina aqui. E isto que responde "a fase muda
+     * sozinha na virada do ano": muda, mas passando por esta previa -- ninguem
+     * sobe de fase sem o coordenador ver, e quem nao fechou a frequencia
+     * aparece com a proposta de NAO_CONCLUIDO ao lado.
+     */
+    val proximaFase: Int? = null,
     val etapaAtual: EtapaCatecumenato? = null,
     /** Para onde a etapa do catecumeno iria. Nula se nao ha promocao. */
     val proximaEtapa: EtapaCatecumenato? = null,

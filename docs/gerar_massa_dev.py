@@ -90,6 +90,15 @@ def esc(texto):
     return texto.replace("'", "''")
 
 
+class Bruto(str):
+    """Valor que entra no SQL como esta -- sem aspas.
+
+    Usado nos ids de comunidade, que viram variavel (@com1) em vez de numero:
+    a comunidade pode JA EXISTIR no banco, com outro id, e o script tem de
+    reaproveitar o que esta la em vez de tentar criar outra igual.
+    """
+
+
 def nome_pessoa(usados):
     while True:
         n = f"{random.choice(PRENOMES)} {random.choice(SOBRENOMES)}"
@@ -115,11 +124,17 @@ class Massa:
 m = Massa()
 
 # ---------------------------------------------------------------- comunidades
+# tb_comunidade.nome e UNIQUE, e a paroquia provavelmente ja tem algumas
+# cadastradas. Por isso a comunidade nao entra no lote comum: cada uma e
+# inserida so se faltar, e o id (o dela ou o meu) vai para uma variavel que o
+# resto do script usa. Sem isso o primeiro INSERT estoura em "Duplicate entry"
+# e nada mais roda.
 comunidades = []
-for nome in COMUNIDADES:
+for n, nome in enumerate(COMUNIDADES, start=1):
     idc = m.novo_id("tb_comunidade")
-    comunidades.append({"id": idc, "nome": nome})
-    m.add("tb_comunidade", (idc, nome, f"Comunidade {nome}", 1))
+    comunidades.append({
+        "id": Bruto(f"@com{n}"), "id_novo": idc, "nome": nome, "var": f"@com{n}",
+    })
 
 # ---------------------------------------------------------------- catequistas
 catequistas = []
@@ -525,12 +540,11 @@ def conferir():
 
     for l in m.linhas["tb_turma"]:
         fk("tb_turma", "id_catequista", l[5], "tb_catequista")
-        fk("tb_turma", "id_comunidade", l[8], "tb_comunidade")
+        # id_comunidade e variavel SQL (@comN), resolvida no banco: nao da para
+        # conferir aqui, e por isso mesmo ela nunca fica orfa.
     for l in m.linhas["tb_turma_catequista"]:
         fk("tb_turma_catequista", "id_turma", l[1], "tb_turma")
         fk("tb_turma_catequista", "id_catequista", l[2], "tb_catequista")
-    for l in m.linhas["tb_catequisando"]:
-        fk("tb_catequisando", "id_comunidade", l[10], "tb_comunidade")
     for l in m.linhas["tb_matricula"]:
         fk("tb_matricula", "id_catequisando", l[1], "tb_catequisando")
         fk("tb_matricula", "id_turma", l[2], "tb_turma")
@@ -540,7 +554,6 @@ def conferir():
         fk("tb_presenca", "id_catequisando", l[3], "tb_catequisando")
         fk("tb_presenca", "id_encontro", l[4], "tb_encontro")
     for l in m.linhas["tb_evento"]:
-        fk("tb_evento", "id_comunidade", l[9], "tb_comunidade")
         fk("tb_evento", "id_turma", l[10], "tb_turma")
         fk("tb_evento", "id_formacao", l[11], "tb_formacao")
     for l in m.linhas["tb_formacao_inscrito"]:
@@ -611,14 +624,17 @@ COLUNAS = {
 }
 
 # Ordem de insercao: pai antes de filho, para o FK nunca reclamar.
+# tb_comunidade nao entra: ela e emitida a parte, condicional (ver acima).
 ORDEM = [
-    "tb_comunidade", "tb_catequista", "tb_turma", "tb_turma_catequista",
+    "tb_catequista", "tb_turma", "tb_turma_catequista",
     "tb_catequisando", "tb_matricula", "tb_encontro", "tb_presenca",
     "tb_etapa_catecumeno", "tb_formacao", "tb_formacao_inscrito",
     "tb_evento", "tb_presenca_formacao",
 ]
 
 def literal(v):
+    if isinstance(v, Bruto):
+        return str(v)
     if v is None:
         return "NULL"
     if isinstance(v, bool):
@@ -746,6 +762,17 @@ saida.append(f"""-- ============================================================
 -- catequista pelo nome.
 -- =====================================================================
 
+-- ATENCAO ao rodar de novo depois de cadastrar coisa nova pela tela: como os
+-- ids da massa sao altos, o AUTO_INCREMENT das tabelas sobe para essa faixa, e
+-- o que voce cadastrar depois tambem tera id acima de {BASE}. O bloco COMO
+-- DESFAZER apaga por faixa de id -- entao use-o ANTES de cadastrar, ou confira
+-- o que ele pegaria.
+-- =====================================================================
+
+-- As checagens de chave estrangeira ficam DESLIGADAS durante toda a carga, e
+-- nao so no DELETE. Carga em lote e assim mesmo: a integridade ja foi
+-- conferida no gerador, e manter a checagem ligada faz qualquer FK que exista
+-- neste banco e que eu nao conheca derrubar o script no meio.
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- Limpeza do que ESTE script criou antes (e so isso: id >= {BASE}).
@@ -755,7 +782,25 @@ for tabela in reversed(ORDEM):
     pk = COLUNAS[tabela].split(",")[0].strip()
     saida.append(f"DELETE FROM {tabela} WHERE {pk} >= {BASE};")
 
-saida.append("\nSET FOREIGN_KEY_CHECKS = 1;\n")
+saida.append(f"DELETE FROM tb_comunidade WHERE id_comunidade >= {BASE};")
+saida.append("")
+saida.append("-- ---------------------------------------------------------------")
+saida.append("-- tb_comunidade: cria so a que faltar, e guarda o id de cada uma")
+saida.append("-- numa variavel. Se a paroquia ja tem 'Matriz', a massa inteira")
+saida.append("-- se pendura na Matriz que ja existe.")
+saida.append("-- ---------------------------------------------------------------")
+for c in comunidades:
+    nome = esc(c["nome"])
+    saida.append(
+        f"INSERT INTO tb_comunidade (id_comunidade, nome, descricao, ativo)\n"
+        f"  SELECT {c['id_novo']}, '{nome}', 'Comunidade {nome}', 1 FROM DUAL\n"
+        f"   WHERE NOT EXISTS (SELECT 1 FROM tb_comunidade WHERE nome = '{nome}');"
+    )
+    saida.append(
+        f"SET {c['var']} = (SELECT id_comunidade FROM tb_comunidade "
+        f"WHERE nome = '{nome}' LIMIT 1);"
+    )
+saida.append("")
 
 LOTE = 200
 for tabela in ORDEM:
@@ -770,6 +815,9 @@ for tabela in ORDEM:
         saida.append(f"INSERT INTO {tabela} ({COLUNAS[tabela]}) VALUES")
         corpo = [",\n".join("  (" + ", ".join(literal(v) for v in l) + ")" for l in pedaco)]
         saida.append(corpo[0] + ";")
+
+saida.append("\n-- Carga terminada: a integridade volta a ser cobrada.")
+saida.append("SET FOREIGN_KEY_CHECKS = 1;")
 
 saida.append(f"""
 
@@ -806,6 +854,8 @@ saida.append(f"""
 for tabela in reversed(ORDEM):
     pk = COLUNAS[tabela].split(",")[0].strip()
     saida.append(f"--   DELETE FROM {tabela} WHERE {pk} >= {BASE};")
+saida.append(f"--   DELETE FROM tb_comunidade WHERE id_comunidade >= {BASE};"
+             "   -- so as que o script criou")
 saida.append("--   SET FOREIGN_KEY_CHECKS = 1;")
 
 destino = pathlib.Path("sql/dados-dev/MASSA_DEV.sql")

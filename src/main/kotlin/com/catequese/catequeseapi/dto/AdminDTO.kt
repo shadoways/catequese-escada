@@ -79,8 +79,21 @@ data class SituacaoMatriculaDTO(
  * a data da mudanca -- assim cada turma cobra so o periodo em que a pessoa
  * esteve nela.
  */
+/**
+ * Uma movimentacao do catequisando.
+ *
+ * Dois destinos possiveis, e so um deles tem turma:
+ *   - outra turma da paroquia -> `idTurmaDestino`
+ *   - outra PAROQUIA          -> `paroquiaDestino` com o nome
+ *
+ * Sao mutuamente exclusivos: quem sai da paroquia nao ganha inscricao nova
+ * aqui, porque a inscricao dele passa a ser de outro lugar. Guardar o nome e o
+ * que permite responder "para onde ele foi?" um ano depois -- sem isso, sai
+ * como transferido e ninguem sabe para onde.
+ */
 data class TransferenciaDTO(
-    val idTurmaDestino: Long = 0,
+    val idTurmaDestino: Long? = null,
+    val paroquiaDestino: String? = null,
     val data: LocalDate? = null,
     val motivo: String? = null
 )

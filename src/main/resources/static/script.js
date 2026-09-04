@@ -847,7 +847,7 @@ const TRILHA_POR_TAB = {
   consulta: 'Atendimento / Consultar catequisandos',
   dashboard: 'Atendimento / Turmas e documentos',
   indicadores: 'Administração / Indicadores',
-  admin: 'Administração / Turmas e matrículas',
+  admin: 'Administração / Turmas e inscrições',
   usuarios: 'Administração / Usuários',
   configuracoes: 'Administração / Configurações'
 };

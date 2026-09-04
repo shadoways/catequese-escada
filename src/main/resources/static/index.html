@@ -86,7 +86,7 @@
           <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /><path d="M13 13h5M13 16.5h5" />
           </svg>
-          Turmas e matrículas
+          Turmas e inscrições
         </button>
         <button type="button" class="tab-btn somente-admin" data-tab="usuarios" hidden>
           <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -203,8 +203,8 @@
               <path d="M13 13h5M13 16.5h5" />
             </svg>
           </span>
-          <h3>Turmas e matrículas</h3>
-          <p>Classificar turmas, matricular, transferir e corrigir chamadas encerradas.</p>
+          <h3>Turmas e inscrições</h3>
+          <p>Classificar turmas, inscrever e movimentar catequisandos.</p>
           <span class="menu-card-cta">Administrar →</span>
         </button>
         <button type="button" class="menu-card somente-admin" data-tab="usuarios" hidden>
@@ -575,13 +575,34 @@
           A categoria define a regra de frequência. Enquanto a turma não tiver
           categoria, a frequência dela não é apurada.
         </p>
+        <!--
+          Filtro de verdade, no topo. Antes nao havia nenhum, e os tres selects
+          DENTRO de cada cartao (categoria, fase, comunidade) eram lidos como
+          filtro -- eles classificam a turma. Com um filtro explicito aqui, o
+          que esta no cartao deixa de ser ambiguo.
+        -->
+        <div class="row ind-nao-imprime">
+          <label style="min-width: 220px;">
+            Comunidade
+            <select id="adm-filtro-comunidade">
+              <option value="">Todas as comunidades</option>
+            </select>
+          </label>
+          <label style="min-width: 220px;">
+            Turma
+            <select id="adm-filtro-turma">
+              <option value="">Todas as turmas</option>
+            </select>
+          </label>
+        </div>
+
         <div id="adm-status" class="summary"></div>
         <div id="adm-turmas-lista" class="adm-turmas"></div>
       </section>
 
       <section class="panel" id="adm-tela-matriculas" hidden>
         <div class="row">
-          <h2 id="adm-matriculas-titulo">Matrículas</h2>
+          <h2 id="adm-matriculas-titulo">Inscrições</h2>
           <button type="button" class="secondary" id="adm-voltar-turmas">
             Voltar para as turmas
           </button>
@@ -590,19 +611,19 @@
 
         <div class="grid">
           <label>
-            Matricular catequisando
+            Inscrever catequisando
             <select id="adm-novo-catequisando"></select>
           </label>
           <label>
-            Data da matrícula
+            Data da inscrição
             <input type="date" id="adm-nova-data" />
           </label>
         </div>
         <p class="muted">
-          A data da matrícula é o marco zero da frequência: quem entra em abril
+          A data da inscrição é o marco zero da frequência: quem entra em abril
           não responde pelos encontros de fevereiro e março.
         </p>
-        <button type="button" id="adm-btn-matricular">Matricular</button>
+        <button type="button" id="adm-btn-matricular">Inscrever</button>
 
         <div id="adm-matriculas-lista" class="adm-matriculas"></div>
       </section>
@@ -942,7 +963,7 @@
         -->
         <nav class="ind-subnav ind-nao-imprime" aria-label="Telas do relatório">
           <button type="button" class="ind-subnav-btn active" data-vista="resumo">Resumo geral</button>
-          <button type="button" class="ind-subnav-btn" data-vista="matriculas">Matrículas</button>
+          <button type="button" class="ind-subnav-btn" data-vista="matriculas">Inscrições</button>
           <button type="button" class="ind-subnav-btn" data-vista="frequencia">Frequência</button>
           <button type="button" class="ind-subnav-btn" data-vista="formacao">Formação</button>
           <button type="button" class="ind-subnav-btn" data-vista="eventos">Eventos</button>

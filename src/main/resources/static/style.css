@@ -3338,3 +3338,17 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
   .ind-tabela-rolagem { overflow: visible; }
   .ind-tabela th, .ind-tabela td { border-bottom: 1px solid #bbb; }
 }
+
+/* Confirmação de que a classificação da turma foi gravada.
+   Substituiu o botão "Salvar" do cartão: o botão era lido como "salvar o
+   filtro" e não era — ele gravava a classificação. Agora grava na mudança do
+   select e confirma aqui, sem tirar a pessoa do lugar. */
+.adm-salvo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--ind-melhor, #2f6f4f);
+}
+
+.adm-salvo[hidden] { display: none; }

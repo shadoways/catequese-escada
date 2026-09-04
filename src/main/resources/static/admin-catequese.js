@@ -114,7 +114,11 @@ const admCarregarTurmas = async () => {
       );
     }
 
-    alvo.innerHTML = admTurmas.map(admCartaoTurma).join('');
+    admPreencherFiltros();
+    const visiveis = admTurmasFiltradas();
+    alvo.innerHTML = visiveis.length
+      ? visiveis.map(admCartaoTurma).join('')
+      : '<div class="status neutro">Nenhuma turma com este filtro.</div>';
     admLigarTurmas(alvo);
   } catch (err) {
     admAviso('adm-status', `Falha de conexão: ${err.message}`, 'error');
@@ -151,7 +155,7 @@ const admCartaoTurma = (turma) => {
         <span class="status ${turma.pendenteDeClassificacao ? 'warning' : 'ok'}">
           ${admEscape(ADM_JANELAS[turma.janela] || '')}
         </span>
-        <span class="muted">${turma.matriculadosNoAno} matriculado(s)</span>
+        <span class="muted">${turma.matriculadosNoAno} inscrito(s)</span>
         ${turma.nomeCatequista ? `<span class="muted">${admEscape(turma.nomeCatequista)}</span>` : ''}
       </div>
       <div class="adm-turma-acoes">
@@ -167,27 +171,61 @@ const admCartaoTurma = (turma) => {
           Comunidade
           <select data-comunidade="${turma.idTurma}">${opcoesComunidade}</select>
         </label>
-        <button type="button" data-salvar="${turma.idTurma}">Salvar</button>
-        <button type="button" class="secondary" data-matriculas="${turma.idTurma}">
-          Matrículas
+        <button type="button" data-matriculas="${turma.idTurma}">
+          Inscrições
         </button>
-        <button type="button" class="secondary" data-corrigir="${turma.idTurma}">
-          Corrigir chamada
-        </button>
+        <span class="adm-salvo" data-salvo="${turma.idTurma}" hidden>classificação salva</span>
       </div>
     </div>
   `;
 };
 
+/** Filtro do topo: comunidade e turma. Vale para a lista de turmas. */
+const admFiltro = { idComunidade: '', idTurma: '' };
+
+const admPreencherFiltros = () => {
+  const selCom = document.getElementById('adm-filtro-comunidade');
+  const selTurma = document.getElementById('adm-filtro-turma');
+  if (!selCom || !selTurma) return;
+
+  selCom.innerHTML = '<option value="">Todas as comunidades</option>' +
+    ADM_COMUNIDADES.map((c) =>
+      `<option value="${c.idComunidade}"${String(c.idComunidade) === admFiltro.idComunidade ? ' selected' : ''}>${admEscape(c.nome)}</option>`
+    ).join('');
+
+  // A lista de turmas encolhe com a comunidade escolhida: select com todas as
+  // turmas da paroquia nao e filtro, e obstaculo.
+  const visiveis = admTurmas.filter((t) =>
+    !admFiltro.idComunidade || String(t.idComunidade || '') === admFiltro.idComunidade
+  );
+  selTurma.innerHTML = '<option value="">Todas as turmas</option>' +
+    visiveis.map((t) =>
+      `<option value="${t.idTurma}"${String(t.idTurma) === admFiltro.idTurma ? ' selected' : ''}>${admEscape(t.nome)}</option>`
+    ).join('');
+};
+
+const admTurmasFiltradas = () => admTurmas.filter((t) => {
+  if (admFiltro.idComunidade && String(t.idComunidade || '') !== admFiltro.idComunidade) return false;
+  if (admFiltro.idTurma && String(t.idTurma) !== admFiltro.idTurma) return false;
+  return true;
+});
+
 const admLigarTurmas = (alvo) => {
-  alvo.querySelectorAll('[data-salvar]').forEach((b) => {
-    b.addEventListener('click', () => admClassificar(Number(b.dataset.salvar)));
+  // A classificacao grava na MUDANCA do select, sem botao.
+  //
+  // O botao "Salvar" que existia aqui era lido como "salvar o filtro" -- e nao
+  // era: ele gravava a classificacao da turma, que e justamente o que destrava
+  // a comunidade nos Indicadores. Apagar sem mais nada tiraria a unica forma de
+  // classificar turma; gravar na mudanca tira o botao E mantem a funcao.
+  ['data-categoria', 'data-etapa', 'data-comunidade'].forEach((attr) => {
+    alvo.querySelectorAll(`[${attr}]`).forEach((campo) => {
+      campo.addEventListener('change', () => {
+        admClassificar(Number(campo.getAttribute(attr)));
+      });
+    });
   });
   alvo.querySelectorAll('[data-matriculas]').forEach((b) => {
     b.addEventListener('click', () => admAbrirMatriculas(Number(b.dataset.matriculas)));
-  });
-  alvo.querySelectorAll('[data-corrigir]').forEach((b) => {
-    b.addEventListener('click', () => admAbrirCorrecao(Number(b.dataset.corrigir)));
   });
 };
 
@@ -211,14 +249,28 @@ const admClassificar = async (idTurma) => {
       return;
     }
     const turma = await resposta.json();
-    admAviso('adm-status', `${turma.nome}: ${ADM_JANELAS[turma.janela] || 'atualizada'}.`, 'ok');
-    await admCarregarTurmas();
+
+    // Nao recarrega a lista inteira: com gravacao na mudanca, redesenhar tudo
+    // a cada select tiraria a pessoa do lugar onde ela estava. Atualiza so o
+    // cartao e mostra a confirmacao ali mesmo.
+    const cartao = document.querySelector(`[data-turma="${idTurma}"]`);
+    const selo = cartao && cartao.querySelector('.status');
+    if (selo) {
+      selo.textContent = ADM_JANELAS[turma.janela] || '';
+      selo.className = `status ${turma.pendenteDeClassificacao ? 'warning' : 'ok'}`;
+    }
+    const salvo = document.querySelector(`[data-salvo="${idTurma}"]`);
+    if (salvo) {
+      salvo.hidden = false;
+      clearTimeout(salvo.dataset.timer);
+      salvo.dataset.timer = setTimeout(() => { salvo.hidden = true; }, 2500);
+    }
   } catch (err) {
     admAviso('adm-status', `Falha de conexão: ${err.message}`, 'error');
   }
 };
 
-// ---- Tela 2: matrículas ---------------------------------------------------
+// ---- Tela 2: inscrições ---------------------------------------------------
 
 const admAbrirMatriculas = async (idTurma) => {
   admTurmaAtual = admTurmas.find((t) => t.idTurma === idTurma) || null;
@@ -226,7 +278,7 @@ const admAbrirMatriculas = async (idTurma) => {
 
   admTela('matriculas');
   document.getElementById('adm-matriculas-titulo').textContent =
-    `Matrículas — ${admTurmaAtual.nome} (${admAno()})`;
+    `Inscrições — ${admTurmaAtual.nome} (${admAno()})`;
   const campoData = document.getElementById('adm-nova-data');
   if (campoData) campoData.value = admHojeISO();
 
@@ -268,7 +320,7 @@ const admCarregarMatriculas = async () => {
     const matriculas = await resposta.json();
     if (!matriculas.length) {
       alvo.innerHTML =
-        '<div class="status warning">Nenhuma matrícula neste ano. Sem matrícula não há lista de chamada.</div>';
+        '<div class="status warning">Nenhuma inscrição neste ano. Sem inscrição não há lista de chamada.</div>';
       return;
     }
     alvo.innerHTML = matriculas.map(admLinhaMatricula).join('');
@@ -276,6 +328,32 @@ const admCarregarMatriculas = async () => {
   } catch (err) {
     admAviso('adm-matriculas-status', `Falha de conexão: ${err.message}`, 'error');
   }
+};
+
+/**
+ * Este destino faz sentido para quem esta nesta turma?
+ *
+ * Espelha RegrasDeMovimentacao no servidor. As duas podem divergir com o
+ * tempo -- por isso a versao do servidor e a que MANDA, e esta aqui so
+ * encurta a lista.
+ */
+const admDestinoPlausivel = (origem, destino) => {
+  if (!destino.categoria) return false;
+  if (origem.categoria === 'PRE_CATEQUESE') {
+    return destino.categoria === 'EUCARISTIA' && (destino.etapa || 1) === 1;
+  }
+  if (origem.categoria === 'PERSEVERANCA') {
+    return destino.categoria === 'CRISMA' && (destino.etapa || 1) === 1;
+  }
+  if (origem.categoria === 'CATECUMENATO') {
+    // O servidor confere se os quatro ritos foram cumpridos; aqui a opcao
+    // aparece para nao esconder um caminho que existe.
+    if (destino.categoria === 'ADULTOS') return true;
+  }
+  if (origem.categoria !== destino.categoria) return false;
+  if ((origem.etapa || null) !== (destino.etapa || null)) return false;
+  // Mesma fase e mesma comunidade nao e transferencia, e troca de turma.
+  return !origem.idComunidade || origem.idComunidade !== destino.idComunidade;
 };
 
 const admLinhaMatricula = (m) => {
@@ -286,8 +364,18 @@ const admLinhaMatricula = (m) => {
   // Transferido nao volta atras por aqui: a matricula ja foi encerrada e
   // existe outra ativa no destino. Mexer nela criaria duas ativas.
   const transferido = m.situacao === 'TRANSFERIDO';
+  // A lista de destino ja vem PODADA pela regra: mesma categoria, mesma fase,
+  // outra comunidade -- mais as duas saidas de percurso (pre-catequese para
+  // Eucaristia 1, perseveranca para Crisma 1) e o catecumeno que concluiu.
+  //
+  // Oferecer tudo e deixar o servidor recusar seria tecnicamente correto e
+  // ruim de usar: a pessoa escolhe, confirma, e so entao descobre que aquele
+  // destino nunca foi possivel. O servidor continua validando -- a poda aqui
+  // e conforto, nao seguranca.
+  const atual = admTurmaAtual || {};
   const destinos = admTurmas
-    .filter((t) => t.idTurma !== (admTurmaAtual && admTurmaAtual.idTurma))
+    .filter((t) => t.idTurma !== atual.idTurma)
+    .filter((t) => admDestinoPlausivel(atual, t))
     .map((t) => `<option value="${t.idTurma}">${admEscape(t.nome)}</option>`)
     .join('');
 
@@ -299,7 +387,7 @@ const admLinhaMatricula = (m) => {
         ${m.atualizadoPor ? `<span class="muted">por ${admEscape(m.atualizadoPor)}</span>` : ''}
       </div>
       ${transferido
-        ? '<span class="status neutro">Transferido — a matrícula ativa está na turma de destino.</span>'
+        ? '<span class="status neutro">Transferido — a inscrição ativa está na turma de destino.</span>'
         : `<div class="adm-matricula-acoes">
              <label>
                Situação
@@ -308,7 +396,11 @@ const admLinhaMatricula = (m) => {
              <button type="button" data-salvar-situacao="${m.idMatricula}">Salvar</button>
              <label>
                Transferir para
-               <select data-destino="${m.idMatricula}">${destinos}</select>
+               <select data-destino="${m.idMatricula}">
+                 <option value="">Escolha o destino</option>
+                 ${destinos}
+                 <option value="OUTRA_PAROQUIA">— outra paróquia —</option>
+               </select>
              </label>
              <button type="button" class="secondary" data-transferir="${m.idMatricula}">
                Transferir
@@ -347,32 +439,69 @@ const admSalvarSituacao = async (idMatricula) => {
   }
 };
 
+/**
+ * Movimentacao do catequisando: outra turma daqui, ou outra paroquia.
+ *
+ * Os dois destinos sao exclusivos, e a tela pergunta na ordem certa -- primeiro
+ * "saiu da paroquia?", porque quem saiu nao tem turma de destino nenhuma. As
+ * regras de para-onde-pode-ir sao do servidor: a tela nao repete a validacao,
+ * so mostra o motivo quando ele recusa.
+ */
 const admTransferir = async (idMatricula) => {
-  const idTurmaDestino = Number(document.querySelector(`[data-destino="${idMatricula}"]`).value);
-  if (!idTurmaDestino) {
-    admAviso('adm-matriculas-status', 'Escolha a turma de destino.', 'warning');
-    return;
-  }
+  const campo = document.querySelector(`[data-destino="${idMatricula}"]`);
+  const escolha = campo ? campo.value : '';
 
-  const motivo = window.prompt(
-    'Transferência de turma.\n\n' +
-    'A matrícula atual será encerrada como transferida e uma nova será criada\n' +
-    'na turma de destino, contando a frequência a partir de hoje.\n\n' +
-    'Motivo (opcional):'
-  );
-  if (motivo === null) return;
+  let corpo = null;
+
+  if (escolha === 'OUTRA_PAROQUIA') {
+    const paroquia = window.prompt(
+      'Transferência para outra paróquia.\n\n' +
+      'A inscrição atual será encerrada como transferida. Não é criada\n' +
+      'inscrição nova aqui — a dela passa a ser de outro lugar.\n\n' +
+      'Nome da paróquia de destino:'
+    );
+    if (paroquia === null) return;
+    if (!paroquia.trim()) {
+      admAviso('adm-matriculas-status', 'Diga para qual paróquia a pessoa foi.', 'warning');
+      return;
+    }
+    corpo = { paroquiaDestino: paroquia.trim(), data: admHojeISO() };
+  } else {
+    const idTurmaDestino = Number(escolha);
+    if (!idTurmaDestino) {
+      admAviso('adm-matriculas-status', 'Escolha o destino.', 'warning');
+      return;
+    }
+    const motivo = window.prompt(
+      'Transferência de turma.\n\n' +
+      'A inscrição atual será encerrada como transferida e uma nova será criada\n' +
+      'na turma de destino, contando a frequência a partir de hoje.\n\n' +
+      'Só é possível para a MESMA fase, em outra comunidade.\n\n' +
+      'Motivo (opcional):'
+    );
+    if (motivo === null) return;
+    corpo = { idTurmaDestino, data: admHojeISO(), motivo: motivo.trim() || null };
+  }
 
   try {
     const resposta = await fetch(`/api/admin/matriculas/${idMatricula}/transferir`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idTurmaDestino, data: admHojeISO(), motivo: motivo.trim() || null })
+      body: JSON.stringify(corpo)
     });
     if (!resposta.ok) {
+      // O servidor explica POR QUE recusou (fase diferente, idade, catecumenato
+      // incompleto). Repassar a frase dele e melhor do que inventar outra aqui.
       admAviso('adm-matriculas-status', await admErro(resposta, 'Não foi possível transferir.'), 'error');
       return;
     }
-    admAviso('adm-matriculas-status', 'Transferência registrada nas duas turmas.', 'ok');
+    admAviso(
+      'adm-matriculas-status',
+      corpo.paroquiaDestino
+        ? `Saída registrada: transferido para ${corpo.paroquiaDestino}.`
+        : 'Transferência registrada nas duas turmas.',
+      'ok'
+    );
     await admCarregarMatriculas();
   } catch (err) {
     admAviso('adm-matriculas-status', `Falha de conexão: ${err.message}`, 'error');
@@ -670,7 +799,7 @@ const admDesenharPrevia = () => {
 
   if (!admPrevia.linhas.length) {
     lista.innerHTML =
-      '<div class="status neutro">Nenhuma matrícula em andamento neste ano. Não há o que encerrar.</div>';
+      '<div class="status neutro">Nenhuma inscrição em andamento neste ano. Não há o que encerrar.</div>';
     return;
   }
 
@@ -727,7 +856,7 @@ const admAplicarEncerramento = async () => {
   // Confirmacao com os numeros, e nao um "tem certeza?" generico: o que
   // importa e quantas pessoas ficam sem concluir a catequese.
   const confirma = window.confirm(
-    `Encerrar ${ids.length} matrícula(s) de ${admPrevia.ano}.\n\n` +
+    `Encerrar ${ids.length} inscrição(ões) de ${admPrevia.ano}.\n\n` +
     `${naoConcluem} pessoa(s) ficarão como NÃO CONCLUÍDO.\n` +
     (promover ? 'As etapas dos catecúmenos aprovados também serão avançadas.\n' : '') +
     '\nO histórico fica registrado. Confirmar?'
@@ -753,7 +882,7 @@ const admAplicarEncerramento = async () => {
     await admAbrirEncerramento();
     admAviso(
       'adm-enc-status',
-      `${resultado.matriculasAtualizadas} matrícula(s) encerrada(s)` +
+      `${resultado.matriculasAtualizadas} inscrição(ões) encerrada(s)` +
       (resultado.etapasPromovidas ? `, ${resultado.etapasPromovidas} etapa(s) avançada(s)` : '') +
       (ignoradas.length ? `. ${ignoradas.length} ignorada(s): ${ignoradas.join(' ')}` : '.'),
       ignoradas.length ? 'warning' : 'ok'
@@ -808,3 +937,29 @@ const admCarregarComunidades = async () => {
 };
 
 document.addEventListener('DOMContentLoaded', admCarregarComunidades);
+
+// O filtro nao vai ao servidor: as turmas do ano ja estao em memoria, e uma
+// ida ao banco a cada troca de select deixaria a tela lenta sem ganhar nada.
+const admAplicarFiltro = () => {
+  const alvo = document.getElementById('adm-turmas-lista');
+  if (!alvo) return;
+  admPreencherFiltros();
+  const visiveis = admTurmasFiltradas();
+  alvo.innerHTML = visiveis.length
+    ? visiveis.map(admCartaoTurma).join('')
+    : '<div class="status neutro">Nenhuma turma com este filtro.</div>';
+  admLigarTurmas(alvo);
+};
+
+document.getElementById('adm-filtro-comunidade')?.addEventListener('change', (e) => {
+  admFiltro.idComunidade = e.target.value;
+  // Trocar de comunidade invalida a turma escolhida: manter um vinculo que nao
+  // pertence mais ao recorte devolveria uma lista vazia sem explicacao.
+  admFiltro.idTurma = '';
+  admAplicarFiltro();
+});
+
+document.getElementById('adm-filtro-turma')?.addEventListener('change', (e) => {
+  admFiltro.idTurma = e.target.value;
+  admAplicarFiltro();
+});

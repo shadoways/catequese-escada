@@ -204,10 +204,19 @@ class EncerramentoAnoService(
             null
         }
 
+        // A fase seguinte do percurso (Eucaristia 1 -> 2, Crisma 1 -> 2). Sai
+        // da mesma regra que a tela de movimentacao usa, para as duas nunca
+        // discordarem sobre quantas fases um percurso tem.
+        val proximaFase =
+            if (fechaPercurso) null
+            else RegrasDeMovimentacao.proximaFase(categoria, matricula.turma?.etapa)
+
         val motivo = buildString {
             append("Frequencia de ${freq?.percentualAtual ?: 0.0}%: conclui o ano.")
             if (fechaPercurso) {
                 append(" Completa os $previstos ano(s) da categoria e encerra o percurso.")
+            } else if (proximaFase != null) {
+                append(" Passa para a ${proximaFase}a fase no ano que vem.")
             } else if (previstos != null) {
                 append(" Vai para o ano $cumpridosDepois de $previstos.")
             }
@@ -220,6 +229,7 @@ class EncerramentoAnoService(
             situacaoProposta = SituacaoMatricula.CONCLUIDO,
             aplicavel = true,
             concluiPercurso = fechaPercurso,
+            proximaFase = proximaFase,
             proximaEtapa = proxima,
             motivo = motivo
         )

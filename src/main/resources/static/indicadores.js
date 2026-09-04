@@ -44,7 +44,7 @@
   const VISTAS = {
     resumo: { rotulo: 'Resumo geral', rota: '', campos: ['ano', 'idComunidade'] },
     matriculas: {
-      rotulo: 'Matrículas', rota: '/matriculas',
+      rotulo: 'Inscrições', rota: '/matriculas',
       campos: ['ano', 'idComunidade', 'idTurma', 'situacao']
     },
     frequencia: {
@@ -411,7 +411,7 @@
       'Ver em detalhe',
       'Cada assunto tem tela própria, com os filtros que aquela pergunta pede.',
       `<div class="ind-atalhos">
-         ${atalho('matriculas', 'Matrículas', 'Quantos estão cursando e quantos desistiram — neste ano e nos anteriores.')}
+         ${atalho('matriculas', 'Inscrições', 'Quantos estão cursando e quantos desistiram — neste ano e nos anteriores.')}
          ${atalho('frequencia', 'Frequência', 'Aproveitamento por comunidade, por turma e por catequisando.')}
          ${atalho('formacao', 'Formação', 'Quem participou e quem faltou; por catequista e por comunidade.')}
          ${atalho('eventos', 'Eventos', 'Por tipo e por nível, com quem participou de cada um.')}
@@ -437,7 +437,7 @@
 
   const vistaMatriculas = () => {
     const cartoes = painel(
-      'Matrículas no ano',
+      'Inscrições no ano',
       'Quantos estão na catequese agora, e como isso se compara com o ano passado.',
       `<div class="ind-cartoes">
          ${cartao(dados.total, true)}${cartao(dados.cursando, true)}

@@ -136,8 +136,15 @@ with sync_playwright() as p:
                '#adm-turmas-lista select, #adm-turmas-lista button, #adm-turmas-lista input',
                'e => e.length') == 0)
     cabecalhos = page.eval_on_selector_all('#adm-turmas-lista th', 'e => e.map(x => x.textContent.trim())')
-    checar('as colunas sao Turma, Fase e Comunidade',
-           cabecalhos == ['Turma', 'Fase', 'Comunidade'], cabecalhos)
+    checar('as colunas sao Turma, Fase, Comunidade e Inscritos',
+           cabecalhos == ['Turma', 'Fase', 'Comunidade', 'Inscritos'], cabecalhos)
+    checar('a contagem de inscritos aparece na linha',
+           page.eval_on_selector(
+               'tr[data-abrir-turma="10"] td:nth-child(4)', 'e => e.textContent.trim()') == '14')
+    checar('a contagem fica alinhada a direita',
+           page.eval_on_selector(
+               'tr[data-abrir-turma="10"] td:nth-child(4)',
+               'e => getComputedStyle(e).textAlign') == 'right')
     texto = page.inner_text('#adm-turmas-lista')
     checar('"Categoria" e "Ano do percurso" sumiram do cabecalho',
            'Categoria' not in cabecalhos and 'Ano do percurso' not in cabecalhos)
@@ -253,6 +260,28 @@ with sync_playwright() as p:
     checar('nenhum elemento passa da borda em 400px', estouros == [], estouros)
     checar('a pagina nao rola na horizontal',
            p400.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'))
+
+    # Botao flutuando meia duzia de pixels acima do campo que ele aciona era o
+    # que fazia a barra de filtro parecer torta. Mede a base, nao o olho.
+    print('--- botao alinhado ao campo')
+    pa = abrir(1280)
+    desalinho = pa.evaluate("""() => {
+      const linha = document.querySelector('#adm-tela-turmas .row.ind-nao-imprime');
+      const campo = linha.querySelector('select');
+      const botao = linha.querySelector('button');
+      return Math.abs(campo.getBoundingClientRect().bottom
+                      - botao.getBoundingClientRect().bottom);
+    }""")
+    checar('o "Consultar" divide a base com o filtro', desalinho <= 1, desalinho)
+
+    cabecalho = pa.evaluate("""() => {
+      const linha = document.querySelector('#adm-tela-turmas .row');
+      const campo = linha.querySelector('input');
+      const botao = linha.querySelector('button');
+      return Math.abs(campo.getBoundingClientRect().bottom
+                      - botao.getBoundingClientRect().bottom);
+    }""")
+    checar('o "Encerrar ano" divide a base com o campo Ano', cabecalho <= 1, cabecalho)
 
     navegador.close()
 

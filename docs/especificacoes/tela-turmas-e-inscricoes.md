@@ -48,10 +48,12 @@ no meio disso mostra um resultado que ninguém pediu — às vezes vazio, parece
 > de turma e os destinos de transferência precisam da lista. O que o "Consultar" governa
 > é o que **aparece**.
 
-**Três colunas, nenhuma edição: Turma, Fase, Comunidade.** Antes eram "Categoria", "Ano
-do percurso" e "Comunidade", cada uma um campo. A coluna Turma traz o nome da turma com
-a categoria abaixo; sem fase, um travessão. A linha inteira é clicável (e alcançável
-pelo teclado) e leva à edição.
+**Quatro colunas, nenhuma edição: Turma, Fase, Comunidade, Inscritos.** Antes eram
+"Categoria", "Ano do percurso" e "Comunidade", cada uma um campo. A coluna Turma traz o
+nome da turma com a categoria abaixo; sem fase, um travessão. Inscritos sai à direita,
+com algarismo de largura fixa — contagem se lê comparando ordem de grandeza, e alinhada
+à esquerda a coluna vira um serrilhado que obriga a ler dígito por dígito. A linha
+inteira é clicável (e alcançável pelo teclado) e leva à edição.
 
 O aviso de turma sem classificação continua: sem categoria a frequência não é apurada, e
 essas turmas ganham uma marca na borda.
@@ -229,7 +231,9 @@ Automatizado em `docs/regressao-turmas.py` (Playwright, sem servidor):
 - [x] Nada aparece antes do "Consultar"; mudar o filtro sozinho não consulta
 - [x] O filtro de comunidade encolhe a lista de turmas, e limpa a turma escolhida
 - [x] A listagem não tem `<select>`, `<button>` nem `<input>` nenhum
-- [x] As colunas são **Turma, Fase, Comunidade**; sem fase, travessão
+- [x] As colunas são **Turma, Fase, Comunidade, Inscritos**; sem fase, travessão
+- [x] A contagem de inscritos sai à direita
+- [x] O botão da barra de filtro divide a base com os campos (e não quebra sozinho)
 - [x] Clicar na linha (mouse ou teclado) abre a edição daquela turma
 - [x] Eucaristia e Crisma mostram o campo de fase; as outras quatro, não
 - [x] Trocar para uma categoria sem fase grava `etapa` **nula**

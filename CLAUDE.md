@@ -64,6 +64,11 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   "detalhe de uma formação" quando criei outro com o mesmo nome. O compilador escolhe
   um dos dois, e o erro seguinte fala de **parâmetro inexistente** num arquivo que está
   correto. DTO de tela leva o prefixo da tela (`IndicadoresFormacaoDTO`).
+- **Botão ao lado de campo se alinha por BAIXO, não pelo centro.** Um `<label>` é rótulo
+  + campo empilhados, então é mais alto que um `<button>` sozinho: centralizado, o botão
+  flutua na altura do rótulo, alguns pixels acima da caixa que ele aciona. `.row:has(>
+  label)` já resolve — o cuidado é não criar barra de filtro fora de `.row`.
+  `docs/regressao-alinhamento.py` mede isso em todas as abas.
 - **`flex-basis: 100%` em container `flex-direction: column`** não é largura, é
   ALTURA. Em `≤600px` o `.row` vira coluna, e um filtro com `flex: 1 1 100%` estourava
   a altura da linha e quebrava para uma SEGUNDA COLUNA, saindo pela direita da tela.
@@ -94,6 +99,7 @@ python3 docs/regressao-agenda-dia.py          # lista do dia: abrir, editar, exc
 python3 docs/regressao-agenda-transicoes.py   # trocar de dia limpa o estado anterior
 python3 docs/regressao-indicadores.py         # comparação, filtro e o caso sem base
 python3 docs/regressao-turmas.py              # listagem só de leitura, fase condicional, abas
+python3 docs/regressao-alinhamento.py         # botão ao lado de campo divide a base com ele
 ```
 
 Os scripts de tela leem de `/tmp/audit/`; copie os estáticos antes:

@@ -182,15 +182,18 @@ const admDesenharTurmas = () => {
     return;
   }
 
-  // Tabela, e nao cartao com campos: aqui nao se altera nada. Tres colunas --
-  // turma, fase e comunidade -- porque sao as tres perguntas que se faz
-  // olhando uma lista. O resto (janela de apuracao, catequista, contagem) e
-  // detalhe da turma e mora na tela de edicao.
+  // Tabela, e nao cartao com campos: aqui nao se altera nada. Quatro colunas --
+  // turma, fase, comunidade e inscritos -- porque sao as perguntas que se faz
+  // olhando uma lista. O resto (janela de apuracao, catequista) e detalhe da
+  // turma e mora na tela de edicao.
   alvo.innerHTML = `
     <div class="ind-tabela-rolagem">
       <table class="ind-tabela adm-lista">
         <thead>
-          <tr><th>Turma</th><th>Fase</th><th>Comunidade</th></tr>
+          <tr>
+            <th>Turma</th><th>Fase</th><th>Comunidade</th>
+            <th class="adm-lista-num">Inscritos</th>
+          </tr>
         </thead>
         <tbody>${visiveis.map(admLinhaTurma).join('')}</tbody>
       </table>
@@ -212,6 +215,7 @@ const admLinhaTurma = (turma) => {
       </td>
       <td>${admEscape(admRotuloFase(turma))}</td>
       <td>${admEscape(comunidade || '—')}</td>
+      <td class="adm-lista-num">${turma.matriculadosNoAno}</td>
     </tr>
   `;
 };

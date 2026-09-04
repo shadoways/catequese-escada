@@ -198,6 +198,20 @@ label { min-width: 0; }
   align-items: center;
 }
 
+/* Linha COM CAMPO alinha por baixo, e não pelo centro.
+   Um <label> é rótulo + campo empilhados, então é mais alto que um <button>
+   sozinho: centralizado, o botão flutuava na altura do rótulo, meia dúzia de
+   pixels acima da caixa do campo que ele aciona. Alinhado por baixo, botão e
+   campo dividem a mesma linha de base e a barra de filtro fica reta.
+
+   `:has()` é enriquecimento progressivo: onde ele não existe, a linha continua
+   centralizada como antes — nada quebra, só não fica alinhada. */
+.row:has(> label) { align-items: flex-end; }
+
+/* O <h2> que abre a linha carrega margem própria e desalinharia tudo de novo,
+   puxando a si mesmo para baixo. Na linha com campo ele deixa de ter margem. */
+.row:has(> label) > h2 { margin: 0; }
+
 /* Campo dentro de .row encolhe; botao nao, para o rotulo nao quebrar. */
 .row > label { min-width: 0; }
 
@@ -3362,6 +3376,12 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
 
 .adm-salvo[hidden] { display: none; }
 
+/* A barra de filtro das turmas cabe numa linha só até a quebra de 600px.
+   Com a base herdada (190px) o "Consultar" caía sozinho para a linha de baixo
+   em larguras intermediárias, separado dos dois campos que ele consulta.
+   Encolher o campo é melhor do que afastar o botão dele. */
+#adm-tela-turmas .ind-filtro { flex-basis: 150px; }
+
 /* Listagem de turmas: só leitura.
    Virou tabela porque a pergunta que se faz olhando uma lista é "onde está
    cada turma?", e cartão com três <select> respondia isso oferecendo alterar
@@ -3391,4 +3411,19 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
 .adm-lista-sub {
   display: block;
   font-size: 0.85rem;
+}
+
+/* Número à direita: contagem se lê comparando ordem de grandeza, e alinhada à
+   esquerda a coluna vira um serrilhado que obriga a ler dígito por dígito.
+
+   Classe própria, e não o `.num` de `.ind-tabela`: lá ele marca "toda coluna
+   que não é a primeira", inclusive as de texto, e alinhar aquilo à direita
+   torceria as colunas de comunidade e categoria. */
+/* Qualificado por `.ind-tabela`: `.ind-tabela th`/`td` alinham à esquerda com
+   especificidade 0-1-1, e uma classe sozinha (0-1-0) perde para eles. */
+.ind-tabela th.adm-lista-num,
+.ind-tabela td.adm-lista-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }

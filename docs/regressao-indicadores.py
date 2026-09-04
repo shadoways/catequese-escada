@@ -119,9 +119,11 @@ FREQUENCIA = {
                           "212 catequisandos apurados"),
     "regulares": ind("Regulares", 169, 180),
     "pertoDoLimite": ind("Perto do limite", 25, 30, "COMPARAVEL", "MENOR",
-                         detalhe="entre 70% e 80% — ainda dá para recuperar"),
+                         detalhe="já no mínimo, mas abaixo de 85% — uma falta derruba"),
     "abaixo": ind("Abaixo do mínimo", 18, 12, "COMPARAVEL", "MENOR"),
-    "minimo": 80, "alerta": 70,
+    # alerta (85) e MAIOR que o minimo (80) -- e assim no Configuracao de
+    # verdade. A fixture tinha 70 e escondia o texto invertido da tela.
+    "minimo": 80, "alerta": 85,
     "turmas": [{"idTurma": 10, "turma": "Crisma I", "comunidade": "São José",
                 "categoria": "CRISMA", "exigeFrequencia": True, "apurados": 28,
                 "media": 71.4, "regulares": 12, "pertoDoLimite": 10, "abaixo": 6,
@@ -304,7 +306,11 @@ with sync_playwright() as p:
     checar('frequencia: 3 filtros',
            filtros(page) == ['ano', 'idComunidade', 'idTurma'], filtros(page))
     texto = page.inner_text('#ind-conteudo')
-    checar('frequencia explica "perto do limite"', 'ainda dá tempo de recuperar' in texto)
+    # alerta (85) e MAIOR que o minimo (80): "perto do limite" e quem ja passou
+    # do minimo e esta prestes a perde-lo. A primeira versao do texto dizia o
+    # contrario -- "entre 85% e 80%" -- e nao existe faixa nenhuma nesse sentido.
+    checar('frequencia explica "perto do limite" na ordem certa',
+           'já atingiu o mínimo mas está abaixo de 85%' in texto)
     checar('turma que nao apura aparece como "não se aplica"', 'não se aplica' in texto)
     checar('pede a turma para descer ao catequisando',
            'Escolha uma turma' in page.inner_text('#ind-avisos'))

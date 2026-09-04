@@ -10,6 +10,10 @@
   na última linha do arquivo); `kt_nomes_check` acha tipo declarado duas vezes no mesmo
   pacote; `kt_argumentos_check` acha argumento nomeado inexistente e obrigatório
   faltando. Os três nasceram de erros que custaram uma ida e volta cada.
+- **gerar_massa_dev.py** — gera `sql/dados-dev/MASSA_DEV.sql`, a massa do banco de
+  desenvolvimento (dois anos de catequese inventada, para os Indicadores terem o que
+  comparar). Determinista; confere a integridade referencial antes de emitir e imprime
+  a prévia do que a tela deve mostrar.
 - **regressao*.py** — verificações de tela com Playwright. Rodar antes de dar uma
   mudança de frontend por encerrada:
 

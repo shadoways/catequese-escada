@@ -493,7 +493,7 @@
   const vistaFrequencia = () => {
     const cartoes = painel(
       'Aproveitamento',
-      `Mínimo de ${dados.minimo}%. "Perto do limite" é quem está entre ${dados.alerta}% e ${dados.minimo}% — ainda dá tempo de recuperar.`,
+      `Mínimo de ${dados.minimo}%. "Perto do limite" é quem já atingiu o mínimo mas está abaixo de ${dados.alerta}% — uma falta derruba.`,
       `<div class="ind-cartoes">
          ${cartao(dados.aproveitamento, true)}${cartao(dados.regulares)}
          ${cartao(dados.pertoDoLimite, true)}${cartao(dados.abaixo, true)}

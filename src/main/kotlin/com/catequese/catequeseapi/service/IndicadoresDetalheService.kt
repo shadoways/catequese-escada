@@ -326,7 +326,7 @@ class IndicadoresDetalheService(
             regulares = IndicadorDTO.de("Regulares", regulares, regularesBase, DirecaoBoa.MAIOR,
                 detalhe = "no mínimo $minimo%"),
             pertoDoLimite = IndicadorDTO.de("Perto do limite", perto, pertoBase, DirecaoBoa.MENOR,
-                detalhe = "entre $alerta% e $minimo% — ainda dá para recuperar"),
+                detalhe = "já no mínimo, mas abaixo de $alerta% — uma falta derruba"),
             abaixo = IndicadorDTO.de("Abaixo do mínimo", abaixo, abaixoBase, DirecaoBoa.MENOR,
                 detalhe = "abaixo de $minimo%"),
             minimo = minimo,

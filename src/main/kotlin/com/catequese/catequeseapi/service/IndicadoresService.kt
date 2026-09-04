@@ -68,8 +68,21 @@ class IndicadoresService(
         val catequistasPorComunidade: Map<Long?, Set<Long>>,
         val catequistas: Set<Long>
     ) {
+        /**
+         * Quem foi catequisando naquele ano -- TODAS as matriculas, qualquer
+         * que tenha sido o desfecho.
+         *
+         * A primeira versao contava so `CURSANDO`, e isso zerava todo ano
+         * fechado: no encerramento cada matricula vira CONCLUIDO,
+         * NAO_CONCLUIDO, DESISTENTE ou TRANSFERIDO, e nenhuma continua
+         * cursando. O ano em curso mostrava 300 e o anterior mostrava 0 --
+         * a comparacao dizia "novo", como se a catequese tivesse comecado
+         * este ano. Quem concluiu a Crisma em 2025 FOI catequisando em 2025.
+         *
+         * A quebra por situacao continua existindo: e a tela de Matriculas.
+         */
         val ativas: List<Matricula>
-            get() = matriculas.filter { it.situacao == SituacaoMatricula.CURSANDO }
+            get() = matriculas
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +112,8 @@ class IndicadoresService(
 
         // --- os cartoes do topo -------------------------------------------
         val catequisandos = IndicadorDTO.de(
-            "Catequisandos", atual.ativas.size, base?.ativas?.size, DirecaoBoa.MAIOR
+            "Catequisandos", atual.ativas.size, base?.ativas?.size, DirecaoBoa.MAIOR,
+            detalhe = "matriculados no ano, qualquer que tenha sido o desfecho"
         )
         val pessoas = atual.ativas.mapNotNull { it.catequisando?.idCatequisando }.distinct().size
         val pessoasDistintas =

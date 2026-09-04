@@ -572,10 +572,6 @@
       <section class="panel" id="adm-tela-turmas">
         <div class="row">
           <h2>Turmas</h2>
-          <label class="adm-ano-campo">
-            Ano
-            <input type="number" id="adm-ano" min="2000" max="2100" step="1" />
-          </label>
           <button type="button" class="secondary" id="adm-abrir-encerramento">Encerrar ano</button>
         </div>
         <!--
@@ -583,8 +579,16 @@
           turmas do ano, e quem entrou para ver UMA comunidade precisava
           primeiro descartar o resto com os olhos. Escolher o recorte e pedir e
           mais rapido do que filtrar depois.
+
+          O ano mora AQUI, com os outros dois. Ele sempre foi filtro -- decide
+          quais turmas a lista traz -- mas ficava na linha do titulo, ao lado do
+          "Encerrar ano", parecendo pertencer aquele botao.
         -->
         <div class="row ind-nao-imprime">
+          <label class="ind-filtro adm-ano-campo">
+            Ano
+            <input type="number" id="adm-ano" min="2000" max="2100" step="1" />
+          </label>
           <label class="ind-filtro">
             Comunidade
             <select id="adm-filtro-comunidade">

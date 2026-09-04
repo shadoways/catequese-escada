@@ -44,7 +44,25 @@ TURMAS = [
      "janela": "NENHUMA", "exigeFrequencia": False, "etapa": None, "nomeCatequista": None,
      "matriculadosNoAno": 0, "idComunidade": None, "nomeComunidade": None,
      "pendenteDeClassificacao": True, "descricao": None, "nivel": None},
+    # O ano anterior: era ele que vazava para a consulta de 2026, com "0
+    # inscritos" ao lado de um titulo que dizia 2026.
+    {"idTurma": 40, "nome": "Eucaristia - Matriz 2025", "ano": 2025, "categoria": "EUCARISTIA",
+     "janela": "ANO", "exigeFrequencia": True, "etapa": 1, "nomeCatequista": "Ana",
+     "matriculadosNoAno": 11, "idComunidade": 1, "nomeComunidade": "Matriz",
+     "pendenteDeClassificacao": False, "descricao": None, "nivel": None},
+    # Cadastro antigo sem ano: aparece em qualquer ano, de proposito -- esta e a
+    # unica tela onde ele pode ser classificado.
+    {"idTurma": 50, "nome": "Turma antiga", "ano": None, "categoria": None,
+     "janela": "NENHUMA", "exigeFrequencia": False, "etapa": None, "nomeCatequista": None,
+     "matriculadosNoAno": 0, "idComunidade": None, "nomeComunidade": None,
+     "pendenteDeClassificacao": True, "descricao": None, "nivel": None},
 ]
+
+
+# O servidor filtra por ano; o stub faz o mesmo, senao o teste passaria com o
+# defeito de volta.
+def do_ano(ano):
+    return [t for t in TURMAS if t["ano"] in (None, ano)]
 
 MATRICULAS = [
     {"idMatricula": 100, "idCatequisando": 1, "nomeCatequisando": "Ana Clara",
@@ -72,13 +90,17 @@ window.fetch = async (u, o) => {
       {pendenteDeClassificacao: corpo.categoria === null}));
   }
   if (s.includes('/matriculas')) return j(%(matriculas)s);
-  if (s.includes('/api/admin/turmas')) return j(%(turmas)s);
+  if (s.includes('/api/admin/turmas')) {
+    const ano = Number((s.match(/ano=(\\d+)/) || [])[1] || 0);
+    return j(ano === 2025 ? %(turmas2025)s : %(turmas)s);
+  }
   return j({});
 };
 localStorage.setItem('catequese.token','t');
 localStorage.setItem('catequese.usuario', JSON.stringify(
   {nome:'G',username:'g',tipo:'COORDENADOR_PAROQUIAL',admin:true,podeEditar:true}));
-""" % {"comunidades": json.dumps(COMUNIDADES), "turmas": json.dumps(TURMAS),
+""" % {"comunidades": json.dumps(COMUNIDADES),
+       "turmas": json.dumps(do_ano(2026)), "turmas2025": json.dumps(do_ano(2025)),
        "matriculas": json.dumps(MATRICULAS)}
 
 falhas = []
@@ -115,7 +137,7 @@ with sync_playwright() as p:
     checar('a tela diz o que fazer',
            'Consultar' in page.inner_text('#adm-turmas-lista'))
     checar('o filtro de turma ja vem preenchido',
-           page.eval_on_selector_all('#adm-filtro-turma option', 'e => e.length') == len(TURMAS) + 1)
+           page.eval_on_selector_all('#adm-filtro-turma option', 'e => e.length') == 6)
 
     # Mudar o filtro nao pode consultar sozinho: quem monta o recorte mexe nos
     # dois campos, e responder no meio disso mostra resultado que ninguem pediu.
@@ -128,8 +150,36 @@ with sync_playwright() as p:
     linhas = page.eval_on_selector_all('#adm-turmas-lista tr[data-abrir-turma]', 'e => e.length')
     checar('o filtro de comunidade recorta a lista', linhas == 2, linhas)
 
-    print('--- a listagem nao edita')
+    print('--- o ano filtra a lista, e nao so a contagem')
     page.select_option('#adm-filtro-comunidade', '')
+    consultar(page)
+    nomes = page.eval_on_selector_all('#adm-turmas-lista tr[data-abrir-turma] td:first-child',
+                                      'e => e.map(x => x.textContent)')
+    checar('turma de 2025 NAO aparece na consulta de 2026',
+           not any('2025' in n for n in nomes), nomes)
+    checar('turma sem ano aparece', any('Turma antiga' in n for n in nomes), nomes)
+    checar('e o aviso explica por que ela esta ai',
+           'sem ano definido' in page.inner_text('#adm-status'))
+
+    page.fill('#adm-ano', '2025')
+    page.dispatch_event('#adm-ano', 'change')
+    page.wait_for_timeout(500)
+    checar('trocar de ano limpa a lista e espera o "Consultar"',
+           page.eval_on_selector_all('#adm-turmas-lista tr[data-abrir-turma]', 'e => e.length') == 0)
+    consultar(page)
+    nomes = page.eval_on_selector_all('#adm-turmas-lista tr[data-abrir-turma] td:first-child',
+                                      'e => e.map(x => x.textContent)')
+    checar('em 2025 vem a turma de 2025', any('2025' in n for n in nomes), nomes)
+    checar('e nenhuma de 2026', not any('2026' in n for n in nomes), nomes)
+    checar('a contagem e a do ano pedido',
+           page.eval_on_selector(
+               'tr[data-abrir-turma="40"] td:nth-child(4)', 'e => e.textContent.trim()') == '11')
+
+    page.fill('#adm-ano', '2026')
+    page.dispatch_event('#adm-ano', 'change')
+    page.wait_for_timeout(500)
+
+    print('--- a listagem nao edita')
     consultar(page)
     checar('nenhum campo editavel na lista',
            page.eval_on_selector_all(
@@ -274,14 +324,20 @@ with sync_playwright() as p:
     }""")
     checar('o "Consultar" divide a base com o filtro', desalinho <= 1, desalinho)
 
-    cabecalho = pa.evaluate("""() => {
-      const linha = document.querySelector('#adm-tela-turmas .row');
-      const campo = linha.querySelector('input');
+    ano = pa.evaluate("""() => {
+      const linha = document.querySelector('#adm-tela-turmas .row.ind-nao-imprime');
+      const campo = linha.querySelector('input#adm-ano');
       const botao = linha.querySelector('button');
       return Math.abs(campo.getBoundingClientRect().bottom
                       - botao.getBoundingClientRect().bottom);
     }""")
-    checar('o "Encerrar ano" divide a base com o campo Ano', cabecalho <= 1, cabecalho)
+    checar('o campo Ano divide a base com o "Consultar"', ano <= 1, ano)
+
+    # O ano e filtro, entao mora na barra de filtro -- na linha do titulo ele
+    # parecia pertencer ao "Encerrar ano", que e outra coisa inteiramente.
+    checar('o Ano esta na barra de filtro, nao na linha do titulo',
+           pa.eval_on_selector_all(
+               '#adm-tela-turmas .row.ind-nao-imprime #adm-ano', 'e => e.length') == 1)
 
     navegador.close()
 

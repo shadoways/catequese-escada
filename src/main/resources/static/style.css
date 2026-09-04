@@ -2049,7 +2049,8 @@ canvas {
   color: var(--accent);
 }
 
-.adm-ano-campo { max-width: 130px; }
+/* Regra do tamanho do campo de ano: ver `#adm-tela-turmas .adm-ano-campo`,
+   junto das outras regras da barra de filtro. */
 
 .adm-turmas,
 .adm-matriculas,
@@ -3381,6 +3382,18 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
    em larguras intermediárias, separado dos dois campos que ele consulta.
    Encolher o campo é melhor do que afastar o botão dele. */
 #adm-tela-turmas .ind-filtro { flex-basis: 150px; }
+
+/* Quatro dígitos não precisam da largura de um <select> de comunidade: com a
+   base dos vizinhos, o ano ficaria com o dobro do campo que usa e empurraria a
+   comunidade para fora da linha.
+
+   `width`, e não `flex-basis` — em ≤600px o `.row` vira coluna, e naquele eixo
+   flex-basis é ALTURA. Já derrubou um filtro antes; ver CLAUDE.md. */
+#adm-tela-turmas .adm-ano-campo {
+  flex: 0 0 auto;
+  width: 96px;
+  max-width: 96px;
+}
 
 /* Listagem de turmas: só leitura.
    Virou tabela porque a pergunta que se faz olhando uma lista é "onde está

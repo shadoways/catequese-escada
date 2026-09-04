@@ -56,7 +56,19 @@ class AdminCatequeseService(
         exigirAdmin()
         val ano = anoPedido ?: LocalDate.now().year
 
+        // O ano E FILTRO, nao so o periodo da contagem.
+        //
+        // Antes ele so escolhia de que ano contar os inscritos, e a lista vinha
+        // com `findAll()`: quem pedia 2026 recebia as turmas de 2025 junto,
+        // todas com "0 inscritos" -- e a tela dizia 2026 no topo. Ler aquilo
+        // como "a turma esvaziou" era o mais natural do mundo.
+        //
+        // Turma SEM ano aparece em qualquer ano, de proposito: e cadastro
+        // antigo, esta e a unica tela onde ela pode ser classificada, e filtrar
+        // por igualdade a tornaria inalcancavel para sempre. O aviso do topo
+        // conta quantas sao.
         return turmaRepository.findAll()
+            .filter { it.ano == null || it.ano == ano }
             .map { turma -> paraDTO(turma, ano) }
             // As pendentes de classificacao primeiro: sao as que travam a
             // frequencia, entao e o que o administrador precisa resolver.

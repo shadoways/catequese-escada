@@ -168,14 +168,20 @@ const admDesenharTurmas = () => {
   }
 
   const visiveis = admTurmasFiltradas();
+
   const pendentes = visiveis.filter((t) => t.pendenteDeClassificacao).length;
-  admAviso(
-    'adm-status',
-    pendentes > 0
-      ? `${pendentes} turma(s) ainda sem classificação. Enquanto isso, a frequência delas não é apurada.`
-      : '',
-    'warning'
-  );
+  // Turma sem ano vem em qualquer consulta: e a unica tela onde ela pode ser
+  // classificada, e filtrar por igualdade a esconderia para sempre. Dito em
+  // voz alta, senao ela parece uma turma do ano pedido.
+  const semAno = visiveis.filter((t) => !t.ano).length;
+  const avisos = [];
+  if (pendentes) {
+    avisos.push(`${pendentes} turma(s) ainda sem classificação — a frequência delas não é apurada.`);
+  }
+  if (semAno) {
+    avisos.push(`Turmas sem ano definido (${semAno}) aparecem em qualquer ano consultado.`);
+  }
+  admAviso('adm-status', avisos.join(' '), 'warning');
 
   if (!visiveis.length) {
     alvo.innerHTML = '<div class="status neutro">Nenhuma turma com este filtro.</div>';
@@ -1006,10 +1012,14 @@ const admAplicarEncerramento = async () => {
 
 document.getElementById('adm-consultar')?.addEventListener('click', () => admCarregarTurmas(true));
 
-// Trocar de ano invalida o que esta na tela, e recarregar sozinho traria de
-// volta a lista inteira -- justamente o que o "Consultar" existe para evitar.
+// O ano e filtro como os outros dois: muda, e a tela espera o "Consultar".
+//
+// A turma escolhida cai junto -- ela e de outro ano, e um id que nao existe
+// mais no recorte devolveria lista vazia sem explicacao. A busca silenciosa
+// aqui e para o combo de turma passar a oferecer as do ano novo.
 document.getElementById('adm-ano')?.addEventListener('change', () => {
   admConsultado = false;
+  admFiltro.idTurma = '';
   admCarregarTurmas(false).then(admDesenharTurmas);
 });
 

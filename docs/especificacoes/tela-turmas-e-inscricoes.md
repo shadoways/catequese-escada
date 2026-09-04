@@ -41,8 +41,22 @@ editáveis na frente, e o risco de mexer na turma errada era o preço de olhar.
 quem entrou atrás de uma comunidade precisava descartar o resto no olho. Agora escolhe o
 recorte e pede.
 
-Mudar o filtro **não** consulta: quem monta um recorte mexe nos dois campos, e responder
-no meio disso mostra um resultado que ninguém pediu — às vezes vazio, parecendo erro.
+São **três** filtros: ano, comunidade e turma. O ano ficava na linha do título, ao lado
+do "Encerrar ano", parecendo pertencer àquele botão; ele é filtro e mora com os outros.
+
+> **O ano filtrava só a contagem, não a lista** — a lista vinha de um `findAll()`. Quem
+> pedia 2026 recebia junto as turmas de 2025, todas com "0 inscritos", sob um título que
+> dizia 2026. Ler aquilo como "a turma esvaziou" era o mais natural do mundo. Corrigido
+> em `AdminCatequeseService.turmas`.
+>
+> **Turma sem ano aparece em qualquer ano**, de propósito: é cadastro antigo, esta é a
+> única tela onde ela pode ser classificada, e filtrar por igualdade a tornaria
+> inalcançável para sempre. O aviso do topo conta quantas são.
+
+Mudar o filtro **não** consulta: quem monta um recorte mexe em mais de um campo, e
+responder no meio disso mostra um resultado que ninguém pediu — às vezes vazio, parecendo
+erro. Trocar o ano também derruba a turma escolhida: ela é de outro ano, e um id fora do
+recorte devolveria lista vazia sem explicação.
 
 > As turmas do ano são carregadas em silêncio ao entrar na aba, porque o próprio filtro
 > de turma e os destinos de transferência precisam da lista. O que o "Consultar" governa
@@ -230,6 +244,9 @@ Automatizado em `docs/regressao-turmas.py` (Playwright, sem servidor):
 
 - [x] Nada aparece antes do "Consultar"; mudar o filtro sozinho não consulta
 - [x] O filtro de comunidade encolhe a lista de turmas, e limpa a turma escolhida
+- [x] O ano filtra a **lista**: turma de 2025 não aparece na consulta de 2026
+- [x] Turma sem ano aparece em qualquer ano, e o aviso diz por quê
+- [x] Trocar o ano limpa a lista e espera o "Consultar"
 - [x] A listagem não tem `<select>`, `<button>` nem `<input>` nenhum
 - [x] As colunas são **Turma, Fase, Comunidade, Inscritos**; sem fase, travessão
 - [x] A contagem de inscritos sai à direita

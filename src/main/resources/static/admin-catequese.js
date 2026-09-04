@@ -460,6 +460,22 @@ const admDesenharMatriculas = () => {
 };
 
 /**
+ * Duas turmas sao do MESMO PERCURSO: mesma categoria e, so quando a categoria
+ * TEM fase, a mesma fase. Espelha `RegrasDeMovimentacao.mesmoPercurso`.
+ *
+ * A ressalva do "so quando tem fase" existe por um caso real: antes de
+ * `admTemFases` existir, a tela oferecia "1o ano / 2o ano" para TODA turma,
+ * Adultos incluida. Uma turma de Adultos podia ter guardado etapa=1 e outra
+ * etapa=2 -- resto de uma pergunta que a categoria nao tem. Comparando etapa
+ * cru, essas duas turmas pareciam percursos diferentes e a transferencia
+ * entre elas -- o caso normal, mesma categoria, comunidade diferente --
+ * sumia da lista sem aviso nenhum. Foi o que aconteceu com Adultos.
+ */
+const admMesmoPercurso = (origem, destino) =>
+  !!origem.categoria && origem.categoria === destino.categoria &&
+  (!admTemFases(origem.categoria) || (origem.etapa || null) === (destino.etapa || null));
+
+/**
  * Este destino faz sentido para quem esta nesta turma?
  *
  * Espelha RegrasDeMovimentacao no servidor. As duas podem divergir com o
@@ -474,14 +490,13 @@ const admDestinoPlausivel = (origem, destino) => {
   if (origem.categoria === 'PERSEVERANCA') {
     return destino.categoria === 'CRISMA' && (destino.etapa || 1) === 1;
   }
-  if (origem.categoria === 'CATECUMENATO') {
+  if (origem.categoria === 'CATECUMENATO' && destino.categoria === 'ADULTOS') {
     // O servidor confere se os quatro ritos foram cumpridos; aqui a opcao
     // aparece para nao esconder um caminho que existe.
-    if (destino.categoria === 'ADULTOS') return true;
+    return true;
   }
-  if (origem.categoria !== destino.categoria) return false;
-  if ((origem.etapa || null) !== (destino.etapa || null)) return false;
-  // Mesma fase e mesma comunidade nao e transferencia, e troca de turma.
+  if (!admMesmoPercurso(origem, destino)) return false;
+  // Mesmo percurso e mesma comunidade nao e transferencia, e troca de turma.
   return !origem.idComunidade || origem.idComunidade !== destino.idComunidade;
 };
 

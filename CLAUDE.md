@@ -69,6 +69,13 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   flutua na altura do rótulo, alguns pixels acima da caixa que ele aciona. `.row:has(>
   label)` já resolve — o cuidado é não criar barra de filtro fora de `.row`.
   `docs/regressao-alinhamento.py` mede isso em todas as abas.
+- **Campo que só existe para ALGUMAS categorias pode ter dado gravado nas outras.**
+  Antes de `RegrasDeMovimentacao.temFases` existir, a tela oferecia "1º ano / 2º ano"
+  para toda turma, Adultos incluído. Regra que compara esse campo cru (`origem.etapa ==
+  destino.etapa`) sem checar se a categoria TEM o campo lê dado velho como se fosse
+  percurso diferente — foi o que escondeu a transferência entre duas turmas de Adultos.
+  Regra nova sobre campo condicional: escreva a condição (`temFases`) uma vez e reuse-a
+  em toda comparação; não repita `== null` cru em cada lugar.
 - **`flex-basis: 100%` em container `flex-direction: column`** não é largura, é
   ALTURA. Em `≤600px` o `.row` vira coluna, e um filtro com `flex: 1 1 100%` estourava
   a altura da linha e quebrava para uma SEGUNDA COLUNA, saindo pela direita da tela.

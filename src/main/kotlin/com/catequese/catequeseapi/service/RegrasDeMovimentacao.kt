@@ -135,6 +135,24 @@ object RegrasDeMovimentacao {
     // ---------------------------------------------------------------- destino
 
     /**
+     * Duas turmas sao do MESMO PERCURSO: mesma categoria e, so quando a
+     * categoria TEM fase, a mesma fase.
+     *
+     * A ressalva do "so quando tem fase" existe por um caso real: antes de
+     * `temFases` existir, a tela oferecia "1o ano / 2o ano" para TODA turma,
+     * Adultos incluida. Uma turma de Adultos podia ter guardado etapa=1 e
+     * outra etapa=2 -- resto de uma tela que perguntava algo que a categoria
+     * nao tem. Comparar `etapa` cru aqui fazia essas duas turmas parecerem
+     * PERCURSOS DIFERENTES, e a transferencia entre elas -- que deveria ser o
+     * caso normal, mesma categoria, comunidade diferente -- desaparecia da
+     * lista sem nenhum aviso. Fora de Eucaristia e Crisma, fase nao significa
+     * nada, e nao deve decidir nada.
+     */
+    private fun mesmoPercurso(origem: Percurso, destino: Percurso): Boolean =
+        origem.categoria != null && origem.categoria == destino.categoria &&
+            (!temFases(origem.categoria) || origem.etapa == destino.etapa)
+
+    /**
      * O catecumeno concluiu o itinerario inteiro?
      *
      * `etapasConcluidas` sao as que ja tem data de fim. Enquanto faltar
@@ -198,20 +216,18 @@ object RegrasDeMovimentacao {
             // caia na regra geral e era barrado por "categoria diferente" --
             // ou seja, quem completou o itinerario ficava preso nele.
             CategoriaTurma.CATECUMENATO ->
-                destino.categoria == CategoriaTurma.ADULTOS ||
-                    (destino.categoria == CategoriaTurma.CATECUMENATO &&
-                        origem.etapa == destino.etapa)
-            // Todo o resto: mesmo percurso, mesma fase, outra comunidade.
-            else -> origem.categoria == destino.categoria && origem.etapa == destino.etapa
+                destino.categoria == CategoriaTurma.ADULTOS || mesmoPercurso(origem, destino)
+            // Todo o resto: mesmo percurso (mesma categoria, e mesma fase so
+            // onde fase existe), outra comunidade.
+            else -> mesmoPercurso(origem, destino)
         }
 
         if (!destinoPermitido) {
             return Veredito.nao(motivoDoDestinoRecusado(origem, destino))
         }
 
-        // Mesma categoria e mesma fase: so faz sentido se mudar de comunidade.
-        val mesmoPercurso = origem.categoria == destino.categoria && origem.etapa == destino.etapa
-        if (mesmoPercurso && origem.idComunidade != null &&
+        // Mesmo percurso: so faz sentido se mudar de comunidade.
+        if (mesmoPercurso(origem, destino) && origem.idComunidade != null &&
             origem.idComunidade == destino.idComunidade
         ) {
             return Veredito.nao(

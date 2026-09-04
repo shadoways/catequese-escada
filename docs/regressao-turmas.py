@@ -36,9 +36,23 @@ TURMAS = [
      "matriculadosNoAno": 12, "idComunidade": 2, "nomeComunidade": "São José",
      "pendenteDeClassificacao": False, "descricao": None, "nivel": None},
     # Sem fase: e o caso que a tela errava, oferecendo "2a fase" para adultos.
+    #
+    # `etapa: 1` aqui e de proposito, e nao um esquecimento: e o resto da tela
+    # antiga, que oferecia "1o ano / 2o ano" para toda categoria. Esta turma
+    # simula um cadastro feito naquela epoca -- Adultos nao tem fase, mas o
+    # campo guardou um valor mesmo assim.
     {"idTurma": 20, "nome": "Adultos - Matriz", "ano": 2026, "categoria": "ADULTOS",
-     "janela": "ANO", "exigeFrequencia": True, "etapa": None, "nomeCatequista": "Célia",
+     "janela": "ANO", "exigeFrequencia": True, "etapa": 1, "nomeCatequista": "Célia",
      "matriculadosNoAno": 9, "idComunidade": 1, "nomeComunidade": "Matriz",
+     "pendenteDeClassificacao": False, "descricao": None, "nivel": None},
+    # A outra turma de Adultos, com a fase espuria DIFERENTE (2, nao 1) --
+    # o pior caso: se a comparacao de fase nao for ignorada aqui, as duas
+    # turmas de Adultos parecem percursos diferentes, e a transferencia entre
+    # elas -- o caso normal, mesma categoria, outra comunidade -- some da
+    # lista sem nenhum aviso. Foi exatamente isto que aconteceu na producao.
+    {"idTurma": 21, "nome": "Adultos - São José", "ano": 2026, "categoria": "ADULTOS",
+     "janela": "ANO", "exigeFrequencia": True, "etapa": 2, "nomeCatequista": "Diego",
+     "matriculadosNoAno": 7, "idComunidade": 2, "nomeComunidade": "São José",
      "pendenteDeClassificacao": False, "descricao": None, "nivel": None},
     {"idTurma": 30, "nome": "Turma nova", "ano": 2026, "categoria": None,
      "janela": "NENHUMA", "exigeFrequencia": False, "etapa": None, "nomeCatequista": None,
@@ -73,6 +87,10 @@ MATRICULAS = [
      "idTurma": 10, "nomeTurma": "Eucaristia I - Matriz", "ano": 2026,
      "dataMatricula": "2026-02-10", "situacao": "TRANSFERIDO", "observacao": None,
      "atualizadoPor": "gabriel", "paroquiaDestino": "São Pedro"},
+    {"idMatricula": 102, "idCatequisando": 3, "nomeCatequisando": "Marcos Vinícius",
+     "idTurma": 20, "nomeTurma": "Adultos - Matriz", "ano": 2026,
+     "dataMatricula": "2026-02-10", "situacao": "CURSANDO", "observacao": None,
+     "atualizadoPor": None, "paroquiaDestino": None},
 ]
 
 STUB = """
@@ -89,7 +107,11 @@ window.fetch = async (u, o) => {
     return j(Object.assign({}, base, corpo,
       {pendenteDeClassificacao: corpo.categoria === null}));
   }
-  if (s.includes('/matriculas')) return j(%(matriculas)s);
+  if (s.includes('/matriculas')) {
+    const m = s.match(/turmas\/(\d+)\/matriculas/);
+    const idTurma = m ? Number(m[1]) : null;
+    return j(%(matriculas)s.filter(x => x.idTurma === idTurma));
+  }
   if (s.includes('/api/admin/turmas')) {
     const ano = Number((s.match(/ano=(\\d+)/) || [])[1] || 0);
     return j(ano === 2025 ? %(turmas2025)s : %(turmas)s);
@@ -137,7 +159,7 @@ with sync_playwright() as p:
     checar('a tela diz o que fazer',
            'Consultar' in page.inner_text('#adm-turmas-lista'))
     checar('o filtro de turma ja vem preenchido',
-           page.eval_on_selector_all('#adm-filtro-turma option', 'e => e.length') == 6)
+           page.eval_on_selector_all('#adm-filtro-turma option', 'e => e.length') == 7)
 
     # Mudar o filtro nao pode consultar sozinho: quem monta o recorte mexe nos
     # dois campos, e responder no meio disso mostra resultado que ninguem pediu.
@@ -310,6 +332,23 @@ with sync_playwright() as p:
     checar('nenhum elemento passa da borda em 400px', estouros == [], estouros)
     checar('a pagina nao rola na horizontal',
            p400.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'))
+
+    print('--- fase espuria nao esconde a transferencia entre comunidades')
+    # Adultos-Matriz (etapa=1) e Adultos-São José (etapa=2): as duas com uma
+    # fase que a categoria nao tem, e DIFERENTE uma da outra -- o resto exato
+    # de quando a tela oferecia "1o ano / 2o ano" para toda turma. Se a
+    # comparacao de fase nao for ignorada fora de Eucaristia/Crisma, elas
+    # parecem percursos diferentes e a transferencia normal desaparece.
+    pt = abrir()
+    consultar(pt)
+    pt.click('tr[data-abrir-turma="20"]')
+    pt.wait_for_timeout(500)
+    pt.click('.adm-subnav-btn[data-adm-vista="transferencias"]')
+    pt.wait_for_timeout(300)
+    destinos = pt.eval_on_selector_all(
+        '#adm-transferencias-lista [data-destino] option', 'e => e.map(o => o.textContent.trim())')
+    checar('a outra turma de Adultos aparece como destino, apesar da fase espuria',
+           'Adultos - São José' in destinos, destinos)
 
     # Botao flutuando meia duzia de pixels acima do campo que ele aciona era o
     # que fazia a barra de filtro parecer torta. Mede a base, nao o olho.

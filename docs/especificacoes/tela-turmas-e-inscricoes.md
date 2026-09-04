@@ -127,6 +127,17 @@ nenhuma tela mostra e que ninguém consegue corrigir depois.
 O vocabulário também mudou: **"primeira fase" e "segunda fase"**, não "1º ano" e "2º
 ano". Percurso de catequese não é série escolar.
 
+> **Falha real corrigida:** turma de Adultos parou de aparecer como destino de
+> transferência para outra turma de Adultos. Não era regra de negócio — era dado
+> velho: antes de `temFases` existir, a tela oferecia "1º ano / 2º ano" para
+> **toda** categoria, Adultos incluído. Duas turmas de Adultos com fase gravada
+> diferente (uma com 1, outra com 2) passaram a parecer **percursos diferentes**
+> para a regra de transferência, que comparava a fase sem checar se a categoria
+> tinha fase. `RegrasDeMovimentacao.mesmoPercurso` agora só compara fase onde ela
+> existe; `sql/movimentacao/LIMPA_FASE_SEM_CATEGORIA.sql` limpa o que já está
+> gravado errado. `docs/regressao-turmas.py` reproduz o caso com fase espúria
+> divergente nas duas turmas de Adultos.
+
 ### 4.1 A regra de fundo
 
 > **Transferência é mudança de lugar, não de percurso.**
@@ -276,6 +287,8 @@ Do servidor (o Gradle não roda no sandbox):
 - [ ] Turma sem categoria não aparece como destino
 - [ ] A prévia do encerramento mostra a fase seguinte de quem continua
 - [ ] Classificar uma turma como Adultos apaga a fase que ela tinha
+- [x] Duas turmas de Adultos com fase espúria DIFERENTE ainda se enxergam como
+      mesmo percurso, e a transferência entre elas aparece (regressao-turmas.py)
 
 **Não verificado daqui:** tudo em §4 é regra de servidor, e o Gradle não roda no
 sandbox. `RegrasDeMovimentacao` é objeto puro — é o melhor candidato a teste de unidade

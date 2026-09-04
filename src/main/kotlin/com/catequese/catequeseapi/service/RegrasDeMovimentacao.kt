@@ -61,6 +61,27 @@ object RegrasDeMovimentacao {
         val idComunidade: Long?
     )
 
+    // ------------------------------------------------------------------ fases
+
+    /**
+     * So Eucaristia e Crisma tem FASE.
+     *
+     * `CategoriaTurma.anosPrevistos` diz quantos anos o percurso dura, e nao e
+     * a mesma coisa: Adultos tambem dura dois anos, mas nao se divide em 1a e
+     * 2a fase -- a pessoa segue no mesmo percurso. Usar `anosPrevistos` como se
+     * fosse numero de fases oferecia "2a fase" em turma que nao tem fase
+     * nenhuma, e era o que confundia o cadastro.
+     *
+     * Tudo que mostra ou pergunta fase passa por aqui: combo, listagem,
+     * progressao do encerramento. Regra em dois lugares e regra que diverge.
+     */
+    fun temFases(categoria: CategoriaTurma?): Boolean =
+        categoria == CategoriaTurma.EUCARISTIA || categoria == CategoriaTurma.CRISMA
+
+    /** Quantas fases o percurso tem. Zero quando ele nao se divide em fases. */
+    fun quantasFases(categoria: CategoriaTurma?): Int =
+        if (temFases(categoria)) categoria?.anosPrevistos ?: 0 else 0
+
     // ------------------------------------------------------------------ idade
 
     /** Quantos meses de folga o percurso aceita depois da inscricao. */
@@ -227,9 +248,12 @@ object RegrasDeMovimentacao {
      * virada do ano.
      */
     fun proximaFase(categoria: CategoriaTurma?, etapa: Int?): Int? {
-        val previstos = categoria?.anosPrevistos ?: return null
+        // Percurso sem fase nao promove ninguem de fase. Antes esta conta usava
+        // `anosPrevistos` direto, e propunha "2a fase" para Adultos.
+        val fases = quantasFases(categoria)
+        if (fases == 0) return null
         val atual = etapa ?: 1
-        return if (atual < previstos) atual + 1 else null
+        return if (atual < fases) atual + 1 else null
     }
 
     fun temProximaFase(categoria: CategoriaTurma?, etapa: Int?): Boolean =

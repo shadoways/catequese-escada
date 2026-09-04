@@ -31,7 +31,13 @@ data class Turma(
     @Enumerated(EnumType.STRING)
     val categoria: CategoriaTurma? = null,
 
-    /** 1 = primeiro ano (Crisma I), 2 = segundo ano (Crisma II). */
+    /**
+     * Fase do percurso: 1 = primeira fase, 2 = segunda.
+     *
+     * So Eucaristia e Crisma tem fase; nas demais e sempre nulo. Quem decide
+     * isso e `RegrasDeMovimentacao.temFases`, e a classificacao da turma zera
+     * este campo ao mudar para uma categoria sem fase.
+     */
     val etapa: Int? = null,
 
     /**

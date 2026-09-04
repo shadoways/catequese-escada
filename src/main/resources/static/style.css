@@ -2854,7 +2854,11 @@ span.agenda-cal-ev { cursor: inherit; }
 
 /* ---- Sub-navegação: uma pergunta por tela ---- */
 
-.ind-subnav {
+/* A mesma sub-navegação serve à área do coordenador (Inscrições /
+   Transferências). É o mesmo gesto — trocar de assunto dentro de uma tela —
+   e duplicar o estilo faria as duas divergirem na primeira mudança. */
+.ind-subnav,
+.adm-subnav {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -2862,11 +2866,13 @@ span.agenda-cal-ev { cursor: inherit; }
   border-bottom: 1px solid var(--stroke);
 }
 
-.ind-subnav[hidden] { display: none; }
+.ind-subnav[hidden],
+.adm-subnav[hidden] { display: none; }
 
 /* <button> estilizado como aba precisa anular a pílula terracota da regra
    base, senão vira um botão de ação sólido — a armadilha nº 1 deste CSS. */
-button.ind-subnav-btn {
+button.ind-subnav-btn,
+button.adm-subnav-btn {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -2880,13 +2886,15 @@ button.ind-subnav-btn {
   cursor: pointer;
 }
 
-button.ind-subnav-btn:hover {
+button.ind-subnav-btn:hover,
+button.adm-subnav-btn:hover {
   background: rgba(47, 111, 126, 0.08);
   color: var(--accent-2);
   transform: none;
 }
 
-button.ind-subnav-btn.active {
+button.ind-subnav-btn.active,
+button.adm-subnav-btn.active {
   color: var(--accent-2);
   border-bottom-color: var(--accent-2);
   font-weight: 600;
@@ -3284,10 +3292,11 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
 
 @media (max-width: 600px) {
   .ind-cartoes { gap: 12px; }
-  .ind-subnav { gap: 6px; }
+  .ind-subnav, .adm-subnav { gap: 6px; }
   /* Piso de 10px entre alvos de toque continua valendo: o gap menor aqui é
      entre abas de uma mesma unidade visual, com padding próprio de 8px. */
-  button.ind-subnav-btn { padding: 8px 10px; font-size: 0.9rem; }
+  button.ind-subnav-btn,
+  button.adm-subnav-btn { padding: 8px 10px; font-size: 0.9rem; }
   /* `flex: 1 1 100%` aqui seria um bug: neste tamanho `.row` vira
      `flex-direction: column`, e nesse eixo `flex-basis: 100%` e ALTURA, nao
      largura -- o item estourava a altura da linha e quebrava para uma SEGUNDA
@@ -3352,3 +3361,34 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
 }
 
 .adm-salvo[hidden] { display: none; }
+
+/* Listagem de turmas: só leitura.
+   Virou tabela porque a pergunta que se faz olhando uma lista é "onde está
+   cada turma?", e cartão com três <select> respondia isso oferecendo alterar
+   — quem só queria conferir tinha campos editáveis na frente e o risco de
+   mexer na turma errada era o preço de olhar. */
+.adm-lista-linha {
+  cursor: pointer;
+}
+
+.adm-lista-linha:hover,
+.adm-lista-linha:focus-visible {
+  background: rgba(47, 111, 126, 0.08);
+  outline: none;
+}
+
+/* A linha inteira é o alvo do clique; sem uma marca visível no foco, quem
+   navega pelo teclado não sabe onde está. */
+.adm-lista-linha:focus-visible td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent-2);
+}
+
+/* Turma sem classificação trava a frequência: precisa saltar aos olhos. */
+.adm-lista-linha--pendente td:first-child {
+  box-shadow: inset 3px 0 0 var(--highlight);
+}
+
+.adm-lista-sub {
+  display: block;
+  font-size: 0.85rem;
+}

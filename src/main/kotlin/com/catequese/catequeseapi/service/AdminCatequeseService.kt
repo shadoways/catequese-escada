@@ -74,14 +74,18 @@ class AdminCatequeseService(
         val etapa = dto.etapa
         if (etapa != null && etapa !in 1..2) {
             throw OperacaoInvalidaException(
-                "A etapa da turma deve ser 1 (primeiro ano) ou 2 (segundo ano)."
+                "A fase da turma deve ser 1 (primeira fase) ou 2 (segunda fase)."
             )
         }
 
         val categoria = dto.categoria
-        // Etapa sem categoria nao significa nada: e a categoria que diz
-        // quantos anos o percurso tem.
-        val etapaFinal = if (categoria == null) null else etapa
+        // Fase so existe em Eucaristia e Crisma -- ver RegrasDeMovimentacao.temFases.
+        //
+        // A tela esconde o campo nas demais, mas isso e conforto: a regra vale
+        // aqui (invariante 1). Sem esta linha, uma turma que era Eucaristia 2 e
+        // virou Adultos guardaria etapa=2 -- um valor que nenhuma tela mostra e
+        // que ninguem consegue corrigir depois.
+        val etapaFinal = if (RegrasDeMovimentacao.temFases(categoria)) etapa else null
 
         val salva = turmaRepository.save(
             turma.copy(
@@ -91,7 +95,7 @@ class AdminCatequeseService(
             )
         )
         log.info(
-            "Turma {} classificada como {} (etapa {}) por '{}'",
+            "Turma {} classificada como {} (fase {}) por '{}'",
             salva.nome, categoria?.name ?: "SEM CATEGORIA", etapaFinal ?: "-", quem()
         )
         return paraDTO(salva, LocalDate.now().year)
@@ -358,7 +362,8 @@ class AdminCatequeseService(
         dataMatricula = matricula.dataMatricula,
         situacao = matricula.situacao,
         observacao = matricula.observacao,
-        atualizadoPor = matricula.atualizadoPor
+        atualizadoPor = matricula.atualizadoPor,
+        paroquiaDestino = matricula.paroquiaDestino
     )
 
     private fun exigirTurma(idTurma: Long): Turma = turmaRepository.findById(idTurma)

@@ -556,8 +556,16 @@
     </div>
 
     <!--
-      Area do coordenador paroquial. Tres contextos, um de cada vez: turmas,
-      matriculas de uma turma, e correcao de chamada encerrada.
+      Area do coordenador paroquial. Quatro contextos, um de cada vez: a
+      LISTAGEM de turmas (so consulta), a EDICAO de uma turma (classificacao,
+      catequisandos e transferencias), o encerramento do ano e a correcao de
+      chamada encerrada.
+
+      Listar e editar sao telas separadas de proposito. Enquanto os selects de
+      classificacao viviam dentro de cada cartao da lista, a lista parecia um
+      formulario gigante: quem so queria CONFERIR onde estava uma turma tinha
+      tres campos editaveis na frente, e o risco de mudar a turma errada era o
+      preco de olhar.
     -->
     <div class="chamada-layout tab-content" id="tab-admin" data-tab-content="admin" hidden>
 
@@ -568,64 +576,101 @@
             Ano
             <input type="number" id="adm-ano" min="2000" max="2100" step="1" />
           </label>
-          <button type="button" class="secondary" id="adm-recarregar">Atualizar</button>
           <button type="button" class="secondary" id="adm-abrir-encerramento">Encerrar ano</button>
         </div>
-        <p class="muted">
-          A categoria define a regra de frequência. Enquanto a turma não tiver
-          categoria, a frequência dela não é apurada.
-        </p>
         <!--
-          Filtro de verdade, no topo. Antes nao havia nenhum, e os tres selects
-          DENTRO de cada cartao (categoria, fase, comunidade) eram lidos como
-          filtro -- eles classificam a turma. Com um filtro explicito aqui, o
-          que esta no cartao deixa de ser ambiguo.
+          Nada aparece antes do "Consultar". A tela abria despejando todas as
+          turmas do ano, e quem entrou para ver UMA comunidade precisava
+          primeiro descartar o resto com os olhos. Escolher o recorte e pedir e
+          mais rapido do que filtrar depois.
         -->
         <div class="row ind-nao-imprime">
-          <label style="min-width: 220px;">
+          <label class="ind-filtro">
             Comunidade
             <select id="adm-filtro-comunidade">
               <option value="">Todas as comunidades</option>
             </select>
           </label>
-          <label style="min-width: 220px;">
+          <label class="ind-filtro">
             Turma
             <select id="adm-filtro-turma">
               <option value="">Todas as turmas</option>
             </select>
           </label>
+          <button type="button" id="adm-consultar">Consultar</button>
         </div>
 
         <div id="adm-status" class="summary"></div>
         <div id="adm-turmas-lista" class="adm-turmas"></div>
       </section>
 
+      <!--
+        Tela de edicao da turma. Chega-se aqui clicando numa linha da listagem.
+        Nao ha campo de inscricao: inscrever exige dados que so o cadastro
+        pergunta (nascimento, responsavel, sacramentos), e um <select> com
+        todos os catequisandos da paroquia fingia que era escolher um nome.
+      -->
       <section class="panel" id="adm-tela-matriculas" hidden>
         <div class="row">
-          <h2 id="adm-matriculas-titulo">Inscrições</h2>
+          <h2 id="adm-matriculas-titulo">Turma</h2>
           <button type="button" class="secondary" id="adm-voltar-turmas">
             Voltar para as turmas
           </button>
         </div>
+        <p class="muted">
+          A turma define a regra de frequência. Enquanto ela não estiver
+          classificada, a frequência não é apurada.
+        </p>
+
+        <div class="adm-turma-acoes" id="adm-classificacao">
+          <label>
+            Turma
+            <select id="adm-edit-categoria"></select>
+          </label>
+          <!--
+            So Eucaristia e Crisma tem fase. O campo some nas demais em vez de
+            ficar desabilitado: oferecer "2a fase" numa turma de adultos era o
+            que mais confundia o cadastro.
+          -->
+          <label id="adm-edit-fase-campo" hidden>
+            Fase
+            <select id="adm-edit-etapa"></select>
+          </label>
+          <label>
+            Comunidade
+            <select id="adm-edit-comunidade"></select>
+          </label>
+          <span class="adm-salvo" id="adm-edit-salvo" hidden>alteração salva</span>
+        </div>
+
         <div id="adm-matriculas-status" class="summary"></div>
 
-        <div class="grid">
-          <label>
-            Inscrever catequisando
-            <select id="adm-novo-catequisando"></select>
-          </label>
-          <label>
-            Data da inscrição
-            <input type="date" id="adm-nova-data" />
-          </label>
-        </div>
-        <p class="muted">
-          A data da inscrição é o marco zero da frequência: quem entra em abril
-          não responde pelos encontros de fevereiro e março.
-        </p>
-        <button type="button" id="adm-btn-matricular">Inscrever</button>
+        <nav class="adm-subnav ind-nao-imprime" aria-label="O que fazer nesta turma">
+          <button type="button" class="adm-subnav-btn active" data-adm-vista="inscricoes">
+            Inscrições
+          </button>
+          <button type="button" class="adm-subnav-btn" data-adm-vista="transferencias">
+            Transferências
+          </button>
+        </nav>
 
-        <div id="adm-matriculas-lista" class="adm-matriculas"></div>
+        <div id="adm-vista-inscricoes">
+          <div id="adm-matriculas-lista" class="adm-matriculas"></div>
+        </div>
+
+        <!--
+          Transferir e uma decisao de outra natureza que mudar a situacao de
+          quem ficou: tira a pessoa da turma. Com os dois botoes na mesma linha,
+          "Salvar" e "Transferir" competiam pelo mesmo clique.
+        -->
+        <div id="adm-vista-transferencias" hidden>
+          <p class="muted">
+            A transferência muda a pessoa de lugar, não de percurso: só vale para
+            a mesma turma e a mesma fase, em outra comunidade. Quem saiu da
+            paróquia entra por “outra paróquia”.
+          </p>
+          <div id="adm-transferencias-lista" class="adm-matriculas"></div>
+        </div>
       </section>
 
       <section class="panel" id="adm-tela-encerramento" hidden>

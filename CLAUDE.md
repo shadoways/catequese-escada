@@ -93,6 +93,7 @@ python3 docs/regressao.py                     # só uma aba visível por vez
 python3 docs/regressao-agenda-dia.py          # lista do dia: abrir, editar, excluir
 python3 docs/regressao-agenda-transicoes.py   # trocar de dia limpa o estado anterior
 python3 docs/regressao-indicadores.py         # comparação, filtro e o caso sem base
+python3 docs/regressao-turmas.py              # listagem só de leitura, fase condicional, abas
 ```
 
 Os scripts de tela leem de `/tmp/audit/`; copie os estáticos antes:

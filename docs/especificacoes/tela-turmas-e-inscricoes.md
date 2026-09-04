@@ -27,18 +27,56 @@ pergunta só — *onde está cada pessoa, e para onde ela pode ir?*
 Só o **coordenador paroquial** (a aba é `somente-admin`, e as rotas `/api/admin/**` já
 exigem o papel).
 
-## 3. O que mudou na tela
+## 3. Duas telas: listar e editar
 
-**Filtro de verdade no topo: comunidade e turma.** Não havia nenhum — e os três selects
-*dentro* de cada cartão (categoria, fase, comunidade) eram lidos como filtro. Com o
-filtro explícito acima, o que está no cartão deixa de ser ambíguo.
+> **Listar responde *onde está cada turma*. Editar responde *o que muda nesta turma*.**
 
-**O botão "Salvar" do cartão saiu — mas a função ficou.** Ele não salvava filtro
-nenhum: gravava a **classificação da turma**, que é justamente o que destrava a
-comunidade nos Indicadores (o balde "Sem comunidade definida" vem daí). Apagar sem mais
-nada tiraria a única forma de classificar turma. A classificação passou a gravar **na
-mudança do select**, com uma confirmação discreta no próprio cartão — o botão some e a
-capacidade fica.
+Eram a mesma tela, e por isso ela confundia: a lista trazia três `<select>` dentro de
+cada cartão, então quem só queria **conferir** onde uma turma estava tinha campos
+editáveis na frente, e o risco de mexer na turma errada era o preço de olhar.
+
+### 3.1 A listagem
+
+**Nada aparece antes do "Consultar".** A tela abria despejando todas as turmas do ano —
+quem entrou atrás de uma comunidade precisava descartar o resto no olho. Agora escolhe o
+recorte e pede.
+
+Mudar o filtro **não** consulta: quem monta um recorte mexe nos dois campos, e responder
+no meio disso mostra um resultado que ninguém pediu — às vezes vazio, parecendo erro.
+
+> As turmas do ano são carregadas em silêncio ao entrar na aba, porque o próprio filtro
+> de turma e os destinos de transferência precisam da lista. O que o "Consultar" governa
+> é o que **aparece**.
+
+**Três colunas, nenhuma edição: Turma, Fase, Comunidade.** Antes eram "Categoria", "Ano
+do percurso" e "Comunidade", cada uma um campo. A coluna Turma traz o nome da turma com
+a categoria abaixo; sem fase, um travessão. A linha inteira é clicável (e alcançável
+pelo teclado) e leva à edição.
+
+O aviso de turma sem classificação continua: sem categoria a frequência não é apurada, e
+essas turmas ganham uma marca na borda.
+
+### 3.2 A tela de edição
+
+Chega-se nela clicando numa linha. Ali ficam a classificação da turma (Turma, Fase,
+Comunidade), e duas abas: **Inscrições** e **Transferências**.
+
+**A classificação grava na mudança do select, sem botão.** O "Salvar" que existia era
+lido como "salvar o filtro" — e não era: gravava a **classificação**, que é o que
+destrava a comunidade nos Indicadores (o balde "Sem comunidade definida" vem daí).
+Apagar sem mais nada tiraria a única forma de classificar turma.
+
+**"Inscrever" saiu.** Era um `<select>` com todos os catequisandos da paróquia mais uma
+data — e inscrição não é isso: exige nascimento, responsável, sacramentos e a conferência
+de idade do percurso. Quem entrava por esse atalho criava um vínculo sem nada disso. A
+porta é a tela de cadastro, que faz as perguntas. `POST /api/admin/matriculas` continua
+existindo e é usado por lá.
+
+**Cada catequisando tem um botão só: Salvar.** "Salvar" e "Transferir" lado a lado eram
+duas ações de peso muito diferente disputando o mesmo clique — uma corrige a situação de
+quem ficou, a outra tira a pessoa da turma. Transferir virou aba, e lá cada linha tem seu
+botão. Quem já saiu não aparece nela: a inscrição dele foi encerrada e a ativa está no
+destino.
 
 **"Corrigir chamada" saiu do cartão**, como pedido. O painel e o código continuam
 inteiros, mas **hoje não há como chegar até ele** — falta decidir onde ele mora. É o
@@ -51,6 +89,27 @@ primeiro item da §7.
 Vivem em `RegrasDeMovimentacao`, um objeto **puro** — sem Spring, sem repositório. Regra
 de percurso muda depois de reunião de coordenação; escondida dentro de um serviço com
 dez dependências, ninguém consegue conferir nem testar.
+
+### 4.0 Quem tem fase
+
+> **Só Eucaristia e Crisma têm fase.** Pré-catequese, perseverança, adultos e
+> catecumenato não se dividem: a pessoa segue no mesmo percurso.
+
+`CategoriaTurma.anosPrevistos` **não** serve de critério — Adultos também dura dois anos,
+e durar dois anos não é dividir-se em duas fases. Era esse atalho que oferecia "segunda
+fase" numa turma que não tem fase nenhuma, e o valor escolhido ficava gravado.
+
+A regra mora em `RegrasDeMovimentacao.temFases`, e tudo que mostra ou pergunta fase passa
+por ela: o combo da edição (que **some** nas categorias sem fase, em vez de ficar
+desabilitado — campo desabilitado ainda é uma pergunta na tela), a coluna da listagem, e
+a progressão do encerramento do ano.
+
+**Classificar uma turma para uma categoria sem fase apaga a fase**, no servidor. Sem
+isso, uma turma que era Eucaristia 2 e virou Adultos guardaria `etapa = 2` — um valor que
+nenhuma tela mostra e que ninguém consegue corrigir depois.
+
+O vocabulário também mudou: **"primeira fase" e "segunda fase"**, não "1º ano" e "2º
+ano". Percurso de catequese não é série escolar.
 
 ### 4.1 A regra de fundo
 
@@ -165,9 +224,24 @@ explicações para o mesmo "não".
 
 ## 8. Como verificar
 
-- [ ] O filtro de comunidade encolhe a lista de turmas, e limpa a turma escolhida
-- [ ] Mudar categoria/fase/comunidade grava sozinho e confirma no cartão
-- [ ] Não há mais botão "Salvar" nem "Corrigir chamada" no cartão de turma
+Automatizado em `docs/regressao-turmas.py` (Playwright, sem servidor):
+
+- [x] Nada aparece antes do "Consultar"; mudar o filtro sozinho não consulta
+- [x] O filtro de comunidade encolhe a lista de turmas, e limpa a turma escolhida
+- [x] A listagem não tem `<select>`, `<button>` nem `<input>` nenhum
+- [x] As colunas são **Turma, Fase, Comunidade**; sem fase, travessão
+- [x] Clicar na linha (mouse ou teclado) abre a edição daquela turma
+- [x] Eucaristia e Crisma mostram o campo de fase; as outras quatro, não
+- [x] Trocar para uma categoria sem fase grava `etapa` **nula**
+- [x] Não há "Inscrever" nem campo de escolher catequisando
+- [x] Cada inscrição tem só "Salvar"; "Transferir" só existe na outra aba
+- [x] Quem já foi transferido não aparece na aba de transferências, e diz para onde foi
+- [x] Voltar para a listagem mostra a classificação recém-alterada
+- [x] Em 400px nada estoura o pai e a página não rola na horizontal
+
+Do servidor (o Gradle não roda no sandbox):
+
+- [ ] Mudar categoria/fase/comunidade grava sozinho e confirma na tela
 - [ ] Eucaristia 1 → Eucaristia 2 é **recusado**, com o motivo da fase
 - [ ] Eucaristia 1 → Crisma 1 é **recusado**, com o motivo do percurso
 - [ ] Eucaristia 1 (comunidade A) → Eucaristia 1 (comunidade B) é **aceito**
@@ -180,6 +254,7 @@ explicações para o mesmo "não".
 - [ ] "Outra paróquia" pede o nome, encerra a inscrição e **não cria** outra
 - [ ] Turma sem categoria não aparece como destino
 - [ ] A prévia do encerramento mostra a fase seguinte de quem continua
+- [ ] Classificar uma turma como Adultos apaga a fase que ela tinha
 
 **Não verificado daqui:** tudo em §4 é regra de servidor, e o Gradle não roda no
 sandbox. `RegrasDeMovimentacao` é objeto puro — é o melhor candidato a teste de unidade

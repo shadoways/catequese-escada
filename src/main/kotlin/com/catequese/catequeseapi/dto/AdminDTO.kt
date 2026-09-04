@@ -16,7 +16,7 @@ data class TurmaAdminDTO(
     val categoria: CategoriaTurma?,
     val janela: JanelaApuracao,
     val exigeFrequencia: Boolean,
-    /** 1 = primeiro ano, 2 = segundo. */
+    /** Fase: 1 = primeira, 2 = segunda. Nulo fora de Eucaristia e Crisma. */
     val etapa: Int?,
     val nomeCatequista: String?,
     val matriculadosNoAno: Int,
@@ -52,7 +52,15 @@ data class MatriculaAdminDTO(
     val dataMatricula: LocalDate?,
     val situacao: SituacaoMatricula,
     val observacao: String?,
-    val atualizadoPor: String?
+    val atualizadoPor: String?,
+    /**
+     * Para onde a pessoa foi quando saiu da paroquia. Nulo em todo o resto.
+     *
+     * Sem este campo a tela mostra "Transferido" e para ali -- e a pergunta que
+     * sempre vem depois e "para onde?". Era ela que fazia a secretaria manter
+     * um caderno paralelo.
+     */
+    val paroquiaDestino: String? = null
 )
 
 /**

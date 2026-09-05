@@ -74,13 +74,44 @@ essas turmas ganham uma marca na borda.
 
 ### 3.2 A tela de edição
 
-Chega-se nela clicando numa linha. Ali ficam a classificação da turma (Turma, Fase,
-Comunidade), e duas abas: **Inscrições** e **Transferências**.
+Chega-se nela clicando numa linha. Ali ficam a navegação para outra turma, a
+classificação da turma atual (Categoria, Fase), e duas abas: **Inscrições** e
+**Transferências**.
+
+> **Falha real corrigida: navegação e classificação estavam misturadas na mesma
+> barra.** No topo da tela de edição havia dois selects, "Turma" e "Comunidade",
+> na mesma posição e com a mesma cara do filtro da listagem — mas escolher outra
+> coisa ali não navegava, **gravava uma classificação nova na turma**. Quem só
+> queria olhar outra turma acabava mudando o cadastro desta. Relatado assim:
+> *"se eu alterar a seleção ele faz alteração no cadastro... essa alteração que
+> ele faz não tem sentido, uma turma mudar de comunidade."*
+>
+> Agora são duas coisas visualmente separadas:
+>
+> 1. **Navegar** (topo, logo abaixo do título): "Comunidade" filtra, "Ir para a
+>    turma" abre outra turma — **nunca grava nada**. Abre já mostrando a
+>    comunidade e a turma atuais ("onde estou"); escolher uma comunidade
+>    diferente só encolhe a lista de turmas para pular, e escolher uma turma
+>    ali é o mesmo que clicar na linha dela na listagem. Voltar a abrir
+>    qualquer turma reseta o filtro para a comunidade dela — o filtro vale só
+>    para a visita atual, não é um estado que persegue de tela em tela.
+> 2. **Classificar** (abaixo do aviso sobre frequência): só **Categoria** e
+>    **Fase**. Continuam gravando sozinhas na mudança do select — ver o
+>    parágrafo seguinte. **Comunidade saiu daqui**: mudar a comunidade DONA da
+>    turma é uma decisão maior (destrava o balde nos Indicadores, muda quem
+>    administra os eventos dela na agenda) do que classificar uma categoria, e
+>    não é algo a decidir de passagem enquanto se navega. Por ora ela aparece
+>    só como informação ("Comunidade desta turma: Matriz"), sem select. Dar a
+>    ela uma tela própria — com a decisão que isso implica — fica para depois;
+>    é o novo item da §7.
 
 **A classificação grava na mudança do select, sem botão.** O "Salvar" que existia era
 lido como "salvar o filtro" — e não era: gravava a **classificação**, que é o que
 destrava a comunidade nos Indicadores (o balde "Sem comunidade definida" vem daí).
-Apagar sem mais nada tiraria a única forma de classificar turma.
+Apagar sem mais nada tiraria a única forma de classificar turma. Trocar a categoria ou
+a fase manda o `PUT` com a **comunidade atual preservada** — como não há mais select
+para ela aqui, deixar o campo vazio apagaria a comunidade da turma a cada troca de
+categoria, mesmo quando ninguém tocou nisso.
 
 **"Inscrever" saiu.** Era um `<select>` com todos os catequisandos da paróquia mais uma
 data — e inscrição não é isso: exige nascimento, responsável, sacramentos e a conferência
@@ -248,6 +279,10 @@ explicações para o mesmo "não".
 - **O rename no código e no banco** — ver a nota da §1.
 - **Idade máxima.** Nada impede um adulto numa turma infantil; a regra pedida era só de
   mínimo.
+- **Uma tela própria para mudar a comunidade dona da turma.** Foi tirada da edição
+  (§3.2) por ser uma decisão maior do que classificar categoria/fase, e sem tela dela
+  hoje isso só se faz direto no banco. Turma sem comunidade continua existindo — o
+  aviso "Sem comunidade definida" nos Indicadores é para isso.
 
 ## 8. Como verificar
 
@@ -270,6 +305,15 @@ Automatizado em `docs/regressao-turmas.py` (Playwright, sem servidor):
 - [x] Quem já foi transferido não aparece na aba de transferências, e diz para onde foi
 - [x] Voltar para a listagem mostra a classificação recém-alterada
 - [x] Em 400px nada estoura o pai e a página não rola na horizontal
+- [x] O select de classificação da categoria se chama "Categoria", não "Turma"
+- [x] O select de navegação abre já mostrando a turma e a comunidade atuais
+- [x] Mudar o filtro de navegação **não** chama o PUT de classificação
+- [x] Mudar o filtro de navegação encolhe o select de turma para pular
+- [x] Escolher uma turma no select de navegação abre ela, e reseta o filtro para a
+      comunidade dela
+- [x] A comunidade da turma aparece como texto, sem `<select>`
+- [x] Trocar só a categoria/fase preserva a comunidade da turma no `PUT`
+      (sem isso, o campo vazio apagaria a comunidade a cada troca)
 
 Do servidor (o Gradle não roda no sandbox):
 

@@ -286,20 +286,74 @@ const admAbrirTurma = async (idTurma) => {
   admAviso('adm-matriculas-status', '');
   document.getElementById('adm-matriculas-titulo').textContent =
     `${admTurmaAtual.nome} (${admAno()})`;
+  admDesenharNavegacao();
   admDesenharClassificacao();
   admVistaTurma('inscricoes');
   await admCarregarMatriculas();
 };
 
-// ---- 2a. Classificação da turma -------------------------------------------
+// ---- 2a. Navegar para outra turma ------------------------------------------
+
+/*
+ * Isto e busca, nao formulario: escolher aqui so ABRE outra turma, nunca
+ * grava nada. Existe porque "Turma" e "Comunidade" ficavam bem nesta posicao
+ * ANTES como parte da classificacao (ver admClassificar) -- e pareciam
+ * navegacao por estarem onde um filtro fica, mas mudavam o cadastro. Quem
+ * queria so olhar outra turma acabava reclassificando esta.
+ */
+
+const admDesenharNavegacao = () => {
+  const turma = admTurmaAtual;
+  const selCom = document.getElementById('adm-nav-comunidade');
+  if (!turma || !selCom) return;
+
+  // O filtro comeca na comunidade da PROPRIA turma -- mostra "onde estou"
+  // antes de qualquer escolha. Trocar o filtro depois vale so para esta
+  // visita: abrir outra turma reseta o filtro para a comunidade dela, do
+  // mesmo jeito que abrir a tela de novo comecaria do zero.
+  const comunidadeAtual = String(turma.idComunidade || '');
+  selCom.innerHTML = '<option value="">Todas as comunidades</option>' +
+    ADM_COMUNIDADES.map((c) =>
+      `<option value="${c.idComunidade}"${String(c.idComunidade) === comunidadeAtual ? ' selected' : ''}>${admEscape(c.nome)}</option>`
+    ).join('');
+
+  admPreencherNavTurma(comunidadeAtual);
+};
+
+const admPreencherNavTurma = (idComunidadeFiltro) => {
+  const turma = admTurmaAtual;
+  const selTurma = document.getElementById('adm-nav-turma');
+  if (!turma || !selTurma) return;
+
+  // As turmas do ANO em memoria, e nao a lista ja filtrada pelo filtro da
+  // listagem: navegacao deve alcancar qualquer turma do ano, nao so as que
+  // bateram com o filtro usado para achar a turma atual.
+  const visiveis = admTurmas.filter((t) =>
+    !idComunidadeFiltro || String(t.idComunidade || '') === idComunidadeFiltro
+  );
+  selTurma.innerHTML = '<option value="">Escolha uma turma</option>' +
+    visiveis.map((t) =>
+      `<option value="${t.idTurma}"${t.idTurma === turma.idTurma ? ' selected' : ''}>${admEscape(t.nome)}</option>`
+    ).join('');
+};
+
+// ---- 2b. Classificação da turma --------------------------------------------
 
 /*
  * Grava na MUDANCA do select, sem botao.
  *
  * O "Salvar" que existia aqui era lido como "salvar o filtro" -- e nao era:
- * gravava a classificacao da turma, que e o que destrava a comunidade nos
- * Indicadores. Apagar sem mais nada tiraria a unica forma de classificar
- * turma; gravar na mudanca tira o botao E mantem a funcao.
+ * gravava a classificacao da turma. Apagar sem mais nada tiraria a unica
+ * forma de classificar turma; gravar na mudanca tira o botao E mantem a
+ * funcao.
+ *
+ * Comunidade NAO esta mais aqui. Ela ficava lado a lado com "Turma" nesta
+ * mesma barra, com a mesma cara de filtro -- e mudar a comunidade DONA da
+ * turma e uma decisao maior (destrava a comunidade nos Indicadores, muda quem
+ * administra os eventos dela na agenda) do que "classificar uma categoria",
+ * que e o que este bloco faz. As duas coisas atras do mesmo gesto -- "mude
+ * este select" -- eram fáceis demais de confundir. Ate ganhar tela propria, a
+ * comunidade so aparece como informacao (admDesenharClassificacao).
  */
 
 const admDesenharClassificacao = () => {
@@ -310,14 +364,9 @@ const admDesenharClassificacao = () => {
     `<option value="${c.valor}"${(turma.categoria || '') === c.valor ? ' selected' : ''}>${admEscape(c.rotulo)}</option>`
   ).join('');
 
-  // Comunidade dona da turma: e o que decide qual coordenador pode mexer nos
-  // eventos dela na agenda.
-  document.getElementById('adm-edit-comunidade').innerHTML =
-    [{ v: '', r: 'Sem comunidade definida' }]
-      .concat(ADM_COMUNIDADES.map((c) => ({ v: String(c.idComunidade), r: c.nome })))
-      .map((c) =>
-        `<option value="${c.v}"${String(turma.idComunidade || '') === c.v ? ' selected' : ''}>${admEscape(c.r)}</option>`
-      ).join('');
+  const comunidade = ADM_COMUNIDADES.find((c) => c.idComunidade === turma.idComunidade);
+  document.getElementById('adm-edit-comunidade-atual').textContent =
+    comunidade ? comunidade.nome : 'Sem comunidade definida';
 
   admDesenharFase(turma.categoria, turma.etapa);
 };
@@ -356,8 +405,10 @@ const admClassificar = async () => {
   const etapaBruta = admTemFases(categoria) ? document.getElementById('adm-edit-etapa').value : '';
   const etapa = etapaBruta ? Number(etapaBruta) : null;
 
-  const comunidadeBruta = document.getElementById('adm-edit-comunidade').value;
-  const idComunidade = comunidadeBruta ? Number(comunidadeBruta) : null;
+  // A comunidade nao tem campo nesta tela (ver a nota acima de
+  // admDesenharClassificacao) -- o PUT exige o valor mesmo assim, e manda-lo
+  // vazio APAGARIA a comunidade da turma a cada troca de categoria ou fase.
+  const idComunidade = admTurmaAtual.idComunidade ?? null;
 
   try {
     const resposta = await fetch(`/api/admin/turmas/${idTurma}/classificacao`, {
@@ -1057,6 +1108,17 @@ document.querySelectorAll('.adm-subnav-btn').forEach((b) => {
   b.addEventListener('click', () => admVistaTurma(b.dataset.admVista));
 });
 
+// Navegar: so troca de turma, nunca grava. Mudar a comunidade aqui e apenas
+// filtro para o select de turma -- a comunidade da turma ATUAL nao muda por
+// isto (ver a nota em admDesenharClassificacao).
+document.getElementById('adm-nav-comunidade')?.addEventListener('change', (e) => {
+  admPreencherNavTurma(e.target.value);
+});
+document.getElementById('adm-nav-turma')?.addEventListener('change', (e) => {
+  const idTurma = Number(e.target.value);
+  if (idTurma && admTurmaAtual && idTurma !== admTurmaAtual.idTurma) admAbrirTurma(idTurma);
+});
+
 // Classificacao: grava na mudanca. A categoria redesenha a fase antes de
 // gravar -- trocar para uma categoria sem fase precisa APAGAR a fase, e ler o
 // campo velho gravaria o valor que acabou de deixar de existir.
@@ -1065,7 +1127,6 @@ document.getElementById('adm-edit-categoria')?.addEventListener('change', (e) =>
   admClassificar();
 });
 document.getElementById('adm-edit-etapa')?.addEventListener('change', admClassificar);
-document.getElementById('adm-edit-comunidade')?.addEventListener('change', admClassificar);
 
 /** script.js chama isto ao entrar na aba. */
 window.carregarAdminCatequese = async () => {

@@ -240,9 +240,51 @@ with sync_playwright() as p:
            page.eval_on_selector('#adm-tela-turmas', 'e => e.hidden'))
     checar('o titulo nomeia a turma',
            'Eucaristia I - Matriz' in page.inner_text('#adm-matriculas-titulo'))
-    checar('o campo se chama "Turma", nao "Categoria"',
-           'Turma' in page.inner_text('#adm-classificacao')
-           and 'Categoria' not in page.inner_text('#adm-classificacao'))
+    # O select de CATEGORIA se chama "Categoria", nao "Turma" -- "Turma" e o
+    # rotulo do select de NAVEGACAO, bem acima. As duas coisas com o mesmo
+    # nome, uma do lado da outra, foi a confusao real que motivou a separacao:
+    # pareciam a mesma pergunta, e uma delas gravava dado.
+    checar('o campo de classificacao se chama "Categoria"',
+           'Categoria' in page.inner_text('#adm-classificacao'))
+
+    print('--- navegar entre turmas nao grava nada')
+    checar('o select de navegacao chama "Comunidade" e "Ir para a turma"',
+           'Comunidade' in page.inner_text('#adm-tela-matriculas')
+           and 'Ir para a turma' in page.inner_text('#adm-tela-matriculas'))
+    checar('o select de turma ja abre na turma atual, para mostrar onde se esta',
+           page.eval_on_selector('#adm-nav-turma', 'e => e.value') == '10')
+    checar('o select de comunidade ja abre na comunidade da turma atual',
+           page.eval_on_selector('#adm-nav-comunidade', 'e => e.value') == '1')
+
+    # Trocar a comunidade do FILTRO de navegacao e so filtro: nao toca na
+    # comunidade da turma aberta.
+    page.select_option('#adm-nav-comunidade', '2')
+    page.wait_for_timeout(300)
+    checar('mudar o filtro de navegacao NAO reclassifica a turma',
+           not page.evaluate('window.__put.some(c => "idComunidade" in c && c.idComunidade === 2)'))
+    opcoesNav = page.eval_on_selector_all('#adm-nav-turma option', 'e => e.map(o => o.textContent.trim())')
+    checar('e encolhe o select de turma para a comunidade escolhida',
+           'Eucaristia I - São José' in opcoesNav and 'Eucaristia I - Matriz' not in opcoesNav,
+           opcoesNav)
+
+    # Escolher uma turma ali ABRE ela -- e so isso.
+    page.select_option('#adm-nav-turma', '11')
+    page.wait_for_timeout(500)
+    checar('escolher uma turma no select de navegacao abre ela',
+           'Eucaristia I - São José' in page.inner_text('#adm-matriculas-titulo'))
+    checar('e o filtro de navegacao reseta para a comunidade da turma nova',
+           page.eval_on_selector('#adm-nav-comunidade', 'e => e.value') == '2')
+
+    # Volta para a turma 10 para o resto dos testes seguir como estava.
+    page.select_option('#adm-nav-comunidade', '')
+    page.wait_for_timeout(200)
+    page.select_option('#adm-nav-turma', '10')
+    page.wait_for_timeout(500)
+
+    print('--- comunidade nao muda mais por aqui')
+    checar('a comunidade aparece como informacao, nao como select',
+           page.eval_on_selector_all('#adm-edit-comunidade', 'e => e.length') == 0)
+    checar('e mostra o nome certo', page.inner_text('#adm-edit-comunidade-atual').strip() == 'Matriz')
 
     print('--- fase so onde existe fase')
     checar('Eucaristia mostra o campo de fase',
@@ -258,6 +300,11 @@ with sync_playwright() as p:
            page.eval_on_selector('#adm-edit-fase-campo', 'e => e.hidden'))
     enviado = page.evaluate('window.__put[window.__put.length - 1]')
     checar('e a fase gravada vai NULA', enviado['etapa'] is None, enviado)
+    # A comunidade nao tem select nesta tela, mas o PUT exige o campo mesmo
+    # assim -- se ele fosse vazio, TROCAR SO A CATEGORIA apagaria a comunidade
+    # da turma sem a pessoa nunca ter tocado nisso.
+    checar('e a comunidade da turma NAO se perde ao trocar so a categoria',
+           enviado['idComunidade'] == 1, enviado)
 
     page.select_option('#adm-edit-categoria', 'CRISMA')
     page.wait_for_timeout(400)

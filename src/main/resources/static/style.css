@@ -2115,6 +2115,31 @@ canvas {
   min-width: 0;
 }
 
+/* Comunidade da turma, so exibida -- nao ha select para mudar de comunidade
+   por aqui (ver a nota no HTML). Mesma forma de um <label> (rotulo em cima,
+   valor embaixo) para alinhar na mesma linha de base dos campos ao lado, sem
+   herdar `label`'s `display:grid` (que faria o texto de status ficar preso ao
+   layout de formulario). */
+.adm-comunidade-atual {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 170px;
+}
+
+.adm-comunidade-atual strong {
+  /* Mesma caixa de um <select> (borda + padding), so que sem fundo nem borda
+     visivel -- para a base bater com a dos campos vizinhos sem parecer campo
+     editavel. Repete os valores de `input, textarea, select` de proposito:
+     e um caso muito pontual (o unico texto estatico entre campos de
+     formulario) para justificar uma variavel so para isto. */
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
 .adm-encontro {
   display: flex;
   flex-wrap: wrap;

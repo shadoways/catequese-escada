@@ -621,14 +621,48 @@
             Voltar para as turmas
           </button>
         </div>
+
+        <!--
+          Navegar para outra turma SEM voltar para a listagem. So muda de
+          pagina -- nao grava nada.
+
+          Existe por causa de uma confusao real: antes, "Turma" e "Comunidade"
+          apareciam bem aqui, na mesma posicao e com a mesma cara de filtro da
+          listagem -- mas escolher outra coisa ali NAO navegava, GRAVAVA uma
+          classificacao nova na turma. Quem so queria olhar outra turma acabava
+          mudando o cadastro desta. Agora este par de selects e so busca:
+          escolher uma turma abre ela, e mais nada.
+        -->
+        <div class="row ind-nao-imprime">
+          <label class="ind-filtro">
+            Comunidade
+            <select id="adm-nav-comunidade">
+              <option value="">Todas as comunidades</option>
+            </select>
+          </label>
+          <label class="ind-filtro">
+            Ir para a turma
+            <select id="adm-nav-turma">
+              <option value="">Escolha uma turma</option>
+            </select>
+          </label>
+        </div>
+
         <p class="muted">
           A turma define a regra de frequência. Enquanto ela não estiver
           classificada, a frequência não é apurada.
         </p>
 
+        <!--
+          Classificacao de VERDADE: muda o cadastro, e grava sozinha na
+          mudanca do select (ver a nota em admClassificar). Comunidade nao
+          entra aqui -- mudar a comunidade DONA da turma e outra decisao,
+          maior, e que ainda nao tem tela propria; por ora ela so aparece
+          como informacao.
+        -->
         <div class="adm-turma-acoes" id="adm-classificacao">
           <label>
-            Turma
+            Categoria
             <select id="adm-edit-categoria"></select>
           </label>
           <!--
@@ -640,10 +674,10 @@
             Fase
             <select id="adm-edit-etapa"></select>
           </label>
-          <label>
-            Comunidade
-            <select id="adm-edit-comunidade"></select>
-          </label>
+          <div class="adm-comunidade-atual">
+            <span class="muted">Comunidade desta turma</span>
+            <strong id="adm-edit-comunidade-atual">—</strong>
+          </div>
           <span class="adm-salvo" id="adm-edit-salvo" hidden>alteração salva</span>
         </div>
 

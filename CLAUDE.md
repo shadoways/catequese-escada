@@ -76,6 +76,15 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   percurso diferente — foi o que escondeu a transferência entre duas turmas de Adultos.
   Regra nova sobre campo condicional: escreva a condição (`temFases`) uma vez e reuse-a
   em toda comparação; não repita `== null` cru em cada lugar.
+- **Um `<select>` na posição de um filtro É lido como filtro**, mesmo que na verdade
+  grave dado. A tela de edição de turma tinha "Turma" e "Comunidade" no topo, no
+  mesmo lugar e com a mesma cara da barra de filtro da listagem logo acima — mas
+  escolher outra coisa ali gravava uma classificação nova em vez de navegar. Relato:
+  *"se eu alterar a seleção ele faz alteração no cadastro... essa barra deveria ser
+  uma forma de navegar."* Regra: campo que MUDA dado e campo que NAVEGA não dividem a
+  mesma barra visual — nem os mesmos rótulos ("Turma", "Categoria" e o nome de uma
+  turma específica são três coisas diferentes; usar a mesma palavra para duas delas
+  na mesma tela é o que confunde).
 - **`flex-basis: 100%` em container `flex-direction: column`** não é largura, é
   ALTURA. Em `≤600px` o `.row` vira coluna, e um filtro com `flex: 1 1 100%` estourava
   a altura da linha e quebrava para uma SEGUNDA COLUNA, saindo pela direita da tela.

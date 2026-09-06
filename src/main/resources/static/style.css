@@ -559,6 +559,22 @@ canvas {
   font-size: 0.85rem;
 }
 
+/* Cadastro e a porta publica: quem chega sem login nao pode ver o menu do
+   sistema nem o botao "Entrar" (que mora dentro de .sidebar, na barra de
+   usuario) -- so o formulario. script.js poe esta classe no body quando a
+   aba ativa e "cadastro" e ninguem esta logado, e tira de novo em qualquer
+   outra aba ou apos o login. Diferente do @media print acima: aqui
+   .tab-content continua visivel, e so o formulario que deve aparecer. */
+body.cadastro-publico-sozinho .sidebar,
+body.cadastro-publico-sozinho .trilha-pagina {
+  display: none;
+}
+
+body.cadastro-publico-sozinho .app-shell {
+  display: block;
+  max-width: 1100px;
+}
+
 /* ==========================================================================
    Itens de navegação da barra lateral (Cadastro / Chamada / Frequência /
    etc.). Reaproveita variáveis, fonte e raio já definidos acima.

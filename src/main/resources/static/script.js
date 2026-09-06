@@ -1014,6 +1014,11 @@ const switchTab = (tabName) => {
   document.querySelectorAll('.tab-content').forEach((el) => {
     el.hidden = el.dataset.tabContent !== tabName;
   });
+  // Cadastro é a porta pública: quem chega sem login não pode ver nem o menu
+  // do sistema nem o botão "Entrar" (que mora dentro da barra lateral) --
+  // só o formulário. Ver a regra em style.css. Logado (inclusive o
+  // coordenador paroquial abrindo a aba para conferir), o menu volta.
+  document.body.classList.toggle('cadastro-publico-sozinho', tabName === 'cadastro' && !Auth.estaLogado());
   // A barra lateral fica sempre visível, inclusive na tela inicial -- é o
   // mapa permanente do sistema, não um apoio que só aparece depois que a
   // pessoa já escolheu uma opção (era assim na barra de abas antiga).

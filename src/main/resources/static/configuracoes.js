@@ -29,7 +29,7 @@ const carregarConfiguracoes = async () => {
     document.getElementById('config-cadastro-aberto').checked = Boolean(dados.cadastroAberto);
     cfgAtualizarRotulo();
     cfgStatus('');
-    await Promise.all([carregarChaves(), cfgCarregarFormacao(), cfgCarregarConhecimentosExigidos()]);
+    await Promise.all([carregarChaves(), cfgCarregarConhecimentosExigidos()]);
   } catch (err) {
     cfgStatus(`Erro de conexão: ${err.message}`, 'error');
   }
@@ -244,61 +244,15 @@ cfgLigar('btn-cancelar-chave', 'click', () => {
 });
 cfgLigar('btn-criar-chave', 'click', cfgCriarChave);
 
-// ---- Conhecimento mínimo do catequista (Consultar Catequistas) ------------
-// Configurável a pedido do Gabriel -- diferente do mínimo de frequência de
-// turma, que é regra da catequese e não muda por tela nenhuma.
-
-const cfgStatusFormacao = (texto, tipo = '') => {
-  const caixa = document.getElementById('cfg-formacao-status');
-  if (caixa) caixa.innerHTML = texto ? `<div class="status ${tipo}">${cfgEscape(texto)}</div>` : '';
-};
-
-const cfgCarregarFormacao = async () => {
-  try {
-    const resposta = await fetch('/api/config/formacao');
-    if (!resposta.ok) {
-      cfgStatusFormacao('Não foi possível carregar esta configuração.', 'error');
-      return;
-    }
-    const dados = await resposta.json();
-    document.getElementById('cfg-formacao-minimo').value = dados.minimoAgregado;
-    document.getElementById('cfg-formacao-fechamento-mes').value = dados.fechamentoMes;
-    document.getElementById('cfg-formacao-alerta').value = dados.alertaMesesAntes;
-  } catch (err) {
-    cfgStatusFormacao(`Erro de conexão: ${err.message}`, 'error');
-  }
-};
-
-const cfgSalvarFormacao = async () => {
-  const botao = document.getElementById('btn-salvar-config-formacao');
-  const corpo = {
-    minimoAgregado: Number(document.getElementById('cfg-formacao-minimo').value),
-    fechamentoMes: Number(document.getElementById('cfg-formacao-fechamento-mes').value),
-    alertaMesesAntes: Number(document.getElementById('cfg-formacao-alerta').value)
-  };
-
-  botao.disabled = true;
-  cfgStatusFormacao('');
-  try {
-    const resposta = await fetch('/api/config/formacao', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(corpo)
-    });
-    if (!resposta.ok) {
-      const erro = await resposta.json().catch(() => null);
-      cfgStatusFormacao((erro && erro.erro) || 'Não foi possível salvar.', 'error');
-      return;
-    }
-    cfgStatusFormacao('Configuração salva.', 'ok');
-  } catch (err) {
-    cfgStatusFormacao(`Erro de conexão: ${err.message}`, 'error');
-  } finally {
-    botao.disabled = false;
-  }
-};
-
-cfgLigar('btn-salvar-config-formacao', 'click', cfgSalvarFormacao);
+// A secao "Conhecimento minimo do catequista" (minimoAgregado/fechamentoMes/
+// alertaMesesAntes, GET e PUT /api/config/formacao) saiu desta tela a pedido
+// do Gabriel -- o nome confundia com o catalogo de Conhecimentos logo abaixo,
+// que e uma coisa totalmente diferente (checklist de pre-requisitos, nao
+// percentual de frequencia). O endpoint /api/config/formacao continua existindo
+// no backend (Consultar Catequistas ainda le o valor para colorir o resumo);
+// so a tela de edicao saiu. Enquanto nao houver outra UI para isso, mudar o
+// minimo/mes de fechamento/meses de aviso exige UPDATE direto em
+// tb_configuracao.
 
 // ---- Conhecimentos exigidos do catequista (Consultar Catequistas) ---------
 // Catálogo à parte de `tb_conhecimento_catequista` (entidade antiga, não

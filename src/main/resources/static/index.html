@@ -1299,7 +1299,7 @@
     <div class="tab-content" id="tab-configuracoes" data-tab-content="configuracoes" hidden>
       <section class="panel">
         <div class="row" style="justify-content: space-between;">
-          <h2>Cadastro público</h2>
+          <h2>Ativar tela de cadastro</h2>
         </div>
         <p class="muted">
           Controla a tela pública de inscrição. Com as inscrições encerradas, quem
@@ -1315,49 +1315,6 @@
         </div>
         <div class="row">
           <button type="button" id="btn-salvar-config">Salvar</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="row" style="justify-content: space-between;">
-          <h2>Conhecimento mínimo do catequista</h2>
-        </div>
-        <p class="muted">
-          Usado em Consultar Catequistas: o aproveitamento do ano soma as presenças
-          de todas as formações do catequista (diocesana, regional e paroquial) antes
-          de dividir. Abaixo do mínimo perto do fechamento, a tela avisa em amarelo;
-          depois do fechamento, em vermelho.
-        </p>
-        <div id="cfg-formacao-status" class="summary"></div>
-        <div class="grid">
-          <label>
-            Mínimo agregado do ano (%)
-            <input id="cfg-formacao-minimo" type="number" min="0" max="100" />
-          </label>
-          <label>
-            Mês em que o ano de formação fecha
-            <select id="cfg-formacao-fechamento-mes">
-              <option value="1">Janeiro</option>
-              <option value="2">Fevereiro</option>
-              <option value="3">Março</option>
-              <option value="4">Abril</option>
-              <option value="5">Maio</option>
-              <option value="6">Junho</option>
-              <option value="7">Julho</option>
-              <option value="8">Agosto</option>
-              <option value="9">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
-            </select>
-          </label>
-          <label>
-            Meses de aviso antes do fechamento
-            <input id="cfg-formacao-alerta" type="number" min="0" max="11" />
-          </label>
-        </div>
-        <div class="row">
-          <button type="button" id="btn-salvar-config-formacao">Salvar</button>
         </div>
       </section>
 

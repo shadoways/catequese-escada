@@ -81,10 +81,15 @@ pedido precisou.
    o dela, regra 7). O mínimo AGREGADO desta tela é um número só, da paróquia,
    guardado em `tb_configuracao` sob a chave `formacao.minimo.agregado` (padrão
    80) — mesmo mecanismo já usado por `frequencia.aviso.percentual`, sem tabela
-   nova. Editável em Configurações → "Conhecimento mínimo do catequista"; leitura
-   liberada a qualquer logado (a tela precisa do número para colorir), escrita
-   restrita a `COORDENADOR_PAROQUIAL` pela regra geral de configuração em
-   `SecurityConfig`.
+   nova. Leitura liberada a qualquer logado (a tela precisa do número para
+   colorir), escrita restrita a `COORDENADOR_PAROQUIAL` pela regra geral de
+   configuração em `SecurityConfig`. O endpoint `GET/PUT /api/config/formacao`
+   continua existindo, mas a tela de edição em Configurações ("Conhecimento
+   mínimo do catequista") saiu a pedido do Gabriel — o nome colidia com o
+   catálogo de Conhecimentos (regra 11) e confundia as duas coisas, que não
+   têm relação nenhuma. Enquanto não houver outra UI para isso, mudar o
+   mínimo/mês de fechamento/meses de aviso exige `UPDATE` direto em
+   `tb_configuracao`.
 6. **A cor é sinal de prazo, não só de nota.** Abaixo do mínimo não vira alerta
    sozinho — o ano ainda não acabou, e reprovar cedo demais seria o mesmo erro que
    `EncerramentoAnoService` já evita para catequisando. A cor muda com a data
@@ -334,9 +339,10 @@ corrigir se a extensão não for o que ele quis:
    o catequista no dia a dia), é uma troca pequena: tirar a restrição de
    `SecurityConfig` e a checagem de `podeEditar` vira só recorte de catequista.
 2. **Onde gerenciar o catálogo** (cadastrar/inativar conhecimentos) foi colocado
-   em Configurações, junto do "Conhecimento mínimo do catequista" — mesmo padrão
-   já usado nesta tela para ajustes do coordenador paroquial. Não foi pedido
-   lugar diferente.
+   em Configurações — mesmo padrão já usado nesta tela para ajustes do
+   coordenador paroquial. Não foi pedido lugar diferente. (Ficava ao lado da
+   seção "Conhecimento mínimo do catequista"; essa seção saiu de Configurações
+   depois, por confundir com este catálogo — ver regra 5.)
 3. **"Tire a palavra currículo"** foi entendido como o TEXTO que a pessoa lê —
    trocado no título do detalhe (agora só o nome) e na frase de introdução da
    lista. Os identificadores internos (rota `/curriculo`,

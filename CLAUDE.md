@@ -113,7 +113,22 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   ÚLTIMA linha (`Unclosed comment`) e num import que está correto, então nenhum dos
   dois erros aponta o problema. Não escreva o curinga em KDoc; use `//` ou cite a rota
   sem ele. Mordeu de novo em `ConfiguracaoController.kt` ao documentar `PUT
-  /api/config/**` — `docs/kt_comentario_check.py` pegou antes do Gradle.
+  /api/config/**` — `docs/kt_comentario_check.py` pegou antes do Gradle. E mordeu uma
+  TERCEIRA vez, no pedido de Consultar Catequistas (aba Conhecimentos), em
+  `RequisitoConhecimentoController.kt` e `RequisitoConhecimentoService.kt`, ao citar a
+  mesma restrição de escrita de configuração dentro do KDoc — mesmo já sabendo da
+  regra. Se a rota citada tem curinga, o mais seguro nem é usar `//`: é descrever em
+  palavras ("mesmo padrão já usado para X") e não escrever a rota literal nenhuma.
+- **Rota nova pode colidir com um `@RequestMapping` que já existe, de uma entidade
+  não relacionada.** Ao criar o catálogo de conhecimentos exigidos (`Consultar
+  Catequistas`, aba Conhecimentos), o caminho óbvio seria `/api/conhecimentos` — mas
+  esse prefixo já era de `ConhecimentoCatequistaController`, uma entidade antiga e sem
+  relação nenhuma (texto livre por catequista, sem catálogo comum), que não aparece em
+  nenhuma tela e por isso é fácil esquecer que existe. Dois `@RequestMapping` na mesma
+  base path não teriam nem chance de conviver. Mesma raiz do problema do "nome de tipo
+  que colide" (a armadilha logo acima), só que em nível de rota: antes de nomear uma
+  rota ou uma classe nova, `grep` pelo nome parecido primeiro — o compilador (ou o
+  Spring, na subida) só aponta o sintoma, não a causa.
 - **Classe "somente-X" que esconde um item de grupo precisa que o CABEÇALHO do
   grupo use a mesma classe (ou uma mais ampla).** Consultar Catequistas é
   `somente-coordenador` (coordenador de comunidade + paroquial) dentro do grupo

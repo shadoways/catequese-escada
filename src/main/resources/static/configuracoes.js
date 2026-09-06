@@ -29,7 +29,7 @@ const carregarConfiguracoes = async () => {
     document.getElementById('config-cadastro-aberto').checked = Boolean(dados.cadastroAberto);
     cfgAtualizarRotulo();
     cfgStatus('');
-    await Promise.all([carregarChaves(), cfgCarregarFormacao()]);
+    await Promise.all([carregarChaves(), cfgCarregarFormacao(), cfgCarregarConhecimentosExigidos()]);
   } catch (err) {
     cfgStatus(`Erro de conexão: ${err.message}`, 'error');
   }
@@ -299,3 +299,120 @@ const cfgSalvarFormacao = async () => {
 };
 
 cfgLigar('btn-salvar-config-formacao', 'click', cfgSalvarFormacao);
+
+// ---- Conhecimentos exigidos do catequista (Consultar Catequistas) ---------
+// Catálogo à parte de `tb_conhecimento_catequista` (entidade antiga, não
+// usada em nenhuma tela) -- ver a KDoc de RequisitoConhecimento.kt. Aqui o
+// coordenador paroquial cadastra, renomeia e inativa o que a paróquia exige
+// de todo catequista; "inativar" nunca apaga a marcação de quem já tinha
+// aquele conhecimento (regra do projeto, nada é apagado de verdade).
+
+let cfgConhecimentosExigidos = [];
+
+const cfgStatusConhecimentos = (texto, tipo = '') => {
+  const caixa = document.getElementById('cfg-conhecimentos-status');
+  if (caixa) caixa.innerHTML = texto ? `<div class="status ${tipo}">${cfgEscape(texto)}</div>` : '';
+};
+
+const cfgCarregarConhecimentosExigidos = async () => {
+  try {
+    const resposta = await fetch('/api/conhecimentos-exigidos');
+    if (!resposta.ok) {
+      cfgStatusConhecimentos('Não foi possível carregar os conhecimentos exigidos.', 'error');
+      return;
+    }
+    cfgConhecimentosExigidos = await resposta.json();
+    cfgRenderConhecimentosExigidos();
+  } catch (err) {
+    cfgStatusConhecimentos(`Erro de conexão: ${err.message}`, 'error');
+  }
+};
+
+const cfgRenderConhecimentosExigidos = () => {
+  const lista = document.getElementById('cfg-conhecimentos-lista');
+  if (!lista) return;
+
+  if (!cfgConhecimentosExigidos.length) {
+    lista.innerHTML = '<p class="muted">Nenhum conhecimento cadastrado ainda.</p>';
+    return;
+  }
+
+  lista.innerHTML = cfgConhecimentosExigidos.map((c) => `
+    <div class="result-item usuario-item">
+      <div class="usuario-dados">
+        <span class="nome">${cfgEscape(c.nome)}</span>
+        <span class="status ${c.ativo ? 'ok' : 'neutro'}">${c.ativo ? 'Ativo' : 'Inativo'}</span>
+      </div>
+      <div class="usuario-acoes">
+        <button type="button" class="secondary" data-alternar="${c.idRequisito}">
+          ${c.ativo ? 'Inativar' : 'Reativar'}
+        </button>
+      </div>
+    </div>`).join('');
+
+  lista.querySelectorAll('[data-alternar]').forEach((b) =>
+    b.addEventListener('click', () => cfgAlternarConhecimentoExigido(Number(b.dataset.alternar))));
+};
+
+const cfgCriarConhecimentoExigido = async () => {
+  const campo = document.getElementById('cfg-conhecimento-nome');
+  const botao = document.getElementById('btn-criar-conhecimento');
+  const nome = campo.value.trim();
+  if (!nome) {
+    cfgStatusConhecimentos('Digite o nome do conhecimento.', 'error');
+    return;
+  }
+
+  botao.disabled = true;
+  cfgStatusConhecimentos('');
+  try {
+    const resposta = await fetch('/api/conhecimentos-exigidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome })
+    });
+    if (!resposta.ok) {
+      const erro = await resposta.json().catch(() => null);
+      cfgStatusConhecimentos((erro && erro.erro) || 'Não foi possível criar o conhecimento.', 'error');
+      return;
+    }
+    campo.value = '';
+    await cfgCarregarConhecimentosExigidos();
+    cfgStatusConhecimentos('Conhecimento adicionado.', 'ok');
+  } catch (err) {
+    cfgStatusConhecimentos(`Erro de conexão: ${err.message}`, 'error');
+  } finally {
+    botao.disabled = false;
+  }
+};
+
+const cfgAlternarConhecimentoExigido = async (id) => {
+  const atual = cfgConhecimentosExigidos.find((c) => c.idRequisito === id);
+  if (!atual) return;
+
+  // Inativar tira o item do checklist de quem ainda não tinha marcado --
+  // vale confirmar, porque o efeito aparece na hora na tela de outra pessoa.
+  if (atual.ativo && !window.confirm(
+    `Inativar "${atual.nome}"?\n\nEle sai do checklist de Consultar Catequistas até ser reativado.`
+  )) return;
+
+  cfgStatusConhecimentos('');
+  try {
+    const resposta = await fetch(`/api/conhecimentos-exigidos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: atual.nome, ativo: !atual.ativo })
+    });
+    if (!resposta.ok) {
+      const erro = await resposta.json().catch(() => null);
+      cfgStatusConhecimentos((erro && erro.erro) || 'Não foi possível salvar.', 'error');
+      return;
+    }
+    await cfgCarregarConhecimentosExigidos();
+    cfgStatusConhecimentos(atual.ativo ? 'Conhecimento inativado.' : 'Conhecimento reativado.', 'ok');
+  } catch (err) {
+    cfgStatusConhecimentos(`Erro de conexão: ${err.message}`, 'error');
+  }
+};
+
+cfgLigar('btn-criar-conhecimento', 'click', cfgCriarConhecimentoExigido);

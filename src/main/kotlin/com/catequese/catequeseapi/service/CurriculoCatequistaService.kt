@@ -3,6 +3,7 @@ package com.catequese.catequeseapi.service
 import com.catequese.catequeseapi.dto.CurriculoCatequistaDTO
 import com.catequese.catequeseapi.dto.CurriculoEncontroDTO
 import com.catequese.catequeseapi.dto.CurriculoFormacaoDTO
+import com.catequese.catequeseapi.dto.CurriculoHistoricoEncontroDTO
 import com.catequese.catequeseapi.dto.CurriculoResumoDTO
 import com.catequese.catequeseapi.dto.EstadoCurriculo
 import com.catequese.catequeseapi.exception.AcessoNegadoException
@@ -104,6 +105,51 @@ class CurriculoCatequistaService(
             regional = linhasDoNivel(NivelEvento.REGIONAL),
             paroquial = linhasDoNivel(NivelEvento.PAROQUIAL)
         )
+    }
+
+    /**
+     * O histórico completo (TODOS os anos) de encontros de formação de um
+     * catequista, uma linha por encontro `REALIZADO` -- para a aba
+     * "Formações" e seus filtros de situação/ano/mês. Diferente de
+     * `formacoesInscritasNoAno`: aqui não se recorta por ano nenhum, porque o
+     * filtro por ano É a tela, não uma pergunta já respondida antes de
+     * chegar nela (ao contrário do resumo, regra 2, que é sempre do ano
+     * corrente).
+     */
+    @Transactional(readOnly = true)
+    fun historico(idCatequista: Long): List<CurriculoHistoricoEncontroDTO> {
+        if (!escopo.podeVerCatequista(idCatequista)) {
+            throw AcessoNegadoException("Você só pode consultar o próprio histórico de formação.")
+        }
+        val formacoes = formacaoInscritoRepository.findByIdCatequista(idCatequista)
+            .mapNotNull { formacaoRepository.findById(it.idFormacao).orElse(null) }
+            // Mesma regra 9 do curriculo: nunca duplicar a mesma formacao na lista.
+            .distinctBy { it.idFormacao }
+
+        return formacoes.flatMap { formacao ->
+            val realizados = eventoRepository.findByIdFormacaoOrderByDataInicioAsc(formacao.idFormacao)
+                .filter { it.situacao == SituacaoEvento.REALIZADO }
+            if (realizados.isEmpty()) return@flatMap emptyList()
+
+            val marcacoes = presencaRepository.findByIdEventoIn(realizados.map { it.idEvento })
+                .filter { it.idCatequista == idCatequista }
+                .associateBy { it.idEvento }
+
+            realizados.map { evento ->
+                val marcacao = marcacoes[evento.idEvento]
+                CurriculoHistoricoEncontroDTO(
+                    idFormacao = formacao.idFormacao,
+                    formacaoNome = formacao.nome,
+                    nivel = formacao.nivel,
+                    nivelRotulo = formacao.nivel.rotulo,
+                    ano = formacao.ano,
+                    data = evento.dataInicio,
+                    // Encontro realizado sem marcacao e falta -- mesma regra de sempre.
+                    situacao = (marcacao?.situacao ?: SituacaoPresenca.FALTA).name,
+                    justificativa = marcacao?.justificativa
+                )
+            }
+        }.sortedByDescending { it.data ?: LocalDate.MIN }
     }
 
     // ------------------------------------------------------------------

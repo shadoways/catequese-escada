@@ -95,6 +95,14 @@ class SecurityConfig(
                     .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                     .requestMatchers(HttpMethod.PUT, "/api/config/**")
                     .hasRole("COORDENADOR_PAROQUIAL")
+                    // Catálogo de conhecimentos exigidos e a marca por catequista:
+                    // mesma regra de Consultar Catequistas, só o paroquial altera.
+                    .requestMatchers(HttpMethod.POST, "/api/conhecimentos-exigidos/**")
+                    .hasRole("COORDENADOR_PAROQUIAL")
+                    .requestMatchers(HttpMethod.PUT, "/api/conhecimentos-exigidos/**")
+                    .hasRole("COORDENADOR_PAROQUIAL")
+                    .requestMatchers(HttpMethod.PUT, "/api/catequistas/*/conhecimentos/**")
+                    .hasRole("COORDENADOR_PAROQUIAL")
                     .anyRequest().permitAll()
             }
             return http.build()
@@ -166,6 +174,17 @@ class SecurityConfig(
                 .requestMatchers("/api/indicadores/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers("/api/chaves/**").hasRole("COORDENADOR_PAROQUIAL")
                 .requestMatchers(HttpMethod.PUT, "/api/config/**").hasRole("COORDENADOR_PAROQUIAL")
+                // Conhecimentos exigidos (Consultar Catequistas, aba Conhecimentos):
+                // criar/renomear/(re)ativar o catálogo, e marcar o checklist de um
+                // catequista, são as duas escritas que só o paroquial faz -- o
+                // coordenador de comunidade só visualiza (mesma regra 2 da tela).
+                // Vem ANTES da regra generica de escrita (COORDENADOR entraria nela).
+                .requestMatchers(HttpMethod.POST, "/api/conhecimentos-exigidos/**")
+                .hasRole("COORDENADOR_PAROQUIAL")
+                .requestMatchers(HttpMethod.PUT, "/api/conhecimentos-exigidos/**")
+                .hasRole("COORDENADOR_PAROQUIAL")
+                .requestMatchers(HttpMethod.PUT, "/api/catequistas/*/conhecimentos/**")
+                .hasRole("COORDENADOR_PAROQUIAL")
 
                 // ---- Leitura: qualquer usuario logado, inclusive catequista ----
                 .requestMatchers(HttpMethod.GET, "/api/**").authenticated()

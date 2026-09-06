@@ -1090,6 +1090,57 @@ canvas {
 
 .cat-encontros .status { padding: 3px 10px; font-size: 0.78rem; margin: 0; }
 
+/* Aba "Conhecimentos": um checklist, nao um formulario -- cada requisito e
+   uma linha com o nome e o checkbox. Nome de classe deliberadamente
+   diferente de .cat-conhecimento (o "Tem o conhecimento" de cada formacao,
+   no Resumo): sao coisas diferentes na mesma tela, e um nome parecido so
+   ajudaria a confundir as duas. */
+.cat-conhecimentos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cat-conhecimento-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fff;
+}
+
+.cat-conhecimento-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+/* Aba "Formacoes": uma linha por encontro, mais densa que os cartoes do
+   Resumo -- aqui o pedido e ver muitos encontros de uma vez, ja filtrados. */
+.cat-historico {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cat-historico-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: #fff;
+}
+
+.cat-historico-linha .status { margin: 0; }
+
 /* Aparência de botão dentro do link da listagem */
 .botao-falso {
   border-radius: 999px;

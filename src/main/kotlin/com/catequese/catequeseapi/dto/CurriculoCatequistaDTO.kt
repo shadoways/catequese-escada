@@ -74,3 +74,23 @@ data class CurriculoCatequistaDTO(
     val regional: List<CurriculoFormacaoDTO>,
     val paroquial: List<CurriculoFormacaoDTO>
 )
+
+/**
+ * Uma linha da aba "Formações" (histórico completo, todos os anos) -- ao
+ * contrário do resumo e das colunas por nível, que só olham o ano corrente
+ * (regra 2), esta lista existe justamente para o filtro de ano/mês pedido
+ * ter o que filtrar. Uma linha por ENCONTRO realizado, não por formação --
+ * é o "foi ou não foi" que o Gabriel pediu para ver em detalhe.
+ */
+data class CurriculoHistoricoEncontroDTO(
+    val idFormacao: Long,
+    val formacaoNome: String,
+    val nivel: NivelEvento,
+    val nivelRotulo: String,
+    val ano: Int?,
+    val data: LocalDate?,
+
+    /** PRESENTE / FALTA / JUSTIFICADA -- mesma regra do curriculo: sem marcação é FALTA. */
+    val situacao: String,
+    val justificativa: String?
+)

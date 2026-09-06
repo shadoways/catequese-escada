@@ -1079,25 +1079,87 @@
           <button type="button" class="secondary" id="cat-recarregar">Atualizar</button>
         </div>
         <p class="muted">
-          O currículo de formação de cada catequista: diocesana, regional e paroquial,
-          e o aproveitamento do ano corrente.
+          O histórico de formação de cada catequista: diocesana, regional e paroquial,
+          o aproveitamento do ano corrente e os conhecimentos que já possui.
         </p>
         <div class="row ind-nao-imprime">
           <label class="ind-filtro">
             Buscar por nome
             <input id="cat-busca" type="text" placeholder="Digite o nome..." />
           </label>
+          <label class="ind-filtro">
+            Comunidade
+            <select id="cat-filtro-comunidade">
+              <option value="">Todas as comunidades</option>
+            </select>
+          </label>
         </div>
         <div id="cat-lista" class="result-list"></div>
       </section>
 
+      <!--
+        O detalhe de um catequista virou tres abas (mesmo componente de
+        Turmas -- .adm-subnav/.adm-subnav-btn -- reusado aqui: "e o mesmo
+        gesto, trocar de assunto dentro de uma tela", ver style.css).
+        cat-curriculo-resumo (a linha "aproveitamento do ano") fica ACIMA das
+        abas, de proposito: e o numero que da contexto pra qualquer uma das
+        tres, nao so pro resumo por nivel.
+      -->
       <section class="panel" id="cat-tela-curriculo" hidden>
         <div class="row" style="justify-content: space-between;">
-          <h2 id="cat-curriculo-titulo">Currículo</h2>
+          <h2 id="cat-curriculo-titulo">Catequista</h2>
           <button type="button" class="secondary" id="cat-voltar">Voltar</button>
         </div>
+
         <div id="cat-curriculo-resumo"></div>
-        <div id="cat-curriculo-corpo"></div>
+
+        <nav class="adm-subnav ind-nao-imprime" aria-label="O que ver deste catequista">
+          <button type="button" class="adm-subnav-btn active" data-cat-vista="resumo">Resumo</button>
+          <button type="button" class="adm-subnav-btn" data-cat-vista="conhecimentos">Conhecimentos</button>
+          <button type="button" class="adm-subnav-btn" data-cat-vista="formacoes">Formações</button>
+        </nav>
+
+        <div id="cat-vista-resumo">
+          <div id="cat-curriculo-corpo"></div>
+        </div>
+
+        <div id="cat-vista-conhecimentos" hidden>
+          <p class="muted">
+            Os conhecimentos que a paróquia exige do catequista. A lista é mantida pelo
+            coordenador paroquial em Configurações.
+          </p>
+          <div id="cat-conhecimentos-status"></div>
+          <div id="cat-conhecimentos-lista" class="cat-conhecimentos-lista"></div>
+        </div>
+
+        <div id="cat-vista-formacoes" hidden>
+          <p class="muted">
+            Todos os encontros de formação deste catequista, em qualquer ano -- não só o
+            ano corrente do Resumo.
+          </p>
+
+          <div class="agenda-filtros ind-nao-imprime" id="cat-formacoes-filtro-situacao">
+            <span class="agenda-filtro-rot">Situação</span>
+          </div>
+
+          <div class="row ind-nao-imprime">
+            <label class="ind-filtro">
+              Ano
+              <select id="cat-formacoes-filtro-ano">
+                <option value="">Todos os anos</option>
+              </select>
+            </label>
+            <label class="ind-filtro">
+              Mês
+              <select id="cat-formacoes-filtro-mes">
+                <option value="">Todos os meses</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="cat-formacoes-status"></div>
+          <div id="cat-formacoes-lista" class="cat-historico"></div>
+        </div>
       </section>
 
     </div>
@@ -1297,6 +1359,26 @@
         <div class="row">
           <button type="button" id="btn-salvar-config-formacao">Salvar</button>
         </div>
+      </section>
+
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Conhecimentos exigidos do catequista</h2>
+        </div>
+        <p class="muted">
+          A lista que aparece na aba "Conhecimentos" de Consultar Catequistas. Inativar
+          um conhecimento tira ele do checklist sem apagar as marcações já feitas —
+          reative quando quiser voltar a exigi-lo.
+        </p>
+        <div id="cfg-conhecimentos-status" class="summary"></div>
+        <div class="row ind-nao-imprime">
+          <label class="ind-filtro">
+            Novo conhecimento
+            <input id="cfg-conhecimento-nome" type="text" placeholder="Ex.: Sacramentos da Iniciação" />
+          </label>
+          <button type="button" id="btn-criar-conhecimento" style="align-self: flex-end;">Adicionar</button>
+        </div>
+        <div id="cfg-conhecimentos-lista" class="result-list"></div>
       </section>
 
       <section class="panel">

@@ -41,5 +41,26 @@ data class Configuracao(
          */
         const val FREQUENCIA_AVISO = "frequencia.aviso.percentual"
         const val FREQUENCIA_AVISO_PADRAO = 85
+
+        /**
+         * As tres chaves do "conhecimento minimo" da tela de Consultar
+         * Catequistas. Ficam configuraveis porque o Gabriel pediu -- ao
+         * contrario do minimo de frequencia de turma (que e regra da
+         * catequese), aqui e o coordenador paroquial quem decide o patamar e
+         * o prazo da propria paroquia.
+         *
+         * Chave/valor em vez de tabela nova: mesmo raciocinio de
+         * FREQUENCIA_AVISO, e evita migracao para um ajuste que e so numero.
+         */
+        const val FORMACAO_MINIMO_AGREGADO = "formacao.minimo.agregado"
+        const val FORMACAO_MINIMO_AGREGADO_PADRAO = 80
+
+        /** Mes (1-12) em que o ano de formacao do catequista "fecha". */
+        const val FORMACAO_FECHAMENTO_MES = "formacao.fechamento.mes"
+        const val FORMACAO_FECHAMENTO_MES_PADRAO = 11 // novembro, sugestao do Gabriel
+
+        /** Quantos meses antes do fechamento o alerta amarelo comeca a aparecer. */
+        const val FORMACAO_ALERTA_MESES_ANTES = "formacao.alerta.meses_antes"
+        const val FORMACAO_ALERTA_MESES_ANTES_PADRAO = 2
     }
 }

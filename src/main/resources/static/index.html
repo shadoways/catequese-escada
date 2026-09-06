@@ -75,7 +75,23 @@
           Turmas e documentos
         </button>
 
-        <p class="tabs-grupo-titulo somente-admin" hidden>Administração</p>
+        <!--
+          O cabecalho do grupo passou a ser "somente-coordenador" (nao mais so
+          "somente-admin"): Consultar Catequistas e o unico item aqui que
+          coordenador de comunidade tambem enxerga (so visualizacao -- quem
+          altera a configuracao dele e so o paroquial, ver tab-configuracoes).
+          Os demais itens do grupo continuam somente-admin, e ficam ocultos
+          para coordenador de comunidade mesmo com o cabecalho visivel.
+        -->
+        <p class="tabs-grupo-titulo somente-coordenador" hidden>Administração</p>
+        <button type="button" class="tab-btn somente-coordenador" data-tab="catequistas" hidden>
+          <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            <path d="M14.5 14.5l2 2 3.5-4" />
+          </svg>
+          Consultar catequistas
+        </button>
         <button type="button" class="tab-btn somente-admin" data-tab="indicadores" hidden>
           <svg class="tab-btn-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 3v18h18" /><path d="M7 16l3.5-4.5 3 2.5L20 7" /><path d="M20 11V7h-4" />
@@ -182,6 +198,18 @@
           <h3>Turmas e documentos</h3>
           <p>Ver catequistas, turmas e quais documentos ainda faltam.</p>
           <span class="menu-card-cta">Ver painel →</span>
+        </button>
+        <button type="button" class="menu-card somente-coordenador" data-tab="catequistas" hidden>
+          <span class="menu-card-icon menu-card-icon--catequistas" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              <path d="M14.5 14.5l2 2 3.5-4" />
+            </svg>
+          </span>
+          <h3>Consultar catequistas</h3>
+          <p>O currículo de formação de cada catequista: o que já cursou e se está no mínimo do ano.</p>
+          <span class="menu-card-cta">Consultar →</span>
         </button>
         <button type="button" class="menu-card somente-admin" data-tab="indicadores" hidden>
           <span class="menu-card-icon menu-card-icon--indicadores" aria-hidden="true">
@@ -1038,6 +1066,43 @@
     </div>
 
     <!--
+      Consultar Catequistas: o curriculo de formacao (tela-catequistas.md).
+      Duas telas no mesmo lugar, nunca as duas ao mesmo tempo -- mesmo padrao
+      da Chamada: a lista (quem ve o que EscopoAcessoService ja recortou) e o
+      curriculo de um catequista (aberto ao clicar numa linha da lista).
+    -->
+    <div class="tab-content" id="tab-catequistas" data-tab-content="catequistas" hidden>
+
+      <section class="panel" id="cat-tela-lista">
+        <div class="row" style="justify-content: space-between;">
+          <h2>Consultar catequistas</h2>
+          <button type="button" class="secondary" id="cat-recarregar">Atualizar</button>
+        </div>
+        <p class="muted">
+          O currículo de formação de cada catequista: diocesana, regional e paroquial,
+          e o aproveitamento do ano corrente.
+        </p>
+        <div class="row ind-nao-imprime">
+          <label class="ind-filtro">
+            Buscar por nome
+            <input id="cat-busca" type="text" placeholder="Digite o nome..." />
+          </label>
+        </div>
+        <div id="cat-lista" class="result-list"></div>
+      </section>
+
+      <section class="panel" id="cat-tela-curriculo" hidden>
+        <div class="row" style="justify-content: space-between;">
+          <h2 id="cat-curriculo-titulo">Currículo</h2>
+          <button type="button" class="secondary" id="cat-voltar">Voltar</button>
+        </div>
+        <div id="cat-curriculo-resumo"></div>
+        <div id="cat-curriculo-corpo"></div>
+      </section>
+
+    </div>
+
+    <!--
       Indicadores: tela de RELATORIO, nao de gestao. Aqui nao se opera nada -- so
       se le, para reuniao de coordenacao e prestacao de contas. O conteudo todo e
       montado por indicadores.js; aqui fica so a moldura e a barra de filtros,
@@ -1193,6 +1258,49 @@
 
       <section class="panel">
         <div class="row" style="justify-content: space-between;">
+          <h2>Conhecimento mínimo do catequista</h2>
+        </div>
+        <p class="muted">
+          Usado em Consultar Catequistas: o aproveitamento do ano soma as presenças
+          de todas as formações do catequista (diocesana, regional e paroquial) antes
+          de dividir. Abaixo do mínimo perto do fechamento, a tela avisa em amarelo;
+          depois do fechamento, em vermelho.
+        </p>
+        <div id="cfg-formacao-status" class="summary"></div>
+        <div class="grid">
+          <label>
+            Mínimo agregado do ano (%)
+            <input id="cfg-formacao-minimo" type="number" min="0" max="100" />
+          </label>
+          <label>
+            Mês em que o ano de formação fecha
+            <select id="cfg-formacao-fechamento-mes">
+              <option value="1">Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5">Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+          </label>
+          <label>
+            Meses de aviso antes do fechamento
+            <input id="cfg-formacao-alerta" type="number" min="0" max="11" />
+          </label>
+        </div>
+        <div class="row">
+          <button type="button" id="btn-salvar-config-formacao">Salvar</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="row" style="justify-content: space-between;">
           <h2>Chaves de inscrição</h2>
           <button type="button" id="btn-nova-chave">Gerar chave</button>
         </div>
@@ -1248,5 +1356,6 @@
   <script src="usuarios.js"></script>
   <script src="configuracoes.js"></script>
   <script src="indicadores.js"></script>
+  <script src="catequistas.js"></script>
 </body>
 </html>

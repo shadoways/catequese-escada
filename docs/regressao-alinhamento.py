@@ -21,7 +21,7 @@ import pathlib, sys
 url = pathlib.Path('/tmp/audit/index.html').resolve().as_uri()
 
 ABAS = ['menu', 'cadastro', 'chamada', 'agenda', 'frequencia', 'consulta',
-        'dashboard', 'indicadores', 'admin', 'usuarios', 'configuracoes']
+        'dashboard', 'indicadores', 'admin', 'usuarios', 'configuracoes', 'catequistas']
 
 # Sem servidor: tudo responde vazio. O que se mede aqui e geometria de
 # formulario, e ela nao depende do conteudo das listas.

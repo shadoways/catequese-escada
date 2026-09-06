@@ -923,6 +923,14 @@ canvas {
   color: var(--accent);
 }
 
+/* Mesma cor de Consultar catequisandos -- as duas sao telas de "buscar e olhar",
+   nao de administrar dado, ainda que Consultar catequistas fique no grupo
+   Administracao (e o unico item dele que coordenador de comunidade tambem ve). */
+.menu-card-icon--catequistas {
+  background: rgba(47, 111, 126, 0.12);
+  color: var(--accent-2);
+}
+
 /* Sem isto, o display:grid vence o atributo hidden e o formulário continua
    visível. Mesma armadilha já vista em .tabs e no form das telas de senha. */
 .grid[hidden] { display: none; }
@@ -1014,6 +1022,14 @@ canvas {
   transition: border-color 160ms ease;
   text-decoration: none;
   color: var(--ink);
+  /* Ate aqui bastava para o <a> da Consulta. box-shadow e font entram porque
+     Consultar Catequistas usa <button> aqui -- sem isto herdaria a sombra e o
+     tamanho da pilula terracota do button base (armadilha ja documentada em
+     CLAUDE.md: botao estilizado como card precisa anular a regra base). */
+  box-shadow: none;
+  font: inherit;
+  text-align: left;
+  width: 100%;
 }
 
 .result-item:hover { border-color: var(--accent-2); }
@@ -1028,6 +1044,51 @@ canvas {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* ---- Consultar Catequistas (tela-catequistas.md) -------------------------- */
+
+.cat-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.cat-coluna h3 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+}
+
+.cat-formacao {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.cat-formacao .row { align-items: flex-start; gap: 10px; }
+
+.cat-conhecimento {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Uma fileira de badges, um por encontro -- mesmo componente .status usado em
+   toda a tela, so mais compacto (padrao ja usado em .adm-encontro .status e
+   .fic-percurso .status para a mesma necessidade: muitos selos numa fileira). */
+.cat-encontros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cat-encontros .status { padding: 3px 10px; font-size: 0.78rem; margin: 0; }
 
 /* Aparência de botão dentro do link da listagem */
 .botao-falso {

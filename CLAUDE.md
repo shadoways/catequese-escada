@@ -112,7 +112,17 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   um comentário novo, e o arquivo inteiro vira comentário. O compilador só reclama na
   ÚLTIMA linha (`Unclosed comment`) e num import que está correto, então nenhum dos
   dois erros aponta o problema. Não escreva o curinga em KDoc; use `//` ou cite a rota
-  sem ele.
+  sem ele. Mordeu de novo em `ConfiguracaoController.kt` ao documentar `PUT
+  /api/config/**` — `docs/kt_comentario_check.py` pegou antes do Gradle.
+- **Classe "somente-X" que esconde um item de grupo precisa que o CABEÇALHO do
+  grupo use a mesma classe (ou uma mais ampla).** Consultar Catequistas é
+  `somente-coordenador` (coordenador de comunidade + paroquial) dentro do grupo
+  "Administração", que era só `somente-admin` (só paroquial). Deixar o `<p>` do
+  cabeçalho como `somente-admin` faria ele ficar escondido para o coordenador de
+  comunidade mesmo com o botão da aba visível — cabeçalho sumido, item solto
+  abaixo dele. A classe do cabeçalho subiu para `somente-coordenador` (o nível
+  mais permissivo entre os itens do grupo); os itens `somente-admin` continuam
+  escondidos para coordenador normalmente.
 
 ---
 
@@ -135,6 +145,7 @@ python3 docs/regressao-indicadores.py         # comparação, filtro e o caso se
 python3 docs/regressao-turmas.py              # listagem só de leitura, fase condicional, abas
 python3 docs/regressao-chamada.py             # filtro de comunidade/turma, e eventos recortados junto
 python3 docs/regressao-alinhamento.py         # botão ao lado de campo divide a base com ele
+python3 docs/regressao-catequistas.py         # quem ve a aba, cor da API sem reinterpretar, falta/justificativa descritas
 ```
 
 Os scripts de tela leem de `/tmp/audit/`; copie os estáticos antes:

@@ -831,10 +831,14 @@ const abrirFichaEmNovaAba = (query) => window.open(`ficha.html?${query}`, '_blan
 
 // ---- Navegação por abas ----
 // Cadastro e a tela publica; consulta e painel sao de uso interno.
-const TABS_PROTEGIDAS = ['chamada', 'agenda', 'frequencia', 'consulta', 'dashboard', 'indicadores', 'admin', 'usuarios', 'configuracoes'];
+const TABS_PROTEGIDAS = ['chamada', 'agenda', 'frequencia', 'consulta', 'dashboard', 'indicadores', 'admin', 'usuarios', 'configuracoes', 'catequistas'];
 // Indicadores e o relatorio da paroquia inteira: entra aqui para nao abrir nem
 // forcando index.html?tab=indicadores. O backend barra de novo em /api/indicadores.
 const TABS_SO_ADMIN = ['indicadores', 'admin', 'usuarios', 'configuracoes'];
+// Consultar Catequistas: coordenador de comunidade so visualiza, catequista
+// comum nao tem esta tela (especificacao, secao 2). Diferente de TABS_SO_ADMIN
+// porque coordenador de comunidade (nao so paroquial) precisa entrar.
+const TABS_SO_COORDENADOR = ['catequistas'];
 
 // Texto da trilha (#trilha-pagina) acima do conteúdo -- o mesmo agrupamento
 // usado nos rótulos da barra lateral, para reforçar "onde eu estou".
@@ -849,7 +853,8 @@ const TRILHA_POR_TAB = {
   indicadores: 'Administração / Indicadores',
   admin: 'Administração / Turmas e inscrições',
   usuarios: 'Administração / Usuários',
-  configuracoes: 'Administração / Configurações'
+  configuracoes: 'Administração / Configurações',
+  catequistas: 'Administração / Consultar catequistas'
 };
 
 // ---- Estado do cadastro público ----
@@ -950,12 +955,23 @@ const verificarCadastroAberto = async () => {
 // paroquial cadastra — catequista e coordenador usam consulta e painel.
 const podeVerCadastro = () => !Auth.estaLogado() || Auth.ehAdmin();
 
+// Coordenador de comunidade OU paroquial -- nao inclui catequista comum.
+// Usado em telas de recorte por comunidade que nao sao so do paroquial
+// (Consultar Catequistas), diferente de Auth.ehAdmin() que e so paroquial.
+const ehCoordenadorOuMais = () => {
+  const tipo = Auth.usuario()?.tipo;
+  return tipo === 'COORDENADOR' || tipo === 'COORDENADOR_PAROQUIAL';
+};
+
 // Mostra ou esconde o que depende do papel de quem esta logado.
 // Isto e conforto visual: quem bloqueia de verdade e o backend.
 const aplicarPermissoesNaTela = () => {
   const admin = Auth.ehAdmin();
   document.querySelectorAll('.somente-admin').forEach((el) => {
     el.hidden = !admin;
+  });
+  document.querySelectorAll('.somente-coordenador').forEach((el) => {
+    el.hidden = !ehCoordenadorOuMais();
   });
   document.querySelectorAll('.somente-cadastro').forEach((el) => {
     el.hidden = !podeVerCadastro();
@@ -976,6 +992,12 @@ const switchTab = (tabName) => {
 
   // Alguem sem permissao chegou pela URL (index.html?tab=usuarios).
   if (TABS_SO_ADMIN.includes(tabName) && !Auth.ehAdmin()) {
+    switchTab('menu');
+    return;
+  }
+
+  // Idem para quem forca index.html?tab=catequistas sem ser coordenador.
+  if (TABS_SO_COORDENADOR.includes(tabName) && !ehCoordenadorOuMais()) {
     switchTab('menu');
     return;
   }
@@ -1010,6 +1032,8 @@ const switchTab = (tabName) => {
   if (tabName === 'indicadores' && window.carregarIndicadores) window.carregarIndicadores();
   if (tabName === 'usuarios' && window.carregarUsuarios) window.carregarUsuarios();
   if (tabName === 'configuracoes' && window.carregarConfiguracoes) window.carregarConfiguracoes();
+  // catequistas.js registra esta funcao.
+  if (tabName === 'catequistas' && window.carregarCatequistas) window.carregarCatequistas();
   if (tabName === 'cadastro') aplicarEstadoCadastro();
 };
 

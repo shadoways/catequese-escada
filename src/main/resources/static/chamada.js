@@ -24,6 +24,14 @@ let chamEncontroAtual = null;
 /** idCatequisando -> {situacao, justificativa}. O que esta na tela, ainda nao salvo. */
 let chamMarcacoes = new Map();
 
+/** A listagem so aparece depois do "Consultar". Ver chamCarregarTurmas. */
+let chamConsultado = false;
+/** Filtro do topo: comunidade e turma. Vale para as turmas e para os eventos (mesmas turmas). */
+const chamFiltro = { idComunidade: '', idTurma: '' };
+
+const CHAM_MSG_CONSULTAR =
+  '<p class="muted">Escolha a comunidade e a turma e clique em <strong>Consultar</strong>.</p>';
+
 const CHAM_SITUACOES = [
   { valor: 'PRESENTE', rotulo: 'Presente', curto: 'P' },
   { valor: 'FALTA', rotulo: 'Falta', curto: 'F' },
@@ -124,10 +132,19 @@ const chamCartaoTurma = (turma) => {
   `;
 };
 
-const chamCarregarTurmas = async () => {
-  const alvo = document.getElementById('cham-turmas-lista');
-  if (!alvo) return;
-  alvo.innerHTML = '<p class="muted">Carregando suas turmas...</p>';
+/**
+ * Busca as turmas do usuário -- já vem recortada pelo backend (catequista só
+ * as suas, coordenador só as da comunidade dele, admin vê tudo).
+ *
+ * `renderizar = false` é o carregamento silencioso da abertura da aba: os
+ * dados alimentam o filtro de comunidade/turma, mas a LISTA só aparece
+ * quando a pessoa pede. Ver `chamDesenharTurmas`.
+ */
+const chamCarregarTurmas = async (renderizar = true) => {
+  if (renderizar) {
+    const alvo = document.getElementById('cham-turmas-lista');
+    if (alvo) alvo.innerHTML = '<p class="muted">Carregando suas turmas...</p>';
+  }
 
   try {
     const resposta = await fetch('/api/chamada/minhas-turmas');
@@ -137,25 +154,88 @@ const chamCarregarTurmas = async () => {
     }
 
     chamTurmas = await resposta.json();
-    if (!chamTurmas.length) {
-      // Diferenciar "nao tem turma" de "erro" evita chamado desnecessario:
-      // o caso comum e o vinculo do catequista ainda nao ter sido feito.
-      chamAvisoTurmas(
-        'Nenhuma turma vinculada ao seu usuário. Peça ao coordenador paroquial ' +
-        'para vincular você às turmas em que atua.',
-        'warning'
-      );
-      return;
-    }
+    chamPreencherFiltros();
 
-    alvo.innerHTML = chamTurmas.map(chamCartaoTurma).join('');
-    alvo.querySelectorAll('[data-id-turma]').forEach((card) => {
-      card.addEventListener('click', () => chamAbrirTurma(Number(card.dataset.idTurma)));
-    });
+    if (renderizar) {
+      chamConsultado = true;
+      chamDesenharTurmas();
+    }
   } catch (err) {
     chamAvisoTurmas(`Falha de conexão ao carregar as turmas: ${err.message}`, 'error');
   }
 };
+
+const chamDesenharTurmas = () => {
+  const alvo = document.getElementById('cham-turmas-lista');
+  if (!alvo) return;
+
+  if (!chamConsultado) {
+    alvo.innerHTML = CHAM_MSG_CONSULTAR;
+    return;
+  }
+
+  if (!chamTurmas.length) {
+    // Diferenciar "nao tem turma" de "erro" evita chamado desnecessario:
+    // o caso comum e o vinculo do catequista ainda nao ter sido feito.
+    chamAvisoTurmas(
+      'Nenhuma turma vinculada ao seu usuário. Peça ao coordenador paroquial ' +
+      'para vincular você às turmas em que atua.',
+      'warning'
+    );
+    return;
+  }
+
+  const visiveis = chamTurmasFiltradas();
+  if (!visiveis.length) {
+    chamAvisoTurmas('Nenhuma turma com este filtro.', 'neutro');
+    return;
+  }
+
+  alvo.innerHTML = visiveis.map(chamCartaoTurma).join('');
+  alvo.querySelectorAll('[data-id-turma]').forEach((card) => {
+    card.addEventListener('click', () => chamAbrirTurma(Number(card.dataset.idTurma)));
+  });
+};
+
+/**
+ * Opções do filtro vêm das PRÓPRIAS turmas do usuário, e não de
+ * `/api/comunidades` (que lista a paróquia inteira). É isso que faz o
+ * catequista só ver a comunidade dele aqui: o combo nunca oferece mais do
+ * que `minhasTurmas` já devolveu.
+ */
+const chamPreencherFiltros = () => {
+  const selCom = document.getElementById('cham-filtro-comunidade');
+  const selTurma = document.getElementById('cham-filtro-turma');
+  if (!selCom || !selTurma) return;
+
+  const comunidades = new Map();
+  chamTurmas.forEach((t) => {
+    if (t.idComunidade != null) comunidades.set(t.idComunidade, t.nomeComunidade || '—');
+  });
+  const listaComunidades = Array.from(comunidades.entries())
+    .sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'pt-BR'));
+
+  selCom.innerHTML = '<option value="">Todas as comunidades</option>' +
+    listaComunidades.map(([id, nome]) =>
+      `<option value="${id}"${String(id) === chamFiltro.idComunidade ? ' selected' : ''}>${chamEscape(nome)}</option>`
+    ).join('');
+
+  // A lista de turmas encolhe com a comunidade escolhida: select com todas as
+  // turmas que o usuario ve nao e filtro, e obstaculo.
+  const visiveis = chamTurmas.filter((t) =>
+    !chamFiltro.idComunidade || String(t.idComunidade || '') === chamFiltro.idComunidade
+  );
+  selTurma.innerHTML = '<option value="">Todas as turmas</option>' +
+    visiveis.map((t) =>
+      `<option value="${t.idTurma}"${String(t.idTurma) === chamFiltro.idTurma ? ' selected' : ''}>${chamEscape(t.nome)}</option>`
+    ).join('');
+};
+
+const chamTurmasFiltradas = () => chamTurmas.filter((t) => {
+  if (chamFiltro.idComunidade && String(t.idComunidade || '') !== chamFiltro.idComunidade) return false;
+  if (chamFiltro.idTurma && String(t.idTurma) !== chamFiltro.idTurma) return false;
+  return true;
+});
 
 // ---- Tela 2: chamada do dia ----------------------------------------------
 
@@ -542,11 +622,17 @@ const chamAbrirEncontro = async () => {
 
 let chamEventos = [];
 
+/** Mesmo gatilho da lista de turmas: os eventos citam as mesmas turmas, e o filtro é um só. */
 const chamCarregarEventos = async () => {
   const alvo = document.getElementById('cham-eventos-lista');
   if (!alvo) return;
-  alvo.innerHTML = '<p class="muted">Carregando eventos...</p>';
 
+  if (!chamConsultado) {
+    alvo.innerHTML = CHAM_MSG_CONSULTAR;
+    return;
+  }
+
+  alvo.innerHTML = '<p class="muted">Carregando eventos...</p>';
   try {
     const resposta = await fetch('/api/chamada/eventos');
     if (!resposta.ok) {
@@ -554,21 +640,42 @@ const chamCarregarEventos = async () => {
       return;
     }
     chamEventos = await resposta.json();
-    if (!chamEventos.length) {
-      alvo.innerHTML =
-        '<div class="status neutro">Nenhum evento cadastrado para este ano.</div>';
-      return;
-    }
-
-    alvo.innerHTML = chamEventos.map(chamCartaoEvento).join('');
-    alvo.querySelectorAll('[data-abrir-evento]').forEach((b) => {
-      b.addEventListener('click', () => {
-        chamAbrirChamadaDeEvento(Number(b.dataset.abrirEvento), Number(b.dataset.turma));
-      });
-    });
+    chamDesenharEventos();
   } catch (err) {
     alvo.innerHTML = `<div class="status error">Falha de conexão: ${chamEscape(err.message)}</div>`;
   }
+};
+
+const chamDesenharEventos = () => {
+  const alvo = document.getElementById('cham-eventos-lista');
+  if (!alvo) return;
+
+  if (!chamConsultado) {
+    alvo.innerHTML = CHAM_MSG_CONSULTAR;
+    return;
+  }
+
+  if (!chamEventos.length) {
+    alvo.innerHTML = '<div class="status neutro">Nenhum evento cadastrado para este ano.</div>';
+    return;
+  }
+
+  // O evento em si nao tem comunidade -- quem tem e a turma. Filtrar aqui e
+  // so aplicar o mesmo recorte de "minhas turmas" as turmas de cada evento.
+  const idsPermitidos = new Set(chamTurmasFiltradas().map((t) => t.idTurma));
+  const cartoes = chamEventos.map((evento) => chamCartaoEvento(evento, idsPermitidos)).filter(Boolean);
+
+  if (!cartoes.length) {
+    alvo.innerHTML = '<div class="status neutro">Nenhum evento com turma neste filtro.</div>';
+    return;
+  }
+
+  alvo.innerHTML = cartoes.join('');
+  alvo.querySelectorAll('[data-abrir-evento]').forEach((b) => {
+    b.addEventListener('click', () => {
+      chamAbrirChamadaDeEvento(Number(b.dataset.abrirEvento), Number(b.dataset.turma));
+    });
+  });
 };
 
 const chamPeriodoEvento = (evento) => {
@@ -578,8 +685,13 @@ const chamPeriodoEvento = (evento) => {
   return inicio || fim || 'sem data definida';
 };
 
-const chamCartaoEvento = (evento) => {
-  const turmas = (evento.turmas || []).map((t) => {
+const chamCartaoEvento = (evento, idsPermitidos) => {
+  const turmasDoFiltro = (evento.turmas || []).filter((t) => idsPermitidos.has(t.idTurma));
+  // Evento sem nenhuma turma dentro do filtro escolhido nao aparece: mostrar
+  // o cartao vazio so confundiria com "evento sem nenhuma turma cadastrada".
+  if (!turmasDoFiltro.length) return '';
+
+  const turmas = turmasDoFiltro.map((t) => {
     if (!t.idEncontro) {
       return `
         <div class="evento-turma">
@@ -660,7 +772,37 @@ const chamAbrirChamadaDeEvento = async (idEvento, idTurma) => {
 // ---- Ligações da tela ----------------------------------------------------
 
 document.getElementById('cham-voltar')?.addEventListener('click', chamMostrarTurmas);
-document.getElementById('cham-recarregar')?.addEventListener('click', chamCarregarTurmas);
+
+// "Atualizar" busca de novo, mas so pinta a lista se ja tiver sido consultada
+// -- senao reapareceria antes da hora, ignorando o "Consultar" que ainda nao
+// foi clicado.
+document.getElementById('cham-recarregar')?.addEventListener('click', async () => {
+  await chamCarregarTurmas(chamConsultado);
+  if (chamConsultado) await chamCarregarEventos();
+});
+
+document.getElementById('cham-consultar')?.addEventListener('click', async () => {
+  chamConsultado = true;
+  chamDesenharTurmas();
+  await chamCarregarEventos();
+});
+
+/*
+ * Mudar o filtro NAO consulta -- mesma decisao da tela de Turmas e
+ * Inscricoes. A consulta tambem nao busca de novo no servidor: as turmas do
+ * usuario ja estao em memoria, filtrar de novo por elas nao ganha nada.
+ */
+document.getElementById('cham-filtro-comunidade')?.addEventListener('change', (e) => {
+  chamFiltro.idComunidade = e.target.value;
+  // Trocar de comunidade invalida a turma escolhida: manter um vinculo que
+  // nao pertence mais ao recorte devolveria uma lista vazia sem explicacao.
+  chamFiltro.idTurma = '';
+  chamPreencherFiltros();
+});
+document.getElementById('cham-filtro-turma')?.addEventListener('change', (e) => {
+  chamFiltro.idTurma = e.target.value;
+});
+
 document.getElementById('cham-btn-abrir')?.addEventListener('click', chamAbrirEncontro);
 document.getElementById('cham-btn-salvar')?.addEventListener('click', () => chamSalvar(false));
 document.getElementById('cham-btn-encerrar')?.addEventListener('click', chamEncerrar);
@@ -677,9 +819,18 @@ document.getElementById('cham-todos-presentes')?.addEventListener('click', () =>
   });
 });
 
-/** script.js chama isto ao entrar na aba. */
-window.carregarChamada = () => {
+/**
+ * script.js chama isto ao entrar na aba.
+ *
+ * O filtro escolhido da ultima vez fica valendo (nao zera aqui) -- so o
+ * "Consultar" precisa ser clicado de novo, porque os dados podem ter mudado
+ * enquanto a aba estava fechada. Mesmo comportamento da tela de Turmas e
+ * Inscricoes.
+ */
+window.carregarChamada = async () => {
   chamMostrarTurmas();
-  chamCarregarTurmas();
-  chamCarregarEventos();
+  chamConsultado = false;
+  await chamCarregarTurmas(false);
+  chamDesenharTurmas();
+  chamDesenharEventos();
 };

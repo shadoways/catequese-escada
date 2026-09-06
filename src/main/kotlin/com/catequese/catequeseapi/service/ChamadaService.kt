@@ -20,6 +20,7 @@ import com.catequese.catequeseapi.model.SituacaoMatricula
 import com.catequese.catequeseapi.model.SituacaoPresenca
 import com.catequese.catequeseapi.model.TipoEvento
 import com.catequese.catequeseapi.model.Turma
+import com.catequese.catequeseapi.repository.ComunidadeRepository
 import com.catequese.catequeseapi.repository.EncontroRepository
 import com.catequese.catequeseapi.repository.EventoRepository
 import com.catequese.catequeseapi.repository.MatriculaRepository
@@ -51,6 +52,7 @@ class ChamadaService(
     private val matriculaRepository: MatriculaRepository,
     private val turmaRepository: TurmaRepository,
     private val eventoRepository: EventoRepository,
+    private val comunidadeRepository: ComunidadeRepository,
     private val escopo: EscopoAcessoService
 ) {
     private val log = LoggerFactory.getLogger(ChamadaService::class.java)
@@ -66,17 +68,26 @@ class ChamadaService(
      * Catequista ve as turmas em que atua -- pelo vinculo novo
      * (tb_turma_catequista) e tambem pelo campo antigo de responsavel, senao
      * quem ainda nao foi migrado abriria a tela vazia. Coordenador ve as
-     * turmas que tem alguem da comunidade dele. Administrador ve todas.
+     * turmas DA COMUNIDADE DELE. Administrador ve todas.
+     *
+     * O recorte do coordenador usa `turma.idComunidade` -- a comunidade DONA
+     * da turma -- e nao a comunidade de quem esta matriculado nela. Antes
+     * comparava pelos matriculados, o que e outra pergunta ("quem estuda
+     * aqui mora onde?") e podia tanto esconder uma turma da comunidade dele
+     * sem ninguem matriculado ainda quanto mostrar uma turma de outra
+     * comunidade so porque um aluno de fora foi matriculado la. Mesma
+     * comunidade que decide transferencia (`RegrasDeMovimentacao`) e edicao
+     * (Turmas e Inscricoes) precisa decidir quem ve a chamada.
      */
     fun minhasTurmas(anoPedido: Int?): List<TurmaChamadaDTO> {
         val ano = anoPedido ?: LocalDate.now().year
         val turmasDoCatequista = escopo.turmasDoCatequista()
         val comunidades = escopo.comunidadesPermitidas()
         val idCatequistaDoUsuario = escopo.usuarioLogado()?.idCatequista
+        val nomesComunidade = comunidadeRepository.findAll().associateBy({ it.idComunidade }, { it.nome })
 
         return turmaRepository.findAll()
-            .map { turma -> turma to matriculadosDaTurma(turma, ano) }
-            .filter { (turma, matriculados) ->
+            .filter { turma ->
                 when {
                     turmasDoCatequista != null ->
                         turma.idTurma in turmasDoCatequista ||
@@ -85,14 +96,12 @@ class ChamadaService(
                                     turma.catequista?.idCatequista == idCatequistaDoUsuario
                                 )
 
-                    comunidades != null -> matriculados.any { catequisando ->
-                        val idComunidade = catequisando.comunidade?.idComunidade
-                        idComunidade != null && idComunidade in comunidades
-                    }
+                    comunidades != null -> turma.idComunidade != null && turma.idComunidade in comunidades
 
                     else -> true
                 }
             }
+            .map { turma -> turma to matriculadosDaTurma(turma, ano) }
             .map { (turma, matriculados) ->
                 val encontros = encontroRepository.findByTurmaOrderByDataDesc(turma)
                 val aberto = encontros.firstOrNull { it.estaAberto() }
@@ -107,7 +116,9 @@ class ChamadaService(
                     matriculados = matriculados.size,
                     exigeFrequencia = categoria?.exigeFrequencia == true,
                     encontroAberto = aberto?.let { resumo(it, matriculados.size) },
-                    ultimoEncontro = encontros.firstOrNull { !it.estaAberto() }?.data
+                    ultimoEncontro = encontros.firstOrNull { !it.estaAberto() }?.data,
+                    idComunidade = turma.idComunidade,
+                    nomeComunidade = turma.idComunidade?.let { nomesComunidade[it] }
                 )
             }
             .sortedBy { it.nome.lowercase() }

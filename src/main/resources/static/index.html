@@ -246,9 +246,32 @@
           <h2>Minhas turmas</h2>
           <button type="button" class="secondary" id="cham-recarregar">Atualizar</button>
         </div>
-        <p class="muted" id="cham-turmas-ajuda">
-          Escolha a turma para fazer a chamada do encontro de hoje.
-        </p>
+        <!--
+          Nada aparece antes do "Consultar" -- mesmo padrao da tela de Turmas
+          e Inscricoes. Turmas e eventos vinham todos de uma vez, e quem
+          enxerga mais de uma comunidade (coordenador, coordenador paroquial)
+          tinha que descartar o resto no olho ate achar a turma que queria.
+
+          As opcoes destes dois campos vem das PROPRIAS turmas do usuario
+          (ver chamPreencherFiltros em chamada.js), que o backend ja devolve
+          recortadas por EscopoAcessoService -- por isso o catequista so ve a
+          comunidade dele aqui, sem nenhuma regra nova nesta tela.
+        -->
+        <div class="row ind-nao-imprime">
+          <label class="ind-filtro">
+            Comunidade
+            <select id="cham-filtro-comunidade">
+              <option value="">Todas as comunidades</option>
+            </select>
+          </label>
+          <label class="ind-filtro">
+            Turma
+            <select id="cham-filtro-turma">
+              <option value="">Todas as turmas</option>
+            </select>
+          </label>
+          <button type="button" id="cham-consultar">Consultar</button>
+        </div>
         <div id="cham-turmas-lista" class="turmas-chamada"></div>
       </section>
 

@@ -25,7 +25,16 @@ data class TurmaChamadaDTO(
     val exigeFrequencia: Boolean,
     /** Nulo quando nao ha chamada em andamento. */
     val encontroAberto: EncontroDTO? = null,
-    val ultimoEncontro: LocalDate? = null
+    val ultimoEncontro: LocalDate? = null,
+    /**
+     * Vao junto para a tela montar o filtro de comunidade/turma sem outra
+     * chamada. Como a lista aqui ja vem recortada por EscopoAcessoService, o
+     * filtro nunca oferece mais do que o usuario ja podia ver -- e assim que
+     * o catequista so enxerga a propria comunidade neste combo, sem
+     * nenhuma regra nova na tela.
+     */
+    val idComunidade: Long? = null,
+    val nomeComunidade: String? = null
 )
 
 /** Abertura da chamada do dia. Sem data, assume hoje. */

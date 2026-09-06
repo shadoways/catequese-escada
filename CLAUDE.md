@@ -89,6 +89,16 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   ALTURA. Em `≤600px` o `.row` vira coluna, e um filtro com `flex: 1 1 100%` estourava
   a altura da linha e quebrava para uma SEGUNDA COLUNA, saindo pela direita da tela.
   Ali largura cheia já vem do `align-items: stretch`.
+- **Comunidade de uma turma é da TURMA, não de quem estuda nela.** A chamada
+  filtrava as turmas do coordenador olhando a comunidade dos matriculados
+  (`catequisando.comunidade`), não `turma.idComunidade` — outra pergunta
+  inteira ("quem estuda aqui mora onde?" em vez de "esta turma é de qual
+  comunidade?"). Escondia uma turma nova, ainda sem ninguém matriculado, da
+  comunidade dela; e podia mostrar uma turma de outra comunidade só porque
+  alguém de fora foi matriculado nela. Mesma comunidade que decide
+  transferência (`RegrasDeMovimentacao`) e edição (Turmas e Inscrições)
+  decide quem vê a chamada — regra de recorte por comunidade sempre lê o
+  campo da entidade que tem dono, nunca deriva de uma relação à parte.
 - **Comentário de bloco em Kotlin ANINHA** (diferente de Java e C). Escrever uma rota
   com curinga dentro de um KDoc — `/api/indicadores/` seguido de dois asteriscos — abre
   um comentário novo, e o arquivo inteiro vira comentário. O compilador só reclama na
@@ -115,6 +125,7 @@ python3 docs/regressao-agenda-dia.py          # lista do dia: abrir, editar, exc
 python3 docs/regressao-agenda-transicoes.py   # trocar de dia limpa o estado anterior
 python3 docs/regressao-indicadores.py         # comparação, filtro e o caso sem base
 python3 docs/regressao-turmas.py              # listagem só de leitura, fase condicional, abas
+python3 docs/regressao-chamada.py             # filtro de comunidade/turma, e eventos recortados junto
 python3 docs/regressao-alinhamento.py         # botão ao lado de campo divide a base com ele
 ```
 
@@ -138,7 +149,7 @@ Se houve armadilha, registre — é o que impede a repetição.
 Termine com:
 
 ```
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01Xdehjdk8wJPA5tXT72jASk
 ```
 

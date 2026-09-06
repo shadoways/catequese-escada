@@ -5,12 +5,17 @@
 
 ## 1. Para que serve
 
-Marcar a presença de um encontro (aula, retiro, missa).
+Marcar a presença de um encontro (aula).
 
 O catequista abre o sistema para fazer uma coisa só, com a turma na frente dele: a
 chamada de hoje. Coordenador e coordenador paroquial também passam por aqui — para
 corrigir uma chamada encerrada (`AdminCatequeseService`/tela de Turmas e Inscrições) é
 preciso primeiro achar o encontro, e é esta tela que lista onde cada turma está.
+
+Este menu é só chamada. Chegou a existir aqui uma seção de Eventos (retiro, missa) —
+foi removida a pedido: mesmo relacionada, era uma segunda coisa na tela que o
+catequista abre para fazer uma coisa só. A presença em evento continua existindo no
+backend (ver §7), só não tem mais lugar nesta tela.
 
 ## 2. Quem usa
 
@@ -42,33 +47,27 @@ exceção.
    inteira). É por isso que um catequista só vê a comunidade dele no combo, sem
    nenhuma regra nova aqui: o combo simplesmente não tem de onde tirar outra opção.
 4. **Nada aparece antes do "Consultar"** — mesmo padrão da tela de Turmas e
-   Inscrições. Turmas e eventos vinham todos de uma vez, e quem enxerga mais de uma
+   Inscrições. A lista de turmas vinha toda de uma vez, e quem enxerga mais de uma
    comunidade (coordenador, coordenador paroquial) tinha que descartar o resto no
    olho até achar a turma que queria.
-5. **O filtro escolhido vale para os eventos também.** Evento (retiro, missa) não tem
-   comunidade — quem tem é a turma dentro dele. Filtrar por comunidade esconde a
-   *linha* da turma de fora do recorte, e o cartão do evento inteiro quando nenhuma
-   turma dele sobra no filtro.
-6. **Encontro cancelado não conta como falta de ninguém** — feriado, chuva ou
+5. **Encontro cancelado não conta como falta de ninguém** — feriado, chuva ou
    catequista doente não podem reprovar quem cumpriu o resto. (Regra do backend,
    `ChamadaService`; citada aqui porque a tela antecipa a pergunta do motivo antes de
    enviar.)
 
 ## 4. Dados
 
-**Entidades:** `Turma`, `Encontro`, `Presenca`, `Evento`, `Matricula` (para saber quem
-está na turma no ano).
+**Entidades:** `Turma`, `Encontro`, `Presenca`, `Matricula` (para saber quem está na
+turma no ano).
 
 **Endpoints:**
 
 | Método e rota | Para quê | Quem pode |
 |---|---|---|
 | `GET /api/chamada/minhas-turmas` | Turmas do usuário logado, já recortadas por `EscopoAcessoService` | Catequista, coordenador, admin |
-| `GET /api/chamada/eventos` | Eventos do ano e o estado da chamada de cada turma do usuário | idem |
 | `GET /api/chamada/turma/{id}/encontros` | Histórico de encontros de uma turma | idem, se tem acesso à turma |
 | `GET /api/chamada/encontro/{id}` | A lista de presença de um encontro | idem |
 | `POST /api/chamada/abrir` | Abre o encontro do dia | idem |
-| `POST /api/chamada/evento/abrir` | Abre a chamada de um evento para uma turma | idem |
 | `POST /api/chamada/encontro/{id}/marcar` | Grava as marcações (sem encerrar) | idem |
 | `POST /api/chamada/encontro/{id}/fechar` | Encerra a chamada | idem |
 | `POST /api/chamada/encontro/{id}/cancelar` | Cancela o encontro (motivo obrigatório) | idem |
@@ -78,26 +77,44 @@ está na turma no ano).
 `TurmaChamadaDTO` ganhou `idComunidade`/`nomeComunidade` nesta revisão — só para a
 tela montar o filtro sem outra chamada; não é campo novo no banco.
 
+`GET /api/chamada/eventos` e `POST /api/chamada/evento/abrir` continuam existindo em
+`ChamadaService`/`ChamadaController` (`eventosParaChamada`, `abrirEvento`), mas **sem
+nenhuma tela que os chame** desde que a seção de Eventos saiu daqui — ver §7.
+
 ## 5. Estados da tela
 
 | Estado | O que aparece |
 |---|---|
 | Carregando (silencioso, ao abrir a aba) | Nada visível ainda muda; os combos de filtro são preenchidos por baixo. |
-| Antes do "Consultar" | "Escolha a comunidade e a turma e clique em Consultar." nas duas listas (turmas e eventos). |
+| Antes do "Consultar" | "Escolha a comunidade e a turma e clique em Consultar." no lugar da lista. |
 | Vazio (sem turma nenhuma vinculada) | Aviso: "Nenhuma turma vinculada ao seu usuário. Peça ao coordenador paroquial para vincular você às turmas em que atua." |
-| Vazio (filtro sem resultado) | "Nenhuma turma com este filtro." / evento cujas turmas somem todas: cartão inteiro não aparece. |
+| Vazio (filtro sem resultado) | "Nenhuma turma com este filtro." |
 | Erro de conexão | Mensagem de erro no lugar da lista, com o motivo quando o backend manda um. |
-| Preenchido | Cartão por turma (categoria, matriculados, estado do último/atual encontro) e cartão por evento (uma linha por turma, com o atalho para abrir/continuar/ver a chamada). |
+| Preenchido | Um cartão por turma: categoria, matriculados, estado do último/atual encontro. |
 
 ## 6. Componentes
 
 `.panel`, `.row` / `.row.ind-nao-imprime` (a barra de filtro não imprime), `.ind-filtro`
 (mesma classe da barra de Turmas e Inscrições e de Indicadores — reusada, não
-recriada), `.status` com `ok`/`warning`/`error`/`neutro`, `.turma-chamada-card`,
-`.evento-card`.
+recriada), `.status` com `ok`/`warning`/`error`/`neutro`, `.turma-chamada-card`.
+
+O título da lista (`#cham-titulo-turmas`) é **"Minha turma"** ou **"Minhas turmas"**
+conforme quem está logado — não é texto fixo do HTML, é `chamTituloTurmas()` em
+`chamada.js`. Um catequista tem normalmente uma turma só (mais de uma é exceção); já
+coordenador e coordenador paroquial enxergam várias de propósito — é para isso que
+existe o filtro no topo. Mostrar "Minha turma" para um coordenador com oito cartões na
+lista leria como tela quebrada, então o singular vale só para `tipo === 'CATEQUISTA'`.
+O botão de voltar da chamada do dia virou só **"Voltar"** — não precisa dizer para onde,
+e evita repetir a mesma ambiguidade de número num segundo lugar.
 
 ## 7. O que fica de fora
 
+- **Eventos (retiro, missa) saíram desta tela** e ficaram sem nenhum ponto de entrada
+  no frontend — o endpoint e o serviço continuam no backend (§4), só não há mais
+  tela que os chame. Se a presença em evento voltar a ser necessária, precisa de uma
+  tela própria (ou um lugar dentro da Agenda, onde o evento já é cadastrado) — não
+  deve voltar a dividir esta tela com a chamada de aula, que foi exatamente o
+  problema relatado.
 - Filtro por ano: a tela sempre usa o ano corrente (`LocalDate.now().year`); não há
   seletor de ano aqui como há em Turmas e Inscrições. Ninguém pediu ainda, e chamada é
   tarefa do dia — abrir a tela num ano passado não é o caso de uso.
@@ -113,14 +130,16 @@ filtro visual por cima, sem mudar quem vê o quê.
 
 ## 9. Como verificar
 
-- [x] Nada aparece (turmas ou eventos) antes de clicar em "Consultar".
+- [x] Não existe mais seção de Eventos nesta aba.
+- [x] Nada aparece antes de clicar em "Consultar".
 - [x] Mudar o filtro não consulta sozinho.
 - [x] O combo de comunidade só oferece o que `minhas-turmas` devolveu — testado com uma
       resposta de uma turma/uma comunidade só, simulando um catequista.
-- [x] Filtrar por comunidade recorta a lista de turmas **e** as linhas de turma dentro
-      de cada evento; evento sem nenhuma turma no recorte não aparece.
+- [x] Filtrar por comunidade recorta a lista de turmas.
 - [x] 400px: nada estoura o pai da aba, e a página não rola na horizontal.
 - [x] O botão "Consultar" divide a base com o campo ao lado.
+- [x] Catequista vê "Minha turma" (singular); coordenador e coordenador paroquial veem
+      "Minhas turmas" (plural).
 - [ ] `./gradlew compileKotlin` local (o Gradle não roda neste sandbox) — a mudança em
       `ChamadaService.minhasTurmas` (recorte por `turma.idComunidade`) e o novo
       construtor de `ChamadaService` (parâmetro `comunidadeRepository`) precisam

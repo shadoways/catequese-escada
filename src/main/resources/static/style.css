@@ -2257,62 +2257,6 @@ canvas {
   #adm-btn-encerrar { width: 100%; }
 }
 
-/* Eventos: retiro e missa (F10) */
-
-.eventos-chamada {
-  display: grid;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.evento-card {
-  display: grid;
-  gap: 8px;
-  padding: 12px 14px;
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  background: var(--paper-2);
-}
-
-.evento-topo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 14px;
-}
-
-.evento-turmas {
-  display: grid;
-  gap: 6px;
-}
-
-.evento-turma {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: var(--paper);
-}
-
-/* O botão vai para a direita; o nome da turma ocupa o resto. */
-.evento-turma > span:first-child {
-  flex: 1 1 140px;
-  min-width: 0;
-  font-weight: 600;
-}
-
-.evento-turma .status {
-  padding: 3px 10px;
-  font-size: 0.8rem;
-  margin: 0;
-}
-
-@media (max-width: 600px) {
-  .evento-turma button { width: 100%; }
-}
-
 /* ==========================================================================
    Agenda da catequese.
 
@@ -3407,6 +3351,12 @@ button.ind-limpar-tudo:hover { background: none; transform: none; }
    em larguras intermediárias, separado dos dois campos que ele consulta.
    Encolher o campo é melhor do que afastar o botão dele. */
 #adm-tela-turmas .ind-filtro { flex-basis: 150px; }
+
+/* Mesma correção na Chamada: aqui o container é mais estreito que o de
+   Turmas e Inscrições (a aba não tem mais a seção de Eventos ao lado, que
+   dava largura extra ao conteúdo), então mesmo com só dois campos o
+   "Consultar" já quebrava sozinho em ~760px com a base herdada. */
+#cham-tela-turmas .ind-filtro { flex-basis: 150px; }
 
 /* Quatro dígitos não precisam da largura de um <select> de comunidade: com a
    base dos vizinhos, o ano ficaria com o dobro do campo que usa e empurraria a

@@ -99,6 +99,14 @@ e só então implemente. Foi assim com a Agenda, e evitou refazer modelo de dado
   transferência (`RegrasDeMovimentacao`) e edição (Turmas e Inscrições)
   decide quem vê a chamada — regra de recorte por comunidade sempre lê o
   campo da entidade que tem dono, nunca deriva de uma relação à parte.
+- **A largura do container de uma aba depende do CONTEÚDO da aba, não só do
+  viewport.** O container das abas (`.shell`) encolhe para caber no conteúdo
+  da aba ativa. Remover a seção de Eventos da Chamada deixou aquela aba mais
+  estreita — e isso, por si só, quebrou o alinhamento do filtro de
+  comunidade/turma em ~760px, mesmo sem nenhuma mudança na barra de filtro em
+  si. Regra: ao tirar conteúdo (não só ao adicionar), rode
+  `docs/regressao-alinhamento.py` de novo — encolher a aba pode apertar uma
+  barra que já estava no limite.
 - **Comentário de bloco em Kotlin ANINHA** (diferente de Java e C). Escrever uma rota
   com curinga dentro de um KDoc — `/api/indicadores/` seguido de dois asteriscos — abre
   um comentário novo, e o arquivo inteiro vira comentário. O compilador só reclama na

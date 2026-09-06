@@ -2,20 +2,20 @@
 
 O que estes testes protegem, em ordem de importancia:
 
-  1. NADA APARECE ANTES DO "CONSULTAR". Turmas e eventos vinham todos de uma
+  1. NESTE MENU SO TEM CHAMADA. Chegou a existir uma secao de Eventos (retiro,
+     missa) na mesma tela -- foi removida a pedido: o catequista abre este
+     menu para uma coisa so, marcar presenca, e outra secao ali (mesmo que
+     relacionada) e ruido nesse momento.
+  2. NADA APARECE ANTES DO "CONSULTAR". A lista de turmas vinha toda de uma
      vez, e quem enxerga mais de uma comunidade (coordenador, coordenador
      paroquial) tinha que descartar o resto no olho ate achar a turma que
      queria -- mesmo problema que a tela de Turmas e Inscricoes ja resolveu.
-  2. O FILTRO NUNCA OFERECE MAIS DO QUE O BACKEND JA DEVOLVEU. As opcoes de
+  3. O FILTRO NUNCA OFERECE MAIS DO QUE O BACKEND JA DEVOLVEU. As opcoes de
      comunidade vem das PROPRIAS turmas do usuario (`/api/chamada/minhas-
      turmas`), nao de `/api/comunidades` (a paroquia inteira). E assim que um
      catequista, que so recebe as turmas dele, so ve a comunidade dele no
      combo -- sem nenhuma regra de permissao nova NESTA tela: quem barra de
      verdade continua sendo o EscopoAcessoService no servidor.
-  3. O FILTRO TAMBEM VALE PARA OS EVENTOS. Evento nao tem comunidade, quem
-     tem e a turma dentro dele -- filtrar por comunidade precisa esconder a
-     LINHA da turma de fora do recorte, e o cartao inteiro quando nenhuma
-     turma do evento sobra.
 
 Este script cobre o FRONTEND (a tela so mostra o que a API manda, e filtra
 direito o que ja recebeu). O recorte por papel em si -- catequista so ve as
@@ -57,41 +57,20 @@ TURMAS_CATEQUISTA = [
      "idComunidade": 1, "nomeComunidade": "Matriz"},
 ]
 
-# Retiro com turmas de DUAS comunidades: filtrar por uma tem que sumir com a
-# linha da outra, sem derrubar o cartao inteiro. Missa so tem turma de São
-# José: filtrar por Matriz precisa sumir com o cartao inteiro.
-EVENTOS = [
-    {"idEvento": 1, "titulo": "Retiro de Páscoa", "local": "Salão paroquial",
-     "publicoAlvo": None, "dataInicio": "2026-04-10", "dataFim": "2026-04-10",
-     "turmas": [
-         {"idTurma": 10, "nomeTurma": "Eucaristia I - Matriz", "matriculados": 14,
-          "idEncontro": None, "situacao": None, "presentes": 0, "editavel": False},
-         {"idTurma": 11, "nomeTurma": "Eucaristia I - São José", "matriculados": 12,
-          "idEncontro": None, "situacao": None, "presentes": 0, "editavel": False},
-     ]},
-    {"idEvento": 2, "titulo": "Missa de Encerramento - São José", "local": "Matriz de São José",
-     "publicoAlvo": None, "dataInicio": "2026-12-05", "dataFim": "2026-12-05",
-     "turmas": [
-         {"idTurma": 11, "nomeTurma": "Eucaristia I - São José", "matriculados": 12,
-          "idEncontro": None, "situacao": None, "presentes": 0, "editavel": False},
-     ]},
-]
 
-
-def stub(turmas):
+def stub(turmas, tipo='COORDENADOR_PAROQUIAL'):
     return """
     window.fetch = async (u) => {
       const s = String(typeof u === 'string' ? u : (u && u.url) || '');
       const j = (x) => new Response(JSON.stringify(x),
           {status: 200, headers: {'Content-Type': 'application/json'}});
       if (s.includes('/api/chamada/minhas-turmas')) return j(%(turmas)s);
-      if (s.includes('/api/chamada/eventos')) return j(%(eventos)s);
       return j({});
     };
     localStorage.setItem('catequese.token', 't');
     localStorage.setItem('catequese.usuario', JSON.stringify(
-      {nome: 'G', username: 'g', tipo: 'COORDENADOR_PAROQUIAL', admin: true, podeEditar: true}));
-    """ % {"turmas": json.dumps(turmas), "eventos": json.dumps(EVENTOS)}
+      {nome: 'G', username: 'g', tipo: '%(tipo)s', admin: true, podeEditar: true}));
+    """ % {"turmas": json.dumps(turmas), "tipo": tipo}
 
 
 falhas = []
@@ -107,10 +86,10 @@ def checar(nome, condicao, detalhe=''):
 with sync_playwright() as p:
     navegador = p.chromium.launch(executable_path='/opt/pw-browsers/chromium')
 
-    def abrir(turmas, largura=1280):
+    def abrir(turmas, largura=1280, tipo='COORDENADOR_PAROQUIAL'):
         page = navegador.new_page(viewport={'width': largura, 'height': 900},
                                   reduced_motion='reduce')
-        page.add_init_script(stub(turmas))
+        page.add_init_script(stub(turmas, tipo))
         page.goto(url)
         page.wait_for_timeout(400)
         page.click('button.tab-btn[data-tab="chamada"]')
@@ -121,14 +100,18 @@ with sync_playwright() as p:
         page.click('#cham-consultar')
         page.wait_for_timeout(500)
 
-    print('--- a lista so aparece quando se pede')
+    print('--- neste menu so tem chamada')
     page = abrir(TURMAS_COORDENADOR)
+    checar('nao existe mais secao de eventos nesta aba',
+           page.eval_on_selector_all('#tab-chamada #cham-tela-eventos', 'e => e.length') == 0)
+    checar('e nenhum cartao de evento sobrou na aba',
+           page.eval_on_selector_all('#tab-chamada .evento-card', 'e => e.length') == 0)
+
+    print('--- a lista so aparece quando se pede')
     checar('nenhuma turma antes do "Consultar"',
            page.eval_on_selector_all('#cham-turmas-lista [data-id-turma]', 'e => e.length') == 0)
     checar('a tela diz o que fazer',
            'Consultar' in page.inner_text('#cham-turmas-lista'))
-    checar('eventos tambem esperam o "Consultar"',
-           'Consultar' in page.inner_text('#cham-eventos-lista'))
     checar('o filtro de turma ja vem preenchido',
            page.eval_on_selector_all('#cham-filtro-turma option', 'e => e.length') == 4)
 
@@ -141,24 +124,8 @@ with sync_playwright() as p:
     cartoes = page.eval_on_selector_all('#cham-turmas-lista [data-id-turma]', 'e => e.length')
     checar('o filtro de comunidade recorta a lista de turmas', cartoes == 2, cartoes)
 
-    print('--- o filtro tambem recorta os eventos')
-    textoEventos = page.inner_text('#cham-eventos-lista')
-    checar('o retiro aparece (tem turma de Matriz)', 'Retiro de Páscoa' in textoEventos)
-    checar('mas so com a turma de Matriz', 'Eucaristia I - São José' not in textoEventos)
-    checar('a missa de São José some inteira (nenhuma turma no recorte)',
-           'Missa de Encerramento' not in textoEventos)
-
-    page.select_option('#cham-filtro-comunidade', '2')
-    page.wait_for_timeout(300)
-    consultar(page)
-    textoEventos = page.inner_text('#cham-eventos-lista')
-    checar('trocando para São José, a missa volta a aparecer',
-           'Missa de Encerramento' in textoEventos)
-    checar('e o retiro mostra so a turma de São José',
-           'Eucaristia I - Matriz' not in textoEventos and 'Eucaristia I - São José' in textoEventos)
-
     print('--- o combo de comunidade nunca inventa uma comunidade que o usuario nao tem')
-    pc = abrir(TURMAS_CATEQUISTA)
+    pc = abrir(TURMAS_CATEQUISTA, tipo='CATEQUISTA')
     opcoesComunidade = pc.eval_on_selector_all(
         '#cham-filtro-comunidade option', 'e => e.map(o => o.textContent.trim())')
     checar('catequista com uma turma so ve "Todas" e a comunidade dele',
@@ -166,6 +133,23 @@ with sync_playwright() as p:
     consultar(pc)
     checar('e a turma dele aparece normalmente',
            'Eucaristia I - Matriz' in pc.inner_text('#cham-turmas-lista'))
+
+    # Titulo no singular ou plural conforme quem esta vendo -- nao e so
+    # cosmetico: um coordenador com oito turmas na lista e "Minha turma" no
+    # topo leria a tela como quebrada. So o texto muda; quem ve o que
+    # continua sendo o backend (EscopoAcessoService), como em todo o resto
+    # desta tela.
+    print('--- o titulo da lista respeita quem esta vendo')
+    checar('catequista (uma turma, o normal) ve o titulo no singular',
+           pc.inner_text('#cham-titulo-turmas').strip() == 'Minha turma',
+           pc.inner_text('#cham-titulo-turmas'))
+    checar('coordenador paroquial (varias turmas, de proposito) ve o titulo no plural',
+           page.inner_text('#cham-titulo-turmas').strip() == 'Minhas turmas',
+           page.inner_text('#cham-titulo-turmas'))
+    pcoord = abrir(TURMAS_COORDENADOR, tipo='COORDENADOR')
+    checar('coordenador de comunidade tambem ve o titulo no plural',
+           pcoord.inner_text('#cham-titulo-turmas').strip() == 'Minhas turmas',
+           pcoord.inner_text('#cham-titulo-turmas'))
 
     print('--- 400px: nada estoura o pai')
     p400 = abrir(TURMAS_COORDENADOR, 400)
@@ -191,6 +175,22 @@ with sync_playwright() as p:
                       - botao.getBoundingClientRect().bottom);
     }""")
     checar('o "Consultar" divide a base com o filtro', desalinho <= 1, desalinho)
+
+    # Sem a secao de Eventos ao lado, a aba ficou com conteudo mais estreito, e
+    # o container (que se ajusta ao conteudo da aba ativa) encolheu junto --
+    # o suficiente para o "Consultar" comecar a quebrar sozinho por volta de
+    # 760px com a base herdada (190px). Ver #cham-tela-turmas .ind-filtro.
+    print('--- 760px: o "Consultar" nao quebra sozinho')
+    p760 = abrir(TURMAS_COORDENADOR, 760)
+    consultar(p760)
+    desalinho760 = p760.evaluate("""() => {
+      const linha = document.querySelector('#cham-tela-turmas .row.ind-nao-imprime');
+      const campo = linha.querySelector('select');
+      const botao = linha.querySelector('button');
+      return Math.abs(campo.getBoundingClientRect().bottom
+                      - botao.getBoundingClientRect().bottom);
+    }""")
+    checar('o "Consultar" ainda divide a base do filtro em 760px', desalinho760 <= 1, desalinho760)
 
     navegador.close()
 
